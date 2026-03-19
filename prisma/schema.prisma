@@ -1,0 +1,39 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+}
+
+model Partner {
+  id        Int      @id @default(autoincrement())
+  name      String
+  slug      String   @unique
+  country   String
+  currency  String
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  stores    Store[]
+}
+
+model Store {
+  id          Int      @id @default(autoincrement())
+  partnerId   Int
+  name        String
+  slug        String
+  address     String?
+  city        String?
+  country     String?
+  email       String?
+  phone       String?
+  active      Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  partner     Partner  @relation(fields: [partnerId], references: [id], onDelete: Cascade)
+
+  @@unique([partnerId, slug])
+  @@index([partnerId])
+}
