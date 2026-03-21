@@ -77,12 +77,22 @@ router.post("/backup", (req, res) => {
   ================================ */
   if (BACKUP_MODE === "manual") {
 
-    const cmd = `mysqldump -h ${db.host} -P ${db.port} -u ${db.user} -p${db.password} ${db.database} > "${filePath}"`;
+    const mysqldumpPath = `"C:\\Program Files\\MySQL\\MySQL Server 8.0\\bin\\mysqldump.exe"`;
 
-    exec(cmd, (error) => {
+const cmd = `${mysqldumpPath} -h ${db.host} -P ${db.port} -u ${db.user} -p${db.password} ${db.database} > "${filePath}"`;
+    exec(cmd, (error, stdout, stderr) => {
+      console.log("==== BACKUP DEBUG ====");
+      console.log("CMD:", cmd);
+      console.log("STDOUT:", stdout);
+      console.log("STDERR:", stderr);
+
       if (error) {
         console.error("Backup error:", error);
-        return res.status(500).json({ error: "Backup failed" });
+
+        return res.status(500).json({
+          error: "Backup failed",
+          details: stderr || error.message
+        });
       }
 
       console.log("Backup created:", filePath);
