@@ -5,15 +5,17 @@
   "main": "index.js",
   "type": "module",
   "scripts": {
-    "start": "node index.js"
+    "start": "npx prisma migrate deploy && node index.js"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "@prisma/client": "^5.2.0",
+    "cors": "^2.8.6",
     "express": "^5.2.1"
   },
   "devDependencies": {
-    "prisma": "^7.5.0"
+    "prisma": "^5.2.0"
   }
 }

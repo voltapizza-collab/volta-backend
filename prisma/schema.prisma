@@ -4,6 +4,7 @@ generator client {
 
 datasource db {
   provider = "mysql"
+  url      = env("DATABASE_URL")
 }
 
 model Partner {
@@ -32,6 +33,7 @@ model Store {
   active      Boolean  @default(true)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
+
   partner     Partner  @relation(fields: [partnerId], references: [id], onDelete: Cascade)
 
   @@unique([partnerId, slug])
