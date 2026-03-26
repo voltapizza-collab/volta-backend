@@ -23,7 +23,7 @@ router.get("/:slug", async (req, res) => {
     res.status(500).json({ error: e.message });
   }
 });
-// crear store
+// crear stor
 router.post("/", async (req, res) => {
   try {
     const data = req.body;
