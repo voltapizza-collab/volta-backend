@@ -23,5 +23,15 @@ router.get("/:slug", async (req, res) => {
     res.status(500).json({ error: e.message });
   }
 });
+// crear store
+router.post("/", async (req, res) => {
+  try {
+    const data = req.body;
+    const store = await prisma.store.create({ data });
+    res.json(store);
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
 
 export default router;
