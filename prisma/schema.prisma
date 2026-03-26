@@ -19,22 +19,35 @@ model Partner {
 
   stores    Store[]
 }
-
 model Store {
-  id          Int      @id @default(autoincrement())
-  partnerId   Int
-  name        String
-  slug        String
-  address     String?
-  city        String?
-  country     String?
-  email       String?
-  phone       String?
-  active      Boolean  @default(true)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id                  Int      @id @default(autoincrement())
+  partnerId           Int
+  name                String
+  slug                String
+  address             String?
+  city                String?
+  country             String?
+  zipCode             String?
+  latitude            Float?
+  longitude           Float?
+  email               String?
+  phone               String?
+  active              Boolean  @default(true)
+  acceptingOrders     Boolean  @default(true)
+  acceptsReservations Boolean  @default(false)
+  reservationCapacity Int?
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
 
-  partner     Partner  @relation(fields: [partnerId], references: [id], onDelete: Cascade)
+  partner             Partner  @relation(fields: [partnerId], references: [id], onDelete: Cascade)
+
+  // reservations        Reservation[]
+  // hours               StoreHours[]
+  // stocks              StorePizzaStock[]
+  // ingredientStocks    StoreIngredientStock[]
+  // sales               Sale[]
+  // redemptions         CouponRedemption[] @relation("StoreToRedemptions")
+  // games               Game[]
 
   @@unique([partnerId, slug])
   @@index([partnerId])
