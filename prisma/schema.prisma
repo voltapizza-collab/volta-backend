@@ -7,6 +7,104 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+
+enum ProductStatus {
+  ACTIVE
+  INACTIVE
+}
+enum ProductType {
+  SELLABLE
+  BASE
+}
+enum IncentiveTriggerMode {
+  FIXED
+  SMART_AVG_TICKET
+}
+enum IncentiveStatus {
+  ACTIVE
+  DISABLED
+}
+enum DeliveryMethod {
+  PICKUP
+  COURIER
+  MARKETPLACE
+  OTHER
+}
+enum OrderStatus {
+  PENDING
+  AWAITING_PAYMENT
+  PAID
+  CANCELED
+}
+enum Channel {
+  WHATSAPP
+  PHONE
+  WEB
+}
+enum CouponKind {
+  PERCENT
+  AMOUNT
+}
+enum CouponVariant {
+  FIXED
+  RANGE
+}
+enum CouponStatus {
+  ACTIVE
+  USED
+  EXPIRED
+  DISABLED
+}
+enum CouponAcquisition {
+  GAME // premio de juego
+  CLAIM // reclamo manual / galería
+  REWARD // recompensa (p.ej. after-purchase)
+  BULK // carga masiva u operación
+  DIRECT // entregado ad-hoc
+  OTHER
+}
+enum CouponLogic {
+  RANDOM
+  PERCENT
+  AMOUNT
+}
+enum CouponChannel {
+  GAME
+  WEB
+  CRM
+  STORE
+  APP
+  SMS
+  EMAIL
+}
+enum CustomerOrigin {
+  PHONE
+  WALKIN
+  MARKETPLACE
+  QR
+  OTHER
+}
+enum CouponVisibility {
+  PUBLIC
+  RESERVED
+}
+enum CustomerSegment {
+  S1 // Potencial: 0–1 compras
+  S2 // Inactivo: >1 compras y última > 30 días
+  S3 // Activo:   última ≤ 30 días
+  S4 // CMV:      S3 y ticket medio > ticket medio empresa
+}
+enum IngredientStatus {
+  ACTIVE
+  INACTIVE
+}
+enum ReservationStatus {
+  PENDING
+  CONFIRMED
+  CANCELED
+  COMPLETED
+}
+
 model Partner {
   id        Int      @id @default(autoincrement())
   name      String
@@ -16,39 +114,400 @@ model Partner {
   active    Boolean  @default(true)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
-
-  stores    Store[]
+  stores             Store[]
+  menuPizzas         MenuPizza[]
+  customers          Customer[]
+  sales              Sale[]
+  coupons            Coupon[]
+  couponRedemptions  CouponRedemption[]
+  games              Game[]
+  gamePlays          GamePlay[]
+  incentives         Incentive[]
+  ingredientExtras   IngredientExtra[]
+  reservations       Reservation[]
 }
 model Store {
-  id                  Int      @id @default(autoincrement())
-  partnerId           Int
-  name                String
-  slug                String
-  address             String?
-  city                String?
-  country             String?
-  zipCode             String?
-  latitude            Float?
-  longitude           Float?
-  email               String?
-  phone               String?
-  active              Boolean  @default(true)
-  acceptingOrders     Boolean  @default(true)
-  acceptsReservations Boolean  @default(false)
-  reservationCapacity Int?
-  createdAt           DateTime @default(now())
-  updatedAt           DateTime @updatedAt
+  id                   Int                @id @default(autoincrement())
+  partnerId            Int
+  partner              Partner            @relation(fields: [partnerId], references: [id])
+  slug                 String             
+  storeName            String
+  tlf                  String?
+  address              String
+  latitude             Float?
+  longitude            Float?
+  city                 String?
+  zipCode              String?
+  email                String?
+  active               Boolean            @default(true)
+  acceptingOrders      Boolean            @default(true)
+  acceptsReservations  Boolean            @default(false)
+  reservationCapacity  Int?
+  createdAt            DateTime           @default(now())
+  updatedAt            DateTime           @updatedAt
+  reservations         Reservation[]
+  stocks               StorePizzaStock[]
+  ingredientStocks     StoreIngredientStock[]
+  sales                Sale[]
+  redemptions          CouponRedemption[] @relation("StoreToRedemptions")
+  games                Game[]
+  hours                StoreHours[]
 
-  partner             Partner  @relation(fields: [partnerId], references: [id], onDelete: Cascade)
-
-  // reservations        Reservation[]
-  // hours               StoreHours[]
-  // stocks              StorePizzaStock[]
-  // ingredientStocks    StoreIngredientStock[]
-  // sales               Sale[]
-  // redemptions         CouponRedemption[] @relation("StoreToRedemptions")
-  // games               Game[]
-
+  @@index([partnerId])
   @@unique([partnerId, slug])
+}
+model StorePizzaStock {
+  storeId   Int
+  pizzaId   Int
+  stock     Int       @default(0)
+  active    Boolean   @default(true)
+  updatedAt DateTime  @updatedAt
+  createdAt DateTime  @default(now())
+
+  store     Store     @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  pizza     MenuPizza @relation(fields: [pizzaId], references: [id], onDelete: Cascade)
+
+  @@id([storeId, pizzaId])
+}
+model MenuPizza {
+  id            Int                   @id @default(autoincrement())
+  name          String
+  partnerId Int
+  partner   Partner @relation(fields: [partnerId], references: [id])
+  category      String?
+  selectSize    Json
+  priceBySize   Json
+  cookingMethod String?
+  image         String?
+  imagePublicId String?
+  status        ProductStatus         @default(ACTIVE)
+  type          ProductType           @default(SELLABLE)
+  createdAt     DateTime              @default(now())
+  updatedAt     DateTime              @updatedAt
+
+  ingredients   MenuPizzaIngredient[]
+  stocks        StorePizzaStock[]
+  incentives    Incentive[]           @relation("RewardPizza")
+  @@index([partnerId])
+}
+model MenuPizzaIngredient {
+  id           Int        @id @default(autoincrement())
+  menuPizzaId  Int
+  ingredientId Int
+  qtyBySize    Json
+
+  menuPizza    MenuPizza  @relation(fields: [menuPizzaId], references: [id], onDelete: Cascade)
+  ingredient   Ingredient @relation(fields: [ingredientId], references: [id], onDelete: Cascade)
+
+  @@index([ingredientId])
+  @@index([menuPizzaId])
+}
+model Incentive {
+  id              Int                  @id @default(autoincrement())
+  name            String
+  partnerId Int
+  partner   Partner @relation(fields: [partnerId], references: [id])
+  triggerMode     IncentiveTriggerMode
+  fixedAmount     Float?
+  percentOverAvg  Float?
+  rewardPizzaId   Int
+  rewardPizza     MenuPizza            @relation("RewardPizza", fields: [rewardPizzaId], references: [id])
+  active          Boolean              @default(false)
+  startsAt        DateTime?
+  endsAt          DateTime?
+  daysActive      Json?
+  windowStart     Int?
+  windowEnd       Int?
+  createdAt       DateTime             @default(now())
+  updatedAt       DateTime             @updatedAt
+
+  sales           Sale[]
+}
+model Ingredient {
+  id               Int                   @id @default(autoincrement())
+  name             String
+  category         String
+  stock            Int                   @default(0)
+  unit             String?
+  costPrice        Float?
+  status           IngredientStatus      @default(ACTIVE)
+  createdAt        DateTime              @default(now())
+  updatedAt        DateTime              @updatedAt
+
+  menuPizzas       MenuPizzaIngredient[]
+  ingredientExtras IngredientExtra[]
+  storeStocks      StoreIngredientStock[]
+}
+model Sale {
+  id                      Int                 @id @default(autoincrement())
+  code                    String              @unique
+  date                    DateTime            @default(now())
+
+  partnerId               Int
+  partner                 Partner             @relation(fields: [partnerId], references: [id])
+
+  storeId                 Int
+  store                   Store               @relation(fields: [storeId], references: [id])
+
+  customerId              Int?
+  customer                Customer?           @relation("CustomerSales", fields: [customerId], references: [id])
+
+  type                    String
+  delivery                DeliveryMethod
+  customerData            Json?
+  products                Json
+  extras                  Json                @default("[]")
+  totalProducts           Float
+  discounts               Float               @default(0)
+  total                   Float
+  processed               Boolean             @default(false)
+  notes                   String?
+  createdAt               DateTime            @default(now())
+  status                  OrderStatus         @default(PENDING)
+  channel                 Channel             @default(WHATSAPP)
+  currency                String              @default("EUR")
+  address_1               String?
+  lat                     Float?
+  lng                     Float?
+
+  stripePaymentIntentId   String?             @unique @db.VarChar(191)
+  stripeCheckoutSessionId String?             @unique @db.VarChar(191)
+
+  incentiveId             Int?
+  incentive               Incentive?          @relation(fields: [incentiveId], references: [id])
+  incentiveAmount         Float?              @default(0)
+
+  redemptions             CouponRedemption[]  @relation("SaleToRedemptions")
+
+  @@index([date])
+  @@index([partnerId])
+}
+model IngredientExtra {
+  id           Int        @id @default(autoincrement())
+  ingredientId Int
+  partnerId Int
+  partner   Partner @relation(fields: [partnerId], references: [id])
+  categoryId   Int
+  price        Float      @default(0)
+  status       String     @default("ACTIVE")
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+  ingredient   Ingredient @relation(fields: [ingredientId], references: [id])
+  category     Category   @relation(fields: [categoryId], references: [id])
+  @@unique([partnerId, ingredientId, categoryId])
+}
+model StoreIngredientStock {
+  storeId      Int
+  ingredientId Int
+  stock        Int        @default(0)
+  active       Boolean    @default(true)
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+
+  store        Store      @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  ingredient   Ingredient @relation(fields: [ingredientId], references: [id], onDelete: Cascade)
+
+  @@id([storeId, ingredientId])
+}
+model Customer {
+  id                Int                 @id @default(autoincrement())
+  code              String              @unique
+
+  partnerId         Int
+  partner           Partner             @relation(fields: [partnerId], references: [id])
+
+  name              String?
+  phone             String?
+  email             String?
+  address_1         String
+  portal            String?
+  observations      String?
+  lat               Float?
+  lng               Float?
+
+  origin            CustomerOrigin      @default(PHONE)
+  createdAt         DateTime            @default(now())
+  updatedAt         DateTime            @updatedAt
+
+  daysOff           Int?
+  isRestricted      Boolean             @default(false)
+  restrictedAt      DateTime?
+  restrictionReason String?
+
+  segment           CustomerSegment     @default(S1)
+  segmentUpdatedAt  DateTime?
+
+  assignedCoupons   Coupon[]            @relation("CustomerAssignedCoupons")
+  sales             Sale[]              @relation("CustomerSales")
+  redemptions       CouponRedemption[]  @relation("CustomerToRedemptions")
+  plays             GamePlay[]
+
+  @@index([partnerId])
+}
+model CouponRedemption {
+  id               Int               @id @default(autoincrement())
+  partnerId        Int
+  partner          Partner           @relation(fields: [partnerId], references: [id])
+  couponId         Int?
+  saleId           Int?
+  customerId       Int?
+  storeId          Int?
+  gameId           Int?
+  couponCode       String
+  acquisition      CouponAcquisition?
+  channel          CouponChannel?
+  campaign         String?
+  segmentAtRedeem  CustomerSegment?
+  kind             CouponKind
+  variant          CouponVariant
+  percentApplied   Int?
+  amountApplied    Decimal?          @db.Decimal(10, 2)
+  discountValue    Decimal?          @db.Decimal(10, 2)
+  redeemedAt       DateTime          @default(now())
+  createdAt        DateTime          @default(now())
+  coupon           Coupon?           @relation("CouponToRedemptions", fields: [couponId], references: [id], onDelete: SetNull)
+  sale             Sale?             @relation("SaleToRedemptions", fields: [saleId], references: [id], onDelete: SetNull)
+  customer         Customer?         @relation("CustomerToRedemptions", fields: [customerId], references: [id], onDelete: SetNull)
+  store            Store?            @relation("StoreToRedemptions", fields: [storeId], references: [id], onDelete: SetNull)
+  game             Game?             @relation("GameRedemptions", fields: [gameId], references: [id], onDelete: SetNull)
+
+  @@index([partnerId])
+  @@index([couponCode])
+  @@index([redeemedAt])
+  @@index([saleId])
+  @@index([customerId])
+  @@index([storeId])
+  @@index([gameId])
+  @@index([channel])
+  @@index([acquisition])
+}
+model Category {
+  id               Int               @id @default(autoincrement())
+  name             String            @unique
+  position         Int               @default(0)
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
+
+  ingredientExtras IngredientExtra[]
+}
+model Coupon {
+  id           Int                  @id @default(autoincrement())
+  code         String               @unique
+
+  partnerId    Int
+  partner      Partner              @relation(fields: [partnerId], references: [id])
+
+  kind         CouponKind           @default(PERCENT)
+  variant      CouponVariant        @default(FIXED)
+  percent      Int?
+  amount       Decimal?             @db.Decimal(10, 2)
+  percentMin   Int?
+  percentMax   Int?
+  maxAmount    Decimal?             @db.Decimal(10, 2)
+  acquisition  CouponAcquisition?
+  channel      CouponChannel?
+  gameId       Int?
+  campaign     String?
+  meta         Json?
+  segments     Json?
+  assignedToId Int?
+  visibility   CouponVisibility     @default(PUBLIC)
+  activeFrom   DateTime?
+  expiresAt    DateTime?
+  daysActive   Json?
+  windowStart  Int?
+  windowEnd    Int?
+  usageLimit   Int                  @default(1)
+  usedCount    Int                  @default(0)
+  status       CouponStatus         @default(ACTIVE)
+  usedAt       DateTime?
+  createdAt    DateTime             @default(now())
+
+  assignedTo   Customer?            @relation("CustomerAssignedCoupons", fields: [assignedToId], references: [id], onDelete: SetNull)
+  game         Game?                @relation("GameCoupons", fields: [gameId], references: [id], onDelete: SetNull)
+  redemptions  CouponRedemption[]   @relation("CouponToRedemptions")
+
+  @@index([partnerId])
+  @@index([status])
+  @@index([assignedToId])
+  @@index([expiresAt])
+  @@index([acquisition])
+  @@index([channel])
+  @@index([gameId])
+  @@index([acquisition, gameId])
+}
+model GamePlay {
+  id         Int        @id @default(autoincrement())
+  gameId     Int
+  partnerId Int
+  partner   Partner @relation(fields: [partnerId], references: [id])
+  playerId   Int?
+  ip         String?
+  result     Json?
+  won        Boolean    @default(false)
+  createdAt  DateTime   @default(now())
+
+  game       Game       @relation(fields: [gameId], references: [id])
+  customer   Customer?  @relation(fields: [playerId], references: [id])
+
+  @@index([gameId, createdAt])
+  @@index([playerId, createdAt])
+  @@index([partnerId])
+}
+model Game {
+  id         Int                 @id @default(autoincrement())
+
+  partnerId  Int
+  partner    Partner             @relation(fields: [partnerId], references: [id])
+
+  name       String
+  slug       String              
+  description String?
+  image      String?
+  active     Boolean             @default(true)
+
+  storeId    Int?
+  store      Store?              @relation(fields: [storeId], references: [id], onDelete: SetNull)
+
+  createdAt  DateTime            @default(now())
+  updatedAt  DateTime            @updatedAt
+
+  coupons    Coupon[]            @relation("GameCoupons")
+  plays      GamePlay[]
+  redemptions CouponRedemption[] @relation("GameRedemptions")
+
+  @@index([partnerId])
+  @@unique([partnerId, slug])
+}
+model StoreHours {
+  id        Int      @id @default(autoincrement())
+
+  storeId   Int
+  store     Store    @relation(fields:[storeId], references:[id], onDelete: Cascade)
+
+  dayOfWeek Int
+  openTime  Int
+  closeTime Int
+
+  createdAt DateTime @default(now())
+}
+model Reservation {
+  id                  Int       @id @default(autoincrement())
+  storeId             Int
+  partnerId Int 
+  partner   Partner @relation(fields: [partnerId], references: [id])
+  store               Store     @relation(fields: [storeId], references: [id])
+  customerName        String
+  customerPhone       String?
+  partySize           Int
+  reservationDate     DateTime
+  reservationTime     String
+  reservationDateTime DateTime
+  status ReservationStatus @default(PENDING)
+  notes               String?
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
+
+  @@index([storeId, reservationDateTime])
   @@index([partnerId])
 }
