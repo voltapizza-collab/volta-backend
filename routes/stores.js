@@ -4,10 +4,27 @@ import { PrismaClient } from "@prisma/client";
 const prisma = new PrismaClient();
 const router = express.Router();
 
-/* ===============================
-   GET MENU (PRIMERO ⚠️)
-================================ */
 
+router.get("/", async (req, res) => {
+  try {
+    const { partnerId } = req.query;
+
+    if (!partnerId) {
+      return res.status(400).json({ error: "partnerId required" });
+    }
+
+    const stores = await prisma.store.findMany({
+      where: {
+        partnerId: Number(partnerId),
+      },
+    });
+
+    res.json(stores);
+  } catch (e) {
+    console.error("GET STORES ERROR:", e);
+    res.status(500).json({ error: e.message });
+  }
+});
 router.get("/:partnerSlug/:storeSlug/menu", async (req, res) => {
   try {
     const { partnerSlug, storeSlug } = req.params;
@@ -50,11 +67,6 @@ const menu = await prisma.storePizzaStock.findMany({
     res.status(500).json({ error: e.message });
   }
 });
-
-/* ===============================
-   GET STORE
-================================ */
-
 router.get("/:partnerSlug/:storeSlug", async (req, res) => {
   try {
     const { partnerSlug, storeSlug } = req.params;
@@ -89,11 +101,6 @@ router.get("/:partnerSlug/:storeSlug", async (req, res) => {
     res.status(500).json({ error: e.message });
   }
 });
-
-/* ===============================
-   CREATE STORE
-================================ */
-
 router.post("/", async (req, res) => {
   try {
     const { storeName, slug, partnerId, address } = req.body;

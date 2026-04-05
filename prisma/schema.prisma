@@ -4,7 +4,7 @@ generator client {
 
 datasource db {
   provider = "mysql"
-  url      = env("DATABASE_URL")
+  url = env("DATABASE_URL")
 }
 
 
@@ -103,6 +103,11 @@ enum ReservationStatus {
   CONFIRMED
   CANCELED
   COMPLETED
+}
+enum SuggestionStatus {
+  PENDING
+  APPROVED
+  REJECTED
 }
 
 model Partner {
@@ -227,16 +232,30 @@ model Ingredient {
   id               Int                   @id @default(autoincrement())
   name             String
   category         String
+  allergens        Json @default("[]")
+  calories         Float?
+  protein          Float?
+  carbs            Float?
+  fat              Float?
+  isSystem         Boolean               @default(true)
   stock            Int                   @default(0)
   unit             String?
   costPrice        Float?
   status           IngredientStatus      @default(ACTIVE)
   createdAt        DateTime              @default(now())
   updatedAt        DateTime              @updatedAt
-
   menuPizzas       MenuPizzaIngredient[]
   ingredientExtras IngredientExtra[]
   storeStocks      StoreIngredientStock[]
+}
+model IngredientSuggestion {
+  id        Int      @id @default(autoincrement())
+  name      String
+  category  String
+  status    SuggestionStatus @default(PENDING)
+  createdAt DateTime @default(now())
+  reviewedAt DateTime?
+  @@index([status])
 }
 model Sale {
   id                      Int                 @id @default(autoincrement())

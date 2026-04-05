@@ -1,8 +1,12 @@
 import express from "express";
 import cors from "cors";
+
 import storesRoutes from "./routes/stores.js";
 import partnersRoutes from "./routes/partners.js";
 import adminRoutes from "./routes/admin.js";
+import ingredientsRoutes from "./routes/ingredients.js";
+import storeIngredientsRoutes from "./routes/storeIngredients.js";
+
 const app = express();
 
 // middlewares
@@ -13,12 +17,13 @@ app.use(cors({
   credentials: true
 }));
 
-// routes
+app.use("/stores/:storeId/ingredients", storeIngredientsRoutes);
 app.use("/stores", storesRoutes);
 app.use("/partners", partnersRoutes);
 app.use("/admin", adminRoutes);
+app.use("/ingredients", ingredientsRoutes);
 
-// test route
+
 app.get("/", (req, res) => {
   res.send("Volta Core running 🚀");
 });
