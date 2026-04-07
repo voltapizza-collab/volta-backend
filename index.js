@@ -9,13 +9,30 @@ import storeIngredientsRoutes from "./routes/storeIngredients.js";
 
 const app = express();
 
+const allowedOrigins = [
+  "http://localhost:3000",
+  process.env.FRONTEND_URL,
+  process.env.PUBLIC_FRONTEND_URL,
+  process.env.RAILWAY_PUBLIC_DOMAIN
+    ? `https://${process.env.RAILWAY_PUBLIC_DOMAIN}`
+    : null,
+].filter(Boolean);
+
 // middlewares
 app.use(express.json());
 
-app.use(cors({
-  origin: ["http://localhost:3000"],
-  credentials: true
-}));
+app.use(
+  cors({
+    origin(origin, callback) {
+      if (!origin || allowedOrigins.includes(origin)) {
+        return callback(null, true);
+      }
+
+      return callback(new Error(`Origin not allowed: ${origin}`));
+    },
+    credentials: true,
+  })
+);
 
 app.use("/stores/:storeId/ingredients", storeIngredientsRoutes);
 app.use("/stores", storesRoutes);
