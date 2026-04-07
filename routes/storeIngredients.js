@@ -10,6 +10,23 @@ const parseId = (v) => {
   return Number.isInteger(n) && n > 0 ? n : null;
 };
 
+const normalizeAllergens = (value) => {
+  if (Array.isArray(value)) {
+    return value;
+  }
+
+  if (typeof value === "string") {
+    try {
+      const parsed = JSON.parse(value);
+      return Array.isArray(parsed) ? parsed : [];
+    } catch {
+      return value.trim() ? [value.trim()] : [];
+    }
+  }
+
+  return [];
+};
+
 /*
  * GET /stores/:storeId/ingredients
  * → devuelve TODOS los ingredientes + estado en la tienda
@@ -37,6 +54,7 @@ router.get("/", async (req, res) => {
         id: ing.id,
         name: ing.name,
         category: ing.category,
+        allergens: normalizeAllergens(ing.allergens),
         unit: ing.unit,
         costPrice: ing.costPrice,
 
@@ -152,6 +170,35 @@ router.patch("/:ingredientId", async (req, res) => {
   } catch (err) {
     console.error("[PATCH store ingredient]", err);
     res.status(500).json({ error: "Error updating ingredient" });
+  }
+});
+
+/*
+ * DELETE /stores/:storeId/ingredients/:ingredientId
+ * → elimina el ingrediente de la tienda
+ */
+router.delete("/:ingredientId", async (req, res) => {
+  try {
+    const storeId = parseId(req.params.storeId);
+    const ingredientId = parseId(req.params.ingredientId);
+
+    if (!storeId || !ingredientId) {
+      return res.status(400).json({ error: "Invalid ids" });
+    }
+
+    await prisma.storeIngredientStock.delete({
+      where: {
+        storeId_ingredientId: {
+          storeId,
+          ingredientId,
+        },
+      },
+    });
+
+    res.json({ success: true });
+  } catch (err) {
+    console.error("[DELETE store ingredient]", err);
+    res.status(500).json({ error: "Error deleting ingredient" });
   }
 });
 

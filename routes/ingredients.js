@@ -4,9 +4,7 @@ import { PrismaClient } from "@prisma/client";
 const prisma = new PrismaClient();
 const router = express.Router();
 
-/* =========================
-   GET INGREDIENTS
-========================= */
+
 router.get("/", async (req, res) => {
   try {
     const ingredients = await prisma.ingredient.findMany({
@@ -19,10 +17,6 @@ router.get("/", async (req, res) => {
     res.status(500).json({ error: "error fetching ingredients" });
   }
 });
-
-/* =========================
-   GET SUGGESTIONS
-========================= */
 router.get("/suggestions", async (req, res) => {
   try {
     const { status } = req.query;
@@ -46,10 +40,6 @@ router.get("/suggestions", async (req, res) => {
     res.status(500).json({ error: "Error fetching suggestions" });
   }
 });
-
-/* =========================
-   CREATE INGREDIENT
-========================= */
 router.post("/", async (req, res) => {
   try {
     const { name, category, allergens } = req.body;
@@ -74,10 +64,44 @@ router.post("/", async (req, res) => {
     res.status(500).json({ error: "error creating ingredient" });
   }
 });
+router.delete("/:id", async (req, res) => {
+  try {
+    const id = Number(req.params.id);
 
-/* =========================
-   CREATE SUGGESTION
-========================= */
+    if (!Number.isInteger(id) || id <= 0) {
+      return res.status(400).json({ error: "Invalid ingredient id" });
+    }
+
+    const existing = await prisma.ingredient.findUnique({
+      where: { id },
+      select: { id: true },
+    });
+
+    if (!existing) {
+      return res.status(404).json({ error: "Ingredient not found" });
+    }
+
+    await prisma.$transaction([
+      prisma.storeIngredientStock.deleteMany({
+        where: { ingredientId: id },
+      }),
+      prisma.menuPizzaIngredient.deleteMany({
+        where: { ingredientId: id },
+      }),
+      prisma.ingredientExtra.deleteMany({
+        where: { ingredientId: id },
+      }),
+      prisma.ingredient.delete({
+        where: { id },
+      }),
+    ]);
+
+    res.json({ ok: true });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "error deleting ingredient" });
+  }
+});
 router.post("/suggestions", async (req, res) => {
   try {
     const { name, category } = req.body;
@@ -128,10 +152,6 @@ router.post("/suggestions", async (req, res) => {
     res.status(500).json({ error: "Error creating suggestion" });
   }
 });
-
-/* =========================
-   APPROVE SUGGESTION
-========================= */
 router.patch("/suggestions/:id/approve", async (req, res) => {
   try {
     const { id } = req.params;
@@ -145,15 +165,7 @@ router.patch("/suggestions/:id/approve", async (req, res) => {
     }
 
     // 🔥 crear ingrediente real
-    const newIngredient = await prisma.ingredient.create({
-      data: {
-        name: suggestion.name,
-        category: suggestion.category,
-      },
-    });
-
-    // 🔥 marcar como aprobado
-    await prisma.ingredientSuggestion.update({
+    const updatedSuggestion = await prisma.ingredientSuggestion.update({
       where: { id: Number(id) },
       data: {
         status: "APPROVED",
@@ -161,16 +173,13 @@ router.patch("/suggestions/:id/approve", async (req, res) => {
       },
     });
 
-    res.json(newIngredient);
+    // 🔥 marcar como aprobado
+    res.json(updatedSuggestion);
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: "Error approving suggestion" });
   }
 });
-
-/* =========================
-   REJECT SUGGESTION
-========================= */
 router.patch("/suggestions/:id/reject", async (req, res) => {
   try {
     const { id } = req.params;
