@@ -16,14 +16,26 @@ import basesPizzasRoutes from "./routes/basesPizzas.js";
 const app = express();
 const prisma = new PrismaClient();
 
+const envOrigins = (process.env.CORS_ORIGINS || "")
+  .split(",")
+  .map((origin) => origin.trim())
+  .filter(Boolean);
+
 const allowedOrigins = [
   "http://localhost:3000",
+  "https://volta-storefront-production.up.railway.app",
   process.env.FRONTEND_URL,
   process.env.PUBLIC_FRONTEND_URL,
+  process.env.APP_URL,
+  process.env.STOREFRONT_URL,
+  process.env.RAILWAY_STATIC_URL,
   process.env.RAILWAY_PUBLIC_DOMAIN
     ? `https://${process.env.RAILWAY_PUBLIC_DOMAIN}`
     : null,
-].filter(Boolean);
+  ...envOrigins,
+]
+  .filter(Boolean)
+  .filter((origin, index, arr) => arr.indexOf(origin) === index);
 
 // middlewares
 app.use(express.json());
