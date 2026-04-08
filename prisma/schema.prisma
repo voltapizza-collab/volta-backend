@@ -109,7 +109,6 @@ enum SuggestionStatus {
   APPROVED
   REJECTED
 }
-
 model Partner {
   id        Int      @id @default(autoincrement())
   name      String
@@ -129,6 +128,7 @@ model Partner {
   gamePlays          GamePlay[]
   incentives         Incentive[]
   ingredientExtras   IngredientExtra[]
+  partnerCategories  PartnerCategory[]
   reservations       Reservation[]
 }
 model Store {
@@ -180,6 +180,8 @@ model MenuPizza {
   partnerId Int
   partner   Partner @relation(fields: [partnerId], references: [id])
   category      String?
+  categoryId    Int?
+  categoryRef   Category?             @relation(fields: [categoryId], references: [id])
   selectSize    Json
   priceBySize   Json
   cookingMethod String?
@@ -194,6 +196,7 @@ model MenuPizza {
   stocks        StorePizzaStock[]
   incentives    Incentive[]           @relation("RewardPizza")
   @@index([partnerId])
+  @@index([categoryId])
 }
 model MenuPizzaIngredient {
   id           Int        @id @default(autoincrement())
@@ -406,8 +409,25 @@ model Category {
   position         Int               @default(0)
   createdAt        DateTime          @default(now())
   updatedAt        DateTime          @updatedAt
-
+  menuPizzas       MenuPizza[]
   ingredientExtras IngredientExtra[]
+  partnerCategories PartnerCategory[]
+}
+model PartnerCategory {
+  id         Int      @id @default(autoincrement())
+  partnerId   Int
+  categoryId  Int
+  enabled     Boolean  @default(true)
+  position    Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  partner    Partner  @relation(fields: [partnerId], references: [id], onDelete: Cascade)
+  category   Category @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+
+  @@unique([partnerId, categoryId])
+  @@index([partnerId, position])
+  @@index([categoryId])
 }
 model Coupon {
   id           Int                  @id @default(autoincrement())
