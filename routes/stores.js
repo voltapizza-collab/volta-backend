@@ -4,7 +4,6 @@ import { PrismaClient } from "@prisma/client";
 const prisma = new PrismaClient();
 const router = express.Router();
 
-
 router.get("/", async (req, res) => {
   try {
     const { partnerId } = req.query;
@@ -25,11 +24,11 @@ router.get("/", async (req, res) => {
     res.status(500).json({ error: e.message });
   }
 });
+
 router.get("/:partnerSlug/:storeSlug/menu", async (req, res) => {
   try {
     const { partnerSlug, storeSlug } = req.params;
 
-    // 🔥 1. buscar partner
     const partner = await prisma.partner.findUnique({
       where: { slug: partnerSlug },
     });
@@ -38,7 +37,6 @@ router.get("/:partnerSlug/:storeSlug/menu", async (req, res) => {
       return res.status(404).json({ error: "Partner not found" });
     }
 
-    // 🔥 2. buscar store por partnerId + slug
     const store = await prisma.store.findFirst({
       where: {
         slug: storeSlug,
@@ -50,28 +48,168 @@ router.get("/:partnerSlug/:storeSlug/menu", async (req, res) => {
       return res.status(404).json({ error: "Store not found" });
     }
 
-    // 🔥 3. menú
-const menu = await prisma.storePizzaStock.findMany({
-  where: {
-    storeId: store.id,
-    active: true,
-  },
-  include: {
-    pizza: true,
-  },
-});
+    let enabledPartnerCategories = [];
 
-    res.json(menu);
+    if (prisma.partnerCategory) {
+      try {
+        enabledPartnerCategories = await prisma.partnerCategory.findMany({
+          where: {
+            partnerId: store.partnerId,
+            enabled: true,
+          },
+          select: { categoryId: true },
+        });
+      } catch (partnerCategoryError) {
+        console.error(
+          "GET MENU partnerCategory fallback:",
+          partnerCategoryError?.message || partnerCategoryError
+        );
+        enabledPartnerCategories = [];
+      }
+    }
+
+    const enabledCategoryIds = enabledPartnerCategories.map(
+      (row) => row.categoryId
+    );
+
+    const pizzas = await prisma.menuPizza.findMany({
+      where: {
+        partnerId: store.partnerId,
+        status: "ACTIVE",
+        type: "SELLABLE",
+        ...(enabledCategoryIds.length
+          ? { categoryId: { in: enabledCategoryIds } }
+          : {}),
+      },
+      select: {
+        id: true,
+        name: true,
+        category: true,
+        categoryId: true,
+        categoryRef: {
+          select: {
+            id: true,
+            name: true,
+          },
+        },
+        selectSize: true,
+        priceBySize: true,
+        image: true,
+        ingredients: {
+          select: {
+            qtyBySize: true,
+            ingredient: {
+              select: {
+                id: true,
+                name: true,
+                status: true,
+                storeStocks: {
+                  where: { storeId: store.id },
+                  select: { active: true },
+                },
+              },
+            },
+          },
+        },
+      },
+      orderBy: { id: "asc" },
+    });
+
+    const availablePizzas = pizzas.filter((pizza) => {
+      const recipe = Array.isArray(pizza.ingredients) ? pizza.ingredients : [];
+
+      return recipe.every((rel) => {
+        const ingredient = rel.ingredient;
+        const storeStock = ingredient?.storeStocks?.[0];
+        return ingredient?.status === "ACTIVE" && storeStock?.active === true;
+      });
+    });
+
+    const categoryIds = [
+      ...new Set(
+        availablePizzas
+          .map((pizza) => pizza.categoryId)
+          .filter((categoryId) => Number.isInteger(categoryId))
+      ),
+    ];
+
+    const extrasRows = categoryIds.length
+      ? await prisma.ingredientExtra.findMany({
+          where: {
+            partnerId: store.partnerId,
+            status: "ACTIVE",
+            categoryId: { in: categoryIds },
+            ingredient: {
+              status: "ACTIVE",
+              storeStocks: {
+                some: {
+                  storeId: store.id,
+                  active: true,
+                },
+              },
+            },
+          },
+          include: {
+            ingredient: {
+              select: {
+                id: true,
+                name: true,
+              },
+            },
+          },
+          orderBy: [
+            { categoryId: "asc" },
+            { ingredient: { name: "asc" } },
+          ],
+        })
+      : [];
+
+    const extrasByCategory = extrasRows.reduce((acc, row) => {
+      if (!acc[row.categoryId]) acc[row.categoryId] = [];
+      acc[row.categoryId].push({
+        ingredientId: row.ingredientId,
+        name: row.ingredient?.name || `Ingrediente ${row.ingredientId}`,
+        price: Number(row.price || 0),
+      });
+      return acc;
+    }, {});
+
+    const menu = availablePizzas.map((pizza) => ({
+      pizzaId: pizza.id,
+      name: pizza.name,
+      categoryId: pizza.categoryId ?? null,
+      category: pizza.categoryRef?.name ?? pizza.category ?? null,
+      selectSize: pizza.selectSize ?? [],
+      priceBySize: pizza.priceBySize ?? {},
+      image: pizza.image ?? null,
+      ingredients: (pizza.ingredients || []).map((rel) => ({
+        id: rel.ingredient.id,
+        name: rel.ingredient.name,
+        qtyBySize: rel.qtyBySize ?? {},
+      })),
+      extras: extrasByCategory[pizza.categoryId] || [],
+      available: true,
+    }));
+
+    res.json({
+      store: {
+        id: store.id,
+        storeName: store.storeName,
+        slug: store.slug,
+        city: store.city,
+      },
+      menu,
+    });
   } catch (e) {
     console.error("GET MENU ERROR:", e);
     res.status(500).json({ error: e.message });
   }
 });
+
 router.get("/:partnerSlug/:storeSlug", async (req, res) => {
   try {
     const { partnerSlug, storeSlug } = req.params;
 
-    // 🔥 1. buscar partner
     const partner = await prisma.partner.findUnique({
       where: { slug: partnerSlug },
     });
@@ -80,7 +218,6 @@ router.get("/:partnerSlug/:storeSlug", async (req, res) => {
       return res.status(404).json({ error: "Partner not found" });
     }
 
-    // 🔥 2. buscar store
     const store = await prisma.store.findFirst({
       where: {
         slug: storeSlug,
@@ -101,6 +238,7 @@ router.get("/:partnerSlug/:storeSlug", async (req, res) => {
     res.status(500).json({ error: e.message });
   }
 });
+
 router.post("/", async (req, res) => {
   try {
     const { storeName, slug, partnerId, address } = req.body;

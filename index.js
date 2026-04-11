@@ -12,6 +12,7 @@ import partnerCategoriesRoutes from "./routes/partnerCategories.js";
 import pizzasRoutes from "./routes/pizzas.js";
 import menuDisponibleRoutes from "./routes/menuDisponible.js";
 import basesPizzasRoutes from "./routes/basesPizzas.js";
+import ingredientExtrasRoutes from "./routes/ingredientExtras.js";
 
 const app = express();
 const prisma = new PrismaClient();
@@ -61,6 +62,7 @@ app.use("/ingredients", ingredientsRoutes);
 app.use("/api/categories", categoriesRoutes);
 app.use("/api", partnerCategoriesRoutes(prisma));
 app.use("/api/pizzas", pizzasRoutes(prisma));
+app.use("/api/ingredient-extras", ingredientExtrasRoutes(prisma));
 app.use("/api/menuDisponible", menuDisponibleRoutes(prisma));
 app.use("/api/bases-pizzas", basesPizzasRoutes(prisma));
 

@@ -7,11 +7,7 @@ const computeProductStatus = (ingredientsAll) => {
     const ingredient = rel?.ingredient;
     const storeStock = ingredient?.storeStocks?.[0];
 
-    return (
-      ingredient?.status === "ACTIVE" &&
-      storeStock?.active === true &&
-      Number(storeStock?.stock ?? 0) > 0
-    );
+    return ingredient?.status === "ACTIVE" && storeStock?.active === true;
   });
 
   return { available };
@@ -32,83 +28,81 @@ export default function menuDisponibleRoutes(prisma) {
 
       if (!store) return res.json([]);
 
-      const enabledPartnerCategories = await prisma.partnerCategory.findMany({
-        where: {
-          partnerId: store.partnerId,
-          enabled: true,
-        },
-        select: { categoryId: true },
-      });
+      let enabledPartnerCategories = [];
+
+      if (prisma.partnerCategory) {
+        try {
+          enabledPartnerCategories = await prisma.partnerCategory.findMany({
+            where: {
+              partnerId: store.partnerId,
+              enabled: true,
+            },
+            select: { categoryId: true },
+          });
+        } catch (partnerCategoryError) {
+          console.error(
+            "menuDisponible partnerCategory fallback:",
+            partnerCategoryError?.message || partnerCategoryError
+          );
+          enabledPartnerCategories = [];
+        }
+      }
 
       const enabledCategoryIds = enabledPartnerCategories.map(
         (row) => row.categoryId
       );
 
-      const rows = await prisma.storePizzaStock.findMany({
+      const rows = await prisma.menuPizza.findMany({
         where: {
-          storeId,
-          active: true,
-          pizza: {
-            status: "ACTIVE",
-            type: "SELLABLE",
-            ...(enabledCategoryIds.length
-              ? { categoryId: { in: enabledCategoryIds } }
-              : { categoryId: null }),
-          },
+          partnerId: store.partnerId,
+          status: "ACTIVE",
+          type: "SELLABLE",
+          ...(enabledCategoryIds.length
+            ? { categoryId: { in: enabledCategoryIds } }
+            : {}),
         },
         select: {
-          pizzaId: true,
-          stock: true,
-          active: true,
-          pizza: {
+          id: true,
+          name: true,
+          category: true,
+          categoryId: true,
+          categoryRef: {
             select: {
+              id: true,
               name: true,
-              category: true,
-              categoryId: true,
-              categoryRef: {
+            },
+          },
+          selectSize: true,
+          priceBySize: true,
+          image: true,
+          ingredients: {
+            select: {
+              qtyBySize: true,
+              ingredient: {
                 select: {
                   id: true,
                   name: true,
-                },
-              },
-              selectSize: true,
-              priceBySize: true,
-              image: true,
-              ingredients: {
-                select: {
-                  qtyBySize: true,
-                  ingredient: {
-                    select: {
-                      id: true,
-                      name: true,
-                      status: true,
-                      storeStocks: {
-                        where: { storeId },
-                        select: { active: true, stock: true },
-                      },
-                    },
+                  status: true,
+                  storeStocks: {
+                    where: { storeId },
+                    select: { active: true, stock: true },
                   },
                 },
               },
             },
           },
         },
-        orderBy: { pizzaId: "asc" },
+        orderBy: { id: "asc" },
       });
 
       const menu = rows
         .map((row) => {
-          if (!row?.pizza) return null;
-
-          const ingredientsAll = Array.isArray(row.pizza.ingredients)
-            ? row.pizza.ingredients
+          const ingredientsAll = Array.isArray(row.ingredients)
+            ? row.ingredients
             : [];
 
           const recipeStatus = computeProductStatus(ingredientsAll);
           if (!recipeStatus.available) return null;
-
-          const hasStock = row.stock == null || Number(row.stock) > 0;
-          if (!hasStock) return null;
 
           const visibleIngredients = ingredientsAll.filter((rel) => {
             const ing = rel.ingredient;
@@ -117,14 +111,13 @@ export default function menuDisponibleRoutes(prisma) {
           });
 
           return {
-            pizzaId: row.pizzaId,
-            stock: row.stock ?? null,
-            name: row.pizza.name,
-            categoryId: row.pizza.categoryId ?? null,
-            category: row.pizza.categoryRef?.name ?? row.pizza.category ?? null,
-            selectSize: row.pizza.selectSize ?? [],
-            priceBySize: row.pizza.priceBySize ?? {},
-            image: row.pizza.image ?? null,
+            pizzaId: row.id,
+            name: row.name,
+            categoryId: row.categoryId ?? null,
+            category: row.categoryRef?.name ?? row.category ?? null,
+            selectSize: row.selectSize ?? [],
+            priceBySize: row.priceBySize ?? {},
+            image: row.image ?? null,
             ingredients: visibleIngredients.map((rel) => ({
               id: rel.ingredient.id,
               name: rel.ingredient.name,
