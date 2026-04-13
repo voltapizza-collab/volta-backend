@@ -30,6 +30,10 @@ enum DeliveryMethod {
   MARKETPLACE
   OTHER
 }
+enum DeliveryPricingMode {
+  FIXED
+  VARIABLE
+}
 enum OrderStatus {
   PENDING
   AWAITING_PAYMENT
@@ -116,6 +120,20 @@ model Partner {
   country   String
   currency  String
   active    Boolean  @default(true)
+  deliveryRadiusKm    Float?
+  deliveryPricingMode DeliveryPricingMode @default(FIXED)
+  deliveryFeeBlockSize Int? @default(5)
+  deliveryMaxPizzasPerOrder Int?
+  deliveryFeeFixed    Float?
+  deliveryFeeBase     Float?
+  deliveryBaseKm      Float?
+  deliveryExtraPerKm  Float?
+  brandPrimary        String?
+  brandSecondary      String?
+  brandAccent         String?
+  brandSurface        String?
+  brandLogoUrl        String? @db.Text
+  brandLogoPublicId   String?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
   stores             Store[]

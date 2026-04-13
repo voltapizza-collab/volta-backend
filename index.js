@@ -1,6 +1,9 @@
 import express from "express";
 import cors from "cors";
 import { PrismaClient } from "@prisma/client";
+import fs from "fs";
+import path from "path";
+import { fileURLToPath } from "url";
 
 import storesRoutes from "./routes/stores.js";
 import partnersRoutes from "./routes/partners.js";
@@ -13,6 +16,31 @@ import pizzasRoutes from "./routes/pizzas.js";
 import menuDisponibleRoutes from "./routes/menuDisponible.js";
 import basesPizzasRoutes from "./routes/basesPizzas.js";
 import ingredientExtrasRoutes from "./routes/ingredientExtras.js";
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+const envPath = path.join(__dirname, ".env");
+
+if (fs.existsSync(envPath)) {
+  const envLines = fs.readFileSync(envPath, "utf8").split(/\r?\n/);
+
+  envLines.forEach((line) => {
+    const trimmedLine = line.trim();
+
+    if (!trimmedLine || trimmedLine.startsWith("#")) return;
+
+    const separatorIndex = trimmedLine.indexOf("=");
+    if (separatorIndex === -1) return;
+
+    const key = trimmedLine.slice(0, separatorIndex).trim();
+    const rawValue = trimmedLine.slice(separatorIndex + 1).trim();
+    const normalizedValue = rawValue.replace(/^"(.*)"$/, "$1");
+
+    if (!(key in process.env)) {
+      process.env[key] = normalizedValue;
+    }
+  });
+}
 
 const app = express();
 const prisma = new PrismaClient();

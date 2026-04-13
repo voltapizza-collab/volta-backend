@@ -48,50 +48,16 @@ router.get("/:partnerSlug/:storeSlug/menu", async (req, res) => {
       return res.status(404).json({ error: "Store not found" });
     }
 
-    let enabledPartnerCategories = [];
-
-    if (prisma.partnerCategory) {
-      try {
-        enabledPartnerCategories = await prisma.partnerCategory.findMany({
-          where: {
-            partnerId: store.partnerId,
-            enabled: true,
-          },
-          select: { categoryId: true },
-        });
-      } catch (partnerCategoryError) {
-        console.error(
-          "GET MENU partnerCategory fallback:",
-          partnerCategoryError?.message || partnerCategoryError
-        );
-        enabledPartnerCategories = [];
-      }
-    }
-
-    const enabledCategoryIds = enabledPartnerCategories.map(
-      (row) => row.categoryId
-    );
-
     const pizzas = await prisma.menuPizza.findMany({
       where: {
         partnerId: store.partnerId,
         status: "ACTIVE",
         type: "SELLABLE",
-        ...(enabledCategoryIds.length
-          ? { categoryId: { in: enabledCategoryIds } }
-          : {}),
       },
       select: {
         id: true,
         name: true,
         category: true,
-        categoryId: true,
-        categoryRef: {
-          select: {
-            id: true,
-            name: true,
-          },
-        },
         selectSize: true,
         priceBySize: true,
         image: true,
@@ -125,60 +91,11 @@ router.get("/:partnerSlug/:storeSlug/menu", async (req, res) => {
       });
     });
 
-    const categoryIds = [
-      ...new Set(
-        availablePizzas
-          .map((pizza) => pizza.categoryId)
-          .filter((categoryId) => Number.isInteger(categoryId))
-      ),
-    ];
-
-    const extrasRows = categoryIds.length
-      ? await prisma.ingredientExtra.findMany({
-          where: {
-            partnerId: store.partnerId,
-            status: "ACTIVE",
-            categoryId: { in: categoryIds },
-            ingredient: {
-              status: "ACTIVE",
-              storeStocks: {
-                some: {
-                  storeId: store.id,
-                  active: true,
-                },
-              },
-            },
-          },
-          include: {
-            ingredient: {
-              select: {
-                id: true,
-                name: true,
-              },
-            },
-          },
-          orderBy: [
-            { categoryId: "asc" },
-            { ingredient: { name: "asc" } },
-          ],
-        })
-      : [];
-
-    const extrasByCategory = extrasRows.reduce((acc, row) => {
-      if (!acc[row.categoryId]) acc[row.categoryId] = [];
-      acc[row.categoryId].push({
-        ingredientId: row.ingredientId,
-        name: row.ingredient?.name || `Ingrediente ${row.ingredientId}`,
-        price: Number(row.price || 0),
-      });
-      return acc;
-    }, {});
-
     const menu = availablePizzas.map((pizza) => ({
       pizzaId: pizza.id,
       name: pizza.name,
-      categoryId: pizza.categoryId ?? null,
-      category: pizza.categoryRef?.name ?? pizza.category ?? null,
+      categoryId: null,
+      category: pizza.category ?? null,
       selectSize: pizza.selectSize ?? [],
       priceBySize: pizza.priceBySize ?? {},
       image: pizza.image ?? null,
@@ -187,7 +104,7 @@ router.get("/:partnerSlug/:storeSlug/menu", async (req, res) => {
         name: rel.ingredient.name,
         qtyBySize: rel.qtyBySize ?? {},
       })),
-      extras: extrasByCategory[pizza.categoryId] || [],
+      extras: [],
       available: true,
     }));
 
