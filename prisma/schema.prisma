@@ -132,6 +132,9 @@ model Partner {
   brandSecondary      String?
   brandAccent         String?
   brandSurface        String?
+  brandTextColor      String?
+  brandFontFamily     String?
+  brandOfferButtonStyle String?
   brandLogoUrl        String? @db.Text
   brandLogoPublicId   String?
   createdAt DateTime @default(now())
