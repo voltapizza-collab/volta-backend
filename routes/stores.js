@@ -114,6 +114,8 @@ router.get("/:partnerSlug/:storeSlug/menu", async (req, res) => {
         storeName: store.storeName,
         slug: store.slug,
         city: store.city,
+        tlf: store.tlf,
+        acceptsReservations: store.acceptsReservations,
       },
       menu,
     });
