@@ -1,7 +1,12 @@
 import express from "express";
 
-const computeProductStatus = (ingredientsAll) => {
+const computeProductStatus = (pizzaStock, ingredientsAll) => {
   const ingredients = Array.isArray(ingredientsAll) ? ingredientsAll : [];
+  const storePizzaState = pizzaStock?.[0];
+
+  if (!storePizzaState || storePizzaState.active !== true) {
+    return { available: false };
+  }
 
   const available = ingredients.every((rel) => {
     const ingredient = rel?.ingredient;
@@ -72,13 +77,20 @@ export default function menuDisponibleRoutes(prisma) {
               name: true,
             },
           },
-          selectSize: true,
-          priceBySize: true,
-          image: true,
-          ingredients: {
-            select: {
-              qtyBySize: true,
-              ingredient: {
+        selectSize: true,
+        priceBySize: true,
+        image: true,
+        stocks: {
+          where: { storeId },
+          select: {
+            active: true,
+            stock: true,
+          },
+        },
+        ingredients: {
+          select: {
+            qtyBySize: true,
+            ingredient: {
                 select: {
                   id: true,
                   name: true,
@@ -100,8 +112,9 @@ export default function menuDisponibleRoutes(prisma) {
           const ingredientsAll = Array.isArray(row.ingredients)
             ? row.ingredients
             : [];
+          const pizzaStock = Array.isArray(row.stocks) ? row.stocks : [];
 
-          const recipeStatus = computeProductStatus(ingredientsAll);
+          const recipeStatus = computeProductStatus(pizzaStock, ingredientsAll);
           if (!recipeStatus.available) return null;
 
           const visibleIngredients = ingredientsAll.filter((rel) => {
@@ -118,6 +131,7 @@ export default function menuDisponibleRoutes(prisma) {
             selectSize: row.selectSize ?? [],
             priceBySize: row.priceBySize ?? {},
             image: row.image ?? null,
+            stock: pizzaStock?.[0]?.stock ?? null,
             ingredients: visibleIngredients.map((rel) => ({
               id: rel.ingredient.id,
               name: rel.ingredient.name,

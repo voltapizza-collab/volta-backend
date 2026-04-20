@@ -63,6 +63,65 @@ const zeroStockForNewPizza = async (prisma, pizzaId, partnerId) => {
   });
 };
 
+const assertIngredientsAvailableForStore = async (
+  prisma,
+  storeId,
+  partnerId,
+  ingredients
+) => {
+  if (!storeId) return;
+
+  const parsedStoreId = Number(storeId);
+
+  if (!Number.isInteger(parsedStoreId) || parsedStoreId <= 0) {
+    const error = new Error("Invalid storeId");
+    error.status = 400;
+    throw error;
+  }
+
+  const store = await prisma.store.findFirst({
+    where: {
+      id: parsedStoreId,
+      partnerId,
+    },
+    select: { id: true },
+  });
+
+  if (!store) {
+    const error = new Error("Store not found for partner");
+    error.status = 404;
+    throw error;
+  }
+
+  const ingredientIds = [...new Set(
+    (Array.isArray(ingredients) ? ingredients : [])
+      .map((item) => Number(item?.id))
+      .filter((id) => Number.isInteger(id) && id > 0)
+  )];
+
+  if (!ingredientIds.length) return;
+
+  const storeIngredients = await prisma.storeIngredientStock.findMany({
+    where: {
+      storeId: parsedStoreId,
+      ingredientId: { in: ingredientIds },
+      active: true,
+    },
+    select: { ingredientId: true },
+  });
+
+  const availableIds = new Set(storeIngredients.map((item) => item.ingredientId));
+  const missingIds = ingredientIds.filter((id) => !availableIds.has(id));
+
+  if (missingIds.length) {
+    const error = new Error(
+      `Some ingredients are not active in store inventory: ${missingIds.join(", ")}`
+    );
+    error.status = 400;
+    throw error;
+  }
+};
+
 const mapPizza = (pizza) => ({
   ...pizza,
   categoryId: pizza.categoryId ?? null,
@@ -131,6 +190,7 @@ export default function pizzasRoutes(prisma) {
       const {
         name,
         partnerId,
+        storeId,
         categoryId,
         sizes,
         priceBySize,
@@ -162,6 +222,13 @@ export default function pizzasRoutes(prisma) {
       const parsedSizes = parseMaybeJson(sizes, []);
       const parsedPrices = parseMaybeJson(priceBySize, {});
       const parsedIngredients = parseMaybeJson(ingredients, []);
+
+      await assertIngredientsAvailableForStore(
+        prisma,
+        storeId,
+        parsedPartnerId,
+        parsedIngredients
+      );
 
       const ingredientRelations = parsedIngredients
         .filter((x) => Number(x?.id))
@@ -238,6 +305,13 @@ export default function pizzasRoutes(prisma) {
       const parsedSizes = parseMaybeJson(req.body.sizes, []);
       const parsedPrices = parseMaybeJson(req.body.priceBySize, {});
       const parsedIngredients = parseMaybeJson(req.body.ingredients, []);
+
+      await assertIngredientsAvailableForStore(
+        prisma,
+        req.body.storeId,
+        existing.partnerId,
+        parsedIngredients
+      );
 
       let nextCategoryId = existing.categoryId ?? null;
       let nextCategoryName = existing.category ?? null;

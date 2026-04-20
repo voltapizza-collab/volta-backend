@@ -98,6 +98,10 @@ enum CustomerSegment {
   S3 // Activo:   última ≤ 30 días
   S4 // CMV:      S3 y ticket medio > ticket medio empresa
 }
+enum CustomerActivity {
+  HOT
+  COLD
+}
 enum IngredientStatus {
   ACTIVE
   INACTIVE
@@ -367,12 +371,14 @@ model Customer {
   observations      String?
   lat               Float?
   lng               Float?
+  zipCode           String?
 
   origin            CustomerOrigin      @default(PHONE)
   createdAt         DateTime            @default(now())
   updatedAt         DateTime            @updatedAt
 
   daysOff           Int?
+  activity          CustomerActivity    @default(HOT)
   isRestricted      Boolean             @default(false)
   restrictedAt      DateTime?
   restrictionReason String?

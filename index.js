@@ -16,6 +16,9 @@ import pizzasRoutes from "./routes/pizzas.js";
 import menuDisponibleRoutes from "./routes/menuDisponible.js";
 import basesPizzasRoutes from "./routes/basesPizzas.js";
 import ingredientExtrasRoutes from "./routes/ingredientExtras.js";
+import stockRoutes from "./routes/stock.js";
+import storeHoursRoutes from "./routes/storeHours.js";
+import customersRoutes from "./routes/customers.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -44,6 +47,10 @@ if (fs.existsSync(envPath)) {
 
 const app = express();
 const prisma = new PrismaClient();
+const storesRouter = storesRoutes(prisma);
+const stockRouter = stockRoutes(prisma);
+const storeHoursRouter = storeHoursRoutes(prisma);
+const customersRouter = customersRoutes(prisma);
 
 const envOrigins = (process.env.CORS_ORIGINS || "")
   .split(",")
@@ -83,10 +90,18 @@ app.use(
 );
 
 app.use("/stores/:storeId/ingredients", storeIngredientsRoutes);
-app.use("/stores", storesRoutes);
+app.use("/api/stores/:storeId/ingredients", storeIngredientsRoutes);
+app.use("/stores", storesRouter);
+app.use("/api/stores", storesRouter);
 app.use("/partners", partnersRoutes);
 app.use("/admin", adminRoutes);
 app.use("/ingredients", ingredientsRoutes);
+app.use("/customers", customersRouter);
+app.use("/api/customers", customersRouter);
+app.use("/stock", stockRouter);
+app.use("/api/stock", stockRouter);
+app.use("/store-hours", storeHoursRouter);
+app.use("/api/store-hours", storeHoursRouter);
 app.use("/api/categories", categoriesRoutes);
 app.use("/api", partnerCategoriesRoutes(prisma));
 app.use("/api/pizzas", pizzasRoutes(prisma));
