@@ -13,7 +13,7 @@ const BACKUP_DIR = process.env.BACKUP_DIR || "_db_backups";
 const BACKUP_RETENTION = parseInt(process.env.BACKUP_RETENTION || "7");
 
 /* ===============================
-   PARSE DATABASE_URL (CLAVE)
+   PARSE DATABASE_URL 
 ================================ */
 function parseDatabaseUrl(url) {
   const parsed = new URL(url);
