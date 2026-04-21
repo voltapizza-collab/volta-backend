@@ -1,0 +1,2 @@
+ALTER TABLE `Coupon`
+ADD COLUMN `minAmount` DECIMAL(10, 2) NULL;

@@ -19,6 +19,7 @@ import ingredientExtrasRoutes from "./routes/ingredientExtras.js";
 import stockRoutes from "./routes/stock.js";
 import storeHoursRoutes from "./routes/storeHours.js";
 import customersRoutes from "./routes/customers.js";
+import couponsRoutes from "./routes/coupons.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -51,6 +52,7 @@ const storesRouter = storesRoutes(prisma);
 const stockRouter = stockRoutes(prisma);
 const storeHoursRouter = storeHoursRoutes(prisma);
 const customersRouter = customersRoutes(prisma);
+const couponsRouter = couponsRoutes(prisma);
 
 const envOrigins = (process.env.CORS_ORIGINS || "")
   .split(",")
@@ -108,6 +110,7 @@ app.use("/api/pizzas", pizzasRoutes(prisma));
 app.use("/api/ingredient-extras", ingredientExtrasRoutes(prisma));
 app.use("/api/menuDisponible", menuDisponibleRoutes(prisma));
 app.use("/api/bases-pizzas", basesPizzasRoutes(prisma));
+app.use("/api/coupons", couponsRouter);
 
 
 app.get("/", (req, res) => {

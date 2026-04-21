@@ -30,9 +30,11 @@ const createWhereByPartner = (partnerId, extra = {}) => ({
 });
 
 const extractZipCode = (value) => {
-  const match = String(value || "").match(/\b(32\d{3})\b/);
+  const match = String(value || "").match(/\b(\d{5})\b/);
   return match ? match[1] : null;
 };
+
+const CUSTOMER_SEGMENTS = ["S1", "S2", "S3", "S4", "S5"];
 
 const getCustomerActivity = (daysOff) =>
   Number(daysOff || 0) > COLD_DAYS_THRESHOLD ? "COLD" : "HOT";
@@ -106,7 +108,9 @@ export default function customersRoutes(prisma) {
   router.get("/admin", async (req, res) => {
     const partnerId = parsePositiveInt(req.query.partnerId);
     const query = String(req.query.q || "").trim();
+    const zip = String(req.query.zip || "").trim();
     const segment = String(req.query.segment || "").trim().toUpperCase();
+    const temperature = String(req.query.temperature || "").trim().toUpperCase();
     const take = Math.min(parsePositiveInt(req.query.take) || 50, 200);
     const skip = Math.max(Number(req.query.skip) || 0, 0);
 
@@ -123,9 +127,22 @@ export default function customersRoutes(prisma) {
       extraWhere.phone = { contains: digits };
     }
 
+    if (zip) {
+      extraWhere.OR = [
+        { zipCode: zip },
+        { address_1: { contains: zip } },
+      ];
+    }
+
     // 🔥 filtro por segmento
-    if (segment && ["S1", "S2", "S3", "S4"].includes(segment)) {
+    if (segment && CUSTOMER_SEGMENTS.includes(segment)) {
       extraWhere.segment = segment;
+    }
+
+    if (temperature === "COLD") {
+      extraWhere.daysOff = { gt: COLD_DAYS_THRESHOLD };
+    } else if (temperature === "HOT") {
+      extraWhere.daysOff = { lte: COLD_DAYS_THRESHOLD };
     }
 
     const where = createWhereByPartner(partnerId, extraWhere);
@@ -142,6 +159,7 @@ export default function customersRoutes(prisma) {
             phone: true,
             email: true,
             address_1: true,
+            zipCode: true,
             portal: true,
             observations: true,
             isRestricted: true,
@@ -207,7 +225,7 @@ export default function customersRoutes(prisma) {
     }
 
     try {
-      const [bySeg, total, restricted] = await Promise.all([
+      const [bySeg, total, restricted, cold, zipRows] = await Promise.all([
         prisma.customer.groupBy({
           by: ["segment"],
           where: { partnerId },
@@ -220,9 +238,27 @@ export default function customersRoutes(prisma) {
             isRestricted: true,
           },
         }),
+        prisma.customer.count({
+          where: {
+            partnerId,
+            daysOff: { gt: COLD_DAYS_THRESHOLD },
+          },
+        }),
+        prisma.customer.findMany({
+          where: { partnerId },
+          select: {
+            zipCode: true,
+            address_1: true,
+          },
+        }),
       ]);
 
-      const counts = { S1: 0, S2: 0, S3: 0, S4: 0 };
+      const counts = { S1: 0, S2: 0, S3: 0, S4: 0, S5: 0 };
+      const zipCodes = [...new Set(
+        zipRows
+          .map((row) => row.zipCode || extractZipCode(row.address_1))
+          .filter(Boolean)
+      )].sort((left, right) => String(left).localeCompare(String(right)));
 
       bySeg.forEach((row) => {
         if (row.segment && Object.prototype.hasOwnProperty.call(counts, row.segment)) {
@@ -237,6 +273,11 @@ export default function customersRoutes(prisma) {
           restricted,
           unrestricted: Math.max(total - restricted, 0),
         },
+        temperature: {
+          cold,
+          hot: Math.max(total - cold, 0),
+        },
+        zipCodes,
         updatedAt: new Date().toISOString(),
       });
     } catch (error) {
@@ -310,19 +351,12 @@ export default function customersRoutes(prisma) {
         },
       });
 
-      const totals = sales
-        .map((sale) => Number(sale.total))
-        .filter((value) => Number.isFinite(value) && value > 0);
-
-      const companyAvg = totals.length
-        ? totals.reduce((acc, value) => acc + value, 0) / totals.length
-        : 0;
-
       const customers = await prisma.customer.findMany({
         where: { partnerId },
         select: {
           id: true,
           segment: true,
+          daysOff: true,
           sales: {
             select: {
               total: true,
@@ -332,53 +366,62 @@ export default function customersRoutes(prisma) {
         },
       });
 
-      const nowMs = Date.now();
       const updates = [];
-      const counts = { S1: 0, S2: 0, S3: 0, S4: 0 };
+      const counts = { S1: 0, S2: 0, S3: 0, S4: 0, S5: 0 };
       let changed = 0;
 
       customers.forEach((customer) => {
-        const rows = customer.sales || [];
+        const rows = (customer.sales || [])
+          .map((row) => ({
+            total: Number(row.total || 0),
+            createdAt: row.createdAt,
+          }))
+          .filter((row) => Number.isFinite(row.total) && row.total > 0)
+          .sort((left, right) => new Date(right.createdAt).getTime() - new Date(left.createdAt).getTime());
+
         const orders = rows.length;
-        const lastDate = rows.reduce((latest, row) => {
-          if (!row.createdAt) return latest;
-          if (!latest || row.createdAt > latest) return row.createdAt;
-          return latest;
-        }, null);
-
-        const days = lastDate
-          ? Math.floor((nowMs - new Date(lastDate).getTime()) / (1000 * 60 * 60 * 24))
-          : Infinity;
-
-        const sum = rows.reduce((acc, row) => acc + Number(row.total || 0), 0);
+        const sum = rows.reduce((acc, row) => acc + row.total, 0);
         const avg = orders ? sum / orders : 0;
+        const lastTicket = rows[0]?.total || 0;
+        const targetTicket = avg * 1.15;
 
         let segment = "S1";
-        if (orders <= 1) segment = "S1";
-        else if (days > 30) segment = "S2";
-        else segment = avg > companyAvg ? "S4" : "S3";
+        if (orders === 0) {
+          segment = "S1";
+        } else if (orders === 1) {
+          segment = "S2";
+        } else if (lastTicket >= targetTicket) {
+          segment = "S5";
+        } else if (lastTicket < avg) {
+          segment = "S3";
+        } else {
+          segment = "S4";
+        }
 
         counts[segment] += 1;
+        const activity = getCustomerActivity(customer.daysOff);
 
         if (segment !== customer.segment) {
           changed += 1;
-          updates.push(
-            prisma.customer.update({
-              where: { id: customer.id },
-              data: {
-                segment,
-                segmentUpdatedAt: new Date(),
-              },
-            })
-          );
         }
+
+        updates.push(
+          prisma.customer.update({
+            where: { id: customer.id },
+            data: {
+              segment,
+              activity,
+              segmentUpdatedAt: new Date(),
+            },
+          })
+        );
       });
 
       if (updates.length) {
         await prisma.$transaction(updates);
       }
 
-      return res.json({ ok: true, companyAvg, changed, counts });
+      return res.json({ ok: true, changed, counts });
     } catch (error) {
       console.error("[CUSTOMERS /resegment] error:", error);
       return res.status(500).json({

@@ -93,10 +93,11 @@ enum CouponVisibility {
   RESERVED
 }
 enum CustomerSegment {
-  S1 // Potencial: 0–1 compras
-  S2 // Inactivo: >1 compras y última > 30 días
-  S3 // Activo:   última ≤ 30 días
-  S4 // CMV:      S3 y ticket medio > ticket medio empresa
+  S1 // Potencial: 0 compras
+  S2 // Nuevo: 1 compra
+  S3 // Dormido: 2+ compras y ticket ultima compra < ticket medio historico
+  S4 // Activo: 2+ compras y ticket ultima compra >= ticket medio historico
+  S5 // VIP: 2+ compras y ticket ultima compra >= ticket objetivo (ticket medio * 1.15)
 }
 enum CustomerActivity {
   HOT
@@ -467,6 +468,7 @@ model Coupon {
   variant      CouponVariant        @default(FIXED)
   percent      Int?
   amount       Decimal?             @db.Decimal(10, 2)
+  minAmount    Decimal?             @db.Decimal(10, 2)
   percentMin   Int?
   percentMax   Int?
   maxAmount    Decimal?             @db.Decimal(10, 2)
