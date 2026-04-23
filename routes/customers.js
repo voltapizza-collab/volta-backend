@@ -34,10 +34,136 @@ const extractZipCode = (value) => {
   return match ? match[1] : null;
 };
 
+const resolveCustomerZipCode = (address, explicitZip) => {
+  const directZip = String(explicitZip || "").trim();
+  if (directZip) return directZip;
+  return extractZipCode(address);
+};
+
+const normalizeComparableText = (value = "") =>
+  String(value || "")
+    .trim()
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "");
+
+const postalAreaKey = (postalCode) => {
+  const digits = String(postalCode || "").replace(/\D/g, "");
+  return digits.length >= 3 ? digits.slice(0, 3) : "";
+};
+
 const CUSTOMER_SEGMENTS = ["S1", "S2", "S3", "S4", "S5"];
 
 const getCustomerActivity = (daysOff) =>
   Number(daysOff || 0) > COLD_DAYS_THRESHOLD ? "COLD" : "HOT";
+
+async function buildCustomerWhere(prisma, filters) {
+  const {
+    partnerId,
+    query = "",
+    zip = "",
+    storeId = null,
+    country = "",
+    segment = "",
+    temperature = "",
+  } = filters;
+
+  const digits = String(query || "").replace(/\D/g, "");
+  const extraWhere = {};
+  const andFilters = [];
+
+  if (digits) {
+    extraWhere.phone = { contains: digits };
+  }
+
+  if (zip) {
+    andFilters.push({
+      OR: [
+        { zipCode: zip },
+        { address_1: { contains: zip } },
+      ],
+    });
+  }
+
+  if (segment && CUSTOMER_SEGMENTS.includes(segment)) {
+    extraWhere.segment = segment;
+  }
+
+  if (temperature === "COLD") {
+    extraWhere.daysOff = { gt: COLD_DAYS_THRESHOLD };
+  } else if (temperature === "HOT") {
+    extraWhere.daysOff = { lte: COLD_DAYS_THRESHOLD };
+  }
+
+  if (storeId) {
+    const selectedStore = await prisma.store.findFirst({
+      where: {
+        id: storeId,
+        partnerId,
+      },
+      select: {
+        id: true,
+        zipCode: true,
+        city: true,
+      },
+    });
+
+    if (!selectedStore) {
+      return { where: null, empty: true };
+    }
+
+    const storeZip = String(selectedStore.zipCode || "").trim();
+    const storeArea = postalAreaKey(storeZip);
+    const storeCity = normalizeComparableText(selectedStore.city || "");
+
+    andFilters.push({
+      OR: [
+        {
+          sales: {
+            some: {
+              storeId,
+            },
+          },
+        },
+        ...(storeZip
+          ? [
+              { zipCode: storeZip },
+              { address_1: { contains: storeZip } },
+            ]
+          : []),
+        ...(storeArea
+          ? [
+              { zipCode: { startsWith: storeArea } },
+              { address_1: { contains: storeArea } },
+            ]
+          : []),
+        ...(storeCity
+          ? [{ address_1: { contains: storeCity, mode: "insensitive" } }]
+          : []),
+      ],
+    });
+  }
+
+  if (country) {
+    const partner = await prisma.partner.findUnique({
+      where: { id: partnerId },
+      select: { country: true },
+    });
+
+    if (!partner || String(partner.country || "").trim().toUpperCase() !== country) {
+      return { where: null, empty: true };
+    }
+  }
+
+  if (andFilters.length) {
+    extraWhere.AND = andFilters;
+  }
+
+  return {
+    where: createWhereByPartner(partnerId, extraWhere),
+    empty: false,
+  };
+}
 
 export default function customersRoutes(prisma) {
   const router = express.Router();
@@ -89,7 +215,9 @@ export default function customersRoutes(prisma) {
           id: true,
           partnerId: true,
           name: true,
+          phone: true,
           address_1: true,
+          zipCode: true,
           lat: true,
           lng: true,
           daysOff: true,
@@ -109,6 +237,8 @@ export default function customersRoutes(prisma) {
     const partnerId = parsePositiveInt(req.query.partnerId);
     const query = String(req.query.q || "").trim();
     const zip = String(req.query.zip || "").trim();
+    const storeId = parsePositiveInt(req.query.storeId);
+    const country = String(req.query.country || "").trim().toUpperCase();
     const segment = String(req.query.segment || "").trim().toUpperCase();
     const temperature = String(req.query.temperature || "").trim().toUpperCase();
     const take = Math.min(parsePositiveInt(req.query.take) || 50, 200);
@@ -121,6 +251,7 @@ export default function customersRoutes(prisma) {
     const digits = query.replace(/\D/g, "");
 
     const extraWhere = {};
+    const andFilters = [];
 
     // filtro por phone
     if (digits) {
@@ -128,10 +259,12 @@ export default function customersRoutes(prisma) {
     }
 
     if (zip) {
-      extraWhere.OR = [
+      andFilters.push({
+        OR: [
         { zipCode: zip },
         { address_1: { contains: zip } },
-      ];
+        ],
+      });
     }
 
     // 🔥 filtro por segmento
@@ -145,9 +278,75 @@ export default function customersRoutes(prisma) {
       extraWhere.daysOff = { lte: COLD_DAYS_THRESHOLD };
     }
 
-    const where = createWhereByPartner(partnerId, extraWhere);
-
     try {
+      let selectedStore = null;
+
+      if (storeId) {
+        selectedStore = await prisma.store.findFirst({
+          where: {
+            id: storeId,
+            partnerId,
+          },
+          select: {
+            id: true,
+            zipCode: true,
+            city: true,
+          },
+        });
+
+        if (!selectedStore) {
+          return res.json({ items: [], total: 0, skip, take });
+        }
+
+        const storeZip = String(selectedStore.zipCode || "").trim();
+        const storeArea = postalAreaKey(storeZip);
+        const storeCity = normalizeComparableText(selectedStore.city || "");
+
+        andFilters.push({
+          OR: [
+          {
+            sales: {
+              some: {
+                storeId,
+              },
+            },
+          },
+          ...(storeZip
+            ? [
+                { zipCode: storeZip },
+                { address_1: { contains: storeZip } },
+              ]
+            : []),
+          ...(storeArea
+            ? [
+                { zipCode: { startsWith: storeArea } },
+                { address_1: { contains: storeArea } },
+              ]
+            : []),
+          ...(storeCity
+            ? [{ address_1: { contains: storeCity, mode: "insensitive" } }]
+            : []),
+          ],
+        });
+      }
+
+      if (country) {
+        const partner = await prisma.partner.findUnique({
+          where: { id: partnerId },
+          select: { country: true },
+        });
+
+        if (!partner || String(partner.country || "").trim().toUpperCase() !== country) {
+          return res.json({ items: [], total: 0, skip, take });
+        }
+      }
+
+      if (andFilters.length) {
+        extraWhere.AND = andFilters;
+      }
+
+      const where = createWhereByPartner(partnerId, extraWhere);
+
       const [items, total] = await Promise.all([
         prisma.customer.findMany({
           where,
@@ -530,6 +729,7 @@ export default function customersRoutes(prisma) {
       }
 
       const code = await genCustomerCode();
+      const zipCode = resolveCustomerZipCode(address, req.body.zipCode);
 
       const saved = await prisma.customer.create({
         data: {
@@ -540,6 +740,7 @@ export default function customersRoutes(prisma) {
           phone: normalizedPhone,
           email: req.body.email != null ? String(req.body.email).trim() : null,
           address_1: address,
+          zipCode,
           portal: req.body.portal != null ? String(req.body.portal).trim() : null,
           observations:
             req.body.observations != null ? String(req.body.observations).trim() : null,
@@ -577,11 +778,16 @@ export default function customersRoutes(prisma) {
         ...(req.body.name != null ? { name: String(req.body.name).trim() } : {}),
         ...(req.body.email != null ? { email: String(req.body.email).trim() } : {}),
         ...(req.body.address_1 != null ? { address_1: String(req.body.address_1).trim() } : {}),
+        ...(req.body.zipCode != null ? { zipCode: String(req.body.zipCode).trim() || null } : {}),
         ...(req.body.portal != null ? { portal: String(req.body.portal).trim() } : {}),
         ...(req.body.observations != null
           ? { observations: String(req.body.observations).trim() }
           : {}),
       };
+
+      if (req.body.address_1 != null && req.body.zipCode == null) {
+        data.zipCode = resolveCustomerZipCode(req.body.address_1, null);
+      }
 
       const latNum = Number(req.body.lat);
       const lngNum = Number(req.body.lng);

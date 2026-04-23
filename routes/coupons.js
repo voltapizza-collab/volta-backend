@@ -131,6 +131,27 @@ const splitTargetTags = (value) => {
   };
 };
 
+const normalizeStoreIds = (value) => {
+  if (!Array.isArray(value)) return [];
+  return [...new Set(
+    value
+      .map((item) => parsePositiveInt(item))
+      .filter(Boolean)
+  )];
+};
+
+const normalizeZipCodes = (value) => {
+  if (!Array.isArray(value)) return [];
+  return [...new Set(
+    value
+      .map((item) => {
+        const match = String(item || "").match(/\b(\d{5})\b/);
+        return match ? match[1] : null;
+      })
+      .filter(Boolean)
+  )];
+};
+
 const uniqueCustomers = (rows = []) => {
   const map = new Map();
   rows.forEach((item) => {
@@ -326,16 +347,26 @@ async function findOrCreateCustomer(prisma, { partnerId, phone, name }) {
   });
 }
 
-async function resolvePrivateRecipients(prisma, { partnerId, segments, activities }) {
+async function resolvePrivateRecipients(prisma, { partnerId, segments, activities, storeIds, zipCodes }) {
   const customers = [];
+  const zipWhere = zipCodes.length
+    ? {
+        OR: zipCodes.flatMap((zipCode) => [
+          { zipCode },
+          { address_1: { contains: zipCode } },
+        ]),
+      }
+    : null;
 
-  if (segments.length || activities.length) {
+  if (segments.length || activities.length || storeIds.length || zipCodes.length) {
     const filteredCustomers = await prisma.customer.findMany({
       where: {
         partnerId,
         isRestricted: false,
         ...(segments.length ? { segment: { in: segments } } : {}),
         ...(activities.length ? { activity: { in: activities } } : {}),
+        ...(storeIds.length ? { sales: { some: { storeId: { in: storeIds } } } } : {}),
+        ...(zipWhere || {}),
       },
       select: {
         id: true,
@@ -343,6 +374,7 @@ async function resolvePrivateRecipients(prisma, { partnerId, segments, activitie
         phone: true,
         segment: true,
         activity: true,
+        zipCode: true,
       },
     });
 
@@ -465,6 +497,8 @@ export default function couponsRoutes(prisma) {
         : Boolean(req.body.isVisible);
     const visibility = isVisible ? "PUBLIC" : "RESERVED";
     const { segments, activities } = splitTargetTags(req.body.segments);
+    const storeIds = normalizeStoreIds(req.body.storeIds);
+    const zipCodes = normalizeZipCodes(req.body.zipCodes);
     const targetTags = [...segments, ...activities];
     const daysActive = normalizeDaysActive(req.body.daysActive || null);
     const windowStart = req.body.windowStart == null || req.body.windowStart === "" ? null : Number(req.body.windowStart);
@@ -486,12 +520,34 @@ export default function couponsRoutes(prisma) {
       const prefix = PREFIX[type];
       let recipients = [];
       let totalToCreate = quantity;
+      let targetStores = [];
+
+      if (storeIds.length) {
+        targetStores = await prisma.store.findMany({
+          where: {
+            partnerId,
+            id: { in: storeIds },
+          },
+          select: {
+            id: true,
+            storeName: true,
+            city: true,
+            zipCode: true,
+          },
+        });
+
+        if (targetStores.length !== storeIds.length) {
+          return res.status(400).json({ ok: false, error: "bad_store_ids" });
+        }
+      }
 
       if (!isVisible) {
         recipients = await resolvePrivateRecipients(prisma, {
           partnerId,
           segments,
           activities,
+          storeIds,
+          zipCodes,
         });
 
         if (!recipients.length) {
@@ -513,6 +569,38 @@ export default function couponsRoutes(prisma) {
             ? Math.floor(Math.random() * (percentMax - percentMin + 1)) + percentMin
             : null;
         const targetCustomer = !isVisible ? recipients[index] : null;
+        const targeting =
+          segments.length || activities.length || storeIds.length || zipCodes.length
+            ? {
+                segments,
+                activities,
+                storeIds,
+                zipCodes,
+              }
+            : null;
+        const meta = {
+          ...(req.body.notes ? { notes: String(req.body.notes) } : {}),
+          ...(targeting ? { targeting } : {}),
+          ...(targetStores.length
+            ? {
+                targetStores: targetStores.map((store) => ({
+                  id: store.id,
+                  storeName: store.storeName,
+                  city: store.city,
+                  zipCode: store.zipCode,
+                })),
+              }
+            : {}),
+          ...(targetCustomer
+            ? {
+                targetCustomerId: targetCustomer.id,
+                targetCustomerName: targetCustomer.name || null,
+                targetCustomerSegment: targetCustomer.segment || null,
+                targetCustomerActivity: targetCustomer.activity || null,
+                targetCustomerZipCode: targetCustomer.zipCode || null,
+              }
+            : {}),
+        };
 
         return {
           partnerId,
@@ -543,19 +631,7 @@ export default function couponsRoutes(prisma) {
               ? null
               : "DIRECT",
           gameId: req.body.gameId ? Number(req.body.gameId) : null,
-          meta: req.body.notes || targetCustomer
-            ? {
-                ...(req.body.notes ? { notes: String(req.body.notes) } : {}),
-                ...(targetCustomer
-                  ? {
-                      targetCustomerId: targetCustomer.id,
-                      targetCustomerName: targetCustomer.name || null,
-                      targetCustomerSegment: targetCustomer.segment || null,
-                      targetCustomerActivity: targetCustomer.activity || null,
-                    }
-                  : {}),
-              }
-            : null,
+          meta: Object.keys(meta).length ? meta : null,
         };
       });
 
@@ -566,6 +642,12 @@ export default function couponsRoutes(prisma) {
         created: rows.length,
         visibility,
         recipients: recipients.length,
+        targeting: {
+          storeIds,
+          zipCodes,
+          segments,
+          activities,
+        },
         sample: rows.slice(0, 10).map((row) => row.code),
       });
     } catch (error) {
