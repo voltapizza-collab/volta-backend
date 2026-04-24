@@ -57,6 +57,37 @@ const CUSTOMER_SEGMENTS = ["S1", "S2", "S3", "S4", "S5"];
 const getCustomerActivity = (daysOff) =>
   Number(daysOff || 0) > COLD_DAYS_THRESHOLD ? "COLD" : "HOT";
 
+const buildStoreScopeFilters = (storeId, selectedStore) => {
+  const storeZip = String(selectedStore?.zipCode || "").trim();
+  const storeArea = postalAreaKey(storeZip);
+  const storeCity = String(selectedStore?.city || "").trim();
+
+  return [
+    {
+      sales: {
+        some: {
+          storeId,
+        },
+      },
+    },
+    ...(storeZip
+      ? [
+          { zipCode: storeZip },
+          { address_1: { contains: storeZip } },
+        ]
+      : []),
+    ...(storeArea
+      ? [
+          { zipCode: { startsWith: storeArea } },
+          { address_1: { contains: storeArea } },
+        ]
+      : []),
+    ...(storeCity
+      ? [{ address_1: { contains: storeCity } }]
+      : []),
+  ];
+};
+
 async function buildCustomerWhere(prisma, filters) {
   const {
     partnerId,
@@ -112,35 +143,8 @@ async function buildCustomerWhere(prisma, filters) {
       return { where: null, empty: true };
     }
 
-    const storeZip = String(selectedStore.zipCode || "").trim();
-    const storeArea = postalAreaKey(storeZip);
-    const storeCity = normalizeComparableText(selectedStore.city || "");
-
     andFilters.push({
-      OR: [
-        {
-          sales: {
-            some: {
-              storeId,
-            },
-          },
-        },
-        ...(storeZip
-          ? [
-              { zipCode: storeZip },
-              { address_1: { contains: storeZip } },
-            ]
-          : []),
-        ...(storeArea
-          ? [
-              { zipCode: { startsWith: storeArea } },
-              { address_1: { contains: storeArea } },
-            ]
-          : []),
-        ...(storeCity
-          ? [{ address_1: { contains: storeCity, mode: "insensitive" } }]
-          : []),
-      ],
+      OR: buildStoreScopeFilters(storeId, selectedStore),
     });
   }
 
@@ -298,35 +302,8 @@ export default function customersRoutes(prisma) {
           return res.json({ items: [], total: 0, skip, take });
         }
 
-        const storeZip = String(selectedStore.zipCode || "").trim();
-        const storeArea = postalAreaKey(storeZip);
-        const storeCity = normalizeComparableText(selectedStore.city || "");
-
         andFilters.push({
-          OR: [
-          {
-            sales: {
-              some: {
-                storeId,
-              },
-            },
-          },
-          ...(storeZip
-            ? [
-                { zipCode: storeZip },
-                { address_1: { contains: storeZip } },
-              ]
-            : []),
-          ...(storeArea
-            ? [
-                { zipCode: { startsWith: storeArea } },
-                { address_1: { contains: storeArea } },
-              ]
-            : []),
-          ...(storeCity
-            ? [{ address_1: { contains: storeCity, mode: "insensitive" } }]
-            : []),
-          ],
+          OR: buildStoreScopeFilters(storeId, selectedStore),
         });
       }
 

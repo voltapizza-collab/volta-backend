@@ -13,6 +13,7 @@ const VALID_SEGMENTS = ["S1", "S2", "S3", "S4", "S5"];
 const VALID_ACTIVITIES = ["HOT", "COLD"];
 const VALID_TARGET_TAGS = [...VALID_SEGMENTS, ...VALID_ACTIVITIES];
 const VALID_TYPES = ["RANDOM_PERCENT", "FIXED_PERCENT", "FIXED_AMOUNT"];
+const COLD_DAYS_THRESHOLD = 15;
 
 const toNum = (value) => {
   if (value == null) return null;
@@ -62,7 +63,7 @@ const base9Phone = (value = "") => {
 const pick = (length) =>
   Array.from({ length }, () => CODE_ALPHABET[Math.floor(Math.random() * CODE_ALPHABET.length)]).join("");
 
-const codePattern = (prefix) => `${prefix}-${pick(2)}-${pick(4)}`;
+const codePattern = (prefix) => `${prefix}${pick(6)}`;
 
 const nowInTZ = () => {
   const snapshot = new Date().toLocaleString("sv-SE", { timeZone: TZ });
@@ -72,6 +73,12 @@ const nowInTZ = () => {
 const minutesOfDay = (dateLike) => {
   const date = dateLike instanceof Date ? dateLike : new Date(dateLike);
   return date.getHours() * 60 + date.getMinutes();
+};
+
+const toNullableFloat = (value) => {
+  if (value == null || value === "") return null;
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : null;
 };
 
 const esDayToNum = (value) => {
@@ -152,6 +159,70 @@ const normalizeZipCodes = (value) => {
   )];
 };
 
+const normalizeZipCode = (value) => {
+  const match = String(value || "").match(/\b(\d{5})\b/);
+  return match ? match[1] : null;
+};
+
+const postalAreaKey = (postalCode) => {
+  const digits = String(postalCode || "").replace(/\D/g, "");
+  return digits.length >= 3 ? digits.slice(0, 3) : "";
+};
+
+const readCouponMeta = (coupon) => {
+  if (!coupon?.meta || typeof coupon.meta !== "object" || Array.isArray(coupon.meta)) {
+    return {};
+  }
+  return coupon.meta;
+};
+
+const readCouponTargeting = (coupon) => {
+  const meta = readCouponMeta(coupon);
+  const targeting =
+    meta.targeting && typeof meta.targeting === "object" && !Array.isArray(meta.targeting)
+      ? meta.targeting
+      : {};
+  const targetStores = Array.isArray(meta.targetStores) ? meta.targetStores : [];
+
+  return {
+    storeIds: normalizeStoreIds(targeting.storeIds),
+    zipCodes: normalizeZipCodes(targeting.zipCodes),
+    targetStores: targetStores
+      .map((store) => ({
+        id: parsePositiveInt(store?.id),
+        zipCode: normalizeZipCode(store?.zipCode),
+      }))
+      .filter((store) => store.id || store.zipCode),
+  };
+};
+
+const hasTerritorialTargeting = (coupon) => {
+  const { storeIds, zipCodes } = readCouponTargeting(coupon);
+  return Boolean(storeIds.length || zipCodes.length);
+};
+
+const matchesCouponTerritory = (coupon, zipCode) => {
+  const { storeIds, zipCodes, targetStores } = readCouponTargeting(coupon);
+  if (!storeIds.length && !zipCodes.length) return true;
+
+  const normalizedZip = normalizeZipCode(zipCode);
+  if (!normalizedZip) return false;
+
+  const areaKey = postalAreaKey(normalizedZip);
+  if (zipCodes.includes(normalizedZip)) return true;
+
+  if (!storeIds.length) return false;
+
+  return targetStores.some((store) => {
+    const storeZip = normalizeZipCode(store.zipCode);
+    if (!storeZip) return false;
+    if (storeZip === normalizedZip) return true;
+
+    const storeArea = postalAreaKey(storeZip);
+    return Boolean(areaKey && storeArea && areaKey === storeArea);
+  });
+};
+
 const uniqueCustomers = (rows = []) => {
   const map = new Map();
   rows.forEach((item) => {
@@ -212,6 +283,19 @@ const buildCouponType = (coupon) => {
   return "UNKNOWN";
 };
 
+const hasSegmentTargeting = (coupon) => normalizeTargetTags(Array.isArray(coupon?.segments) ? coupon.segments : []).length > 0;
+
+const haversineKm = (leftLat, leftLng, rightLat, rightLng) => {
+  const toRad = (value) => (value * Math.PI) / 180;
+  const earthRadiusKm = 6371;
+  const dLat = toRad(rightLat - leftLat);
+  const dLng = toRad(rightLng - leftLng);
+  const a =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos(toRad(leftLat)) * Math.cos(toRad(rightLat)) * Math.sin(dLng / 2) ** 2;
+  return 2 * earthRadiusKm * Math.asin(Math.sqrt(a));
+};
+
 const buildCouponKey = (coupon) => {
   if (coupon.campaign === "PIZZA_GRATIS_QR") return "SURPRISE";
 
@@ -261,6 +345,29 @@ const buildTypeWhere = (type, key) => {
   }
 
   return null;
+};
+
+const customerActivityTag = (customer) =>
+  Number(customer?.daysOff || 0) > COLD_DAYS_THRESHOLD ? "COLD" : "HOT";
+
+const customerMatchesCouponTargetTags = (customer, coupon) => {
+  const tags = normalizeTargetTags(Array.isArray(coupon?.segments) ? coupon.segments : []);
+  if (!tags.length) return true;
+
+  const requiredSegments = tags.filter((tag) => VALID_SEGMENTS.includes(tag));
+  const requiredActivities = tags.filter((tag) => VALID_ACTIVITIES.includes(tag));
+
+  if (requiredSegments.length) {
+    const customerSegment = String(customer?.segment || "").trim().toUpperCase();
+    if (!requiredSegments.includes(customerSegment)) return false;
+  }
+
+  if (requiredActivities.length) {
+    const activity = customerActivityTag(customer);
+    if (!requiredActivities.includes(activity)) return false;
+  }
+
+  return true;
 };
 
 const parseCouponDefinition = (type, source) => {
@@ -387,6 +494,7 @@ async function resolvePrivateRecipients(prisma, { partnerId, segments, activitie
 export default function couponsRoutes(prisma) {
   router.get("/gallery", async (req, res) => {
     const partnerId = parsePositiveInt(req.query.partnerId);
+    const zipCode = normalizeZipCode(req.query.zipCode);
 
     if (!partnerId) {
       return res.status(400).json({ ok: false, error: "partnerId required" });
@@ -402,10 +510,11 @@ export default function couponsRoutes(prisma) {
         },
         orderBy: { createdAt: "desc" },
       });
+      const scopedRows = rows.filter((coupon) => matchesCouponTerritory(coupon, zipCode));
 
       const groups = new Map();
 
-      rows.forEach((coupon) => {
+      scopedRows.forEach((coupon) => {
         const type = buildCouponType(coupon);
         const key = buildCouponKey(coupon);
         const mapKey = `${type}:${key}`;
@@ -463,16 +572,113 @@ export default function couponsRoutes(prisma) {
           acquisition: group.sample.acquisition,
           channel: group.sample.channel,
           campaign: group.sample.campaign,
+          isSegmented: hasSegmentTargeting(group.sample),
         }))
         .sort((left, right) => String(left.title).localeCompare(String(right.title), "es"));
 
       return res.json({
         ok: true,
         partnerId,
+        zipCode,
         cards,
       });
     } catch (error) {
       console.error("[coupons.gallery] error:", error);
+      return res.status(500).json({ ok: false, error: "server" });
+    }
+  });
+
+  router.get("/gallery-context", async (req, res) => {
+    const partnerId = parsePositiveInt(req.query.partnerId);
+    const latitude = toNullableFloat(req.query.lat);
+    const longitude = toNullableFloat(req.query.lng);
+
+    if (!partnerId) {
+      return res.status(400).json({ ok: false, error: "partnerId required" });
+    }
+
+    try {
+      const [rows, stores] = await Promise.all([
+        prisma.coupon.findMany({
+          where: {
+            partnerId,
+            status: "ACTIVE",
+            visibility: "PUBLIC",
+          },
+          select: {
+            meta: true,
+            segments: true,
+          },
+        }),
+        prisma.store.findMany({
+          where: { partnerId, active: true },
+          select: {
+            id: true,
+            storeName: true,
+            city: true,
+            zipCode: true,
+            latitude: true,
+            longitude: true,
+          },
+        }),
+      ]);
+
+      const zipSet = new Set();
+
+      rows.forEach((coupon) => {
+        const { zipCodes, targetStores } = readCouponTargeting(coupon);
+        zipCodes.forEach((zipCode) => zipSet.add(zipCode));
+        targetStores.forEach((store) => {
+          if (store.zipCode) zipSet.add(store.zipCode);
+        });
+      });
+
+      stores.forEach((store) => {
+        const zipCode = normalizeZipCode(store.zipCode);
+        if (zipCode) zipSet.add(zipCode);
+      });
+
+      const zipCodes = [...zipSet].sort((left, right) => String(left).localeCompare(String(right), "es"));
+
+      let resolvedZipCode = null;
+      let resolvedStore = null;
+
+      if (latitude != null && longitude != null) {
+        const nearestStore = stores
+          .map((store) => ({
+            ...store,
+            zipCode: normalizeZipCode(store.zipCode),
+            latitude: toNullableFloat(store.latitude),
+            longitude: toNullableFloat(store.longitude),
+          }))
+          .filter((store) => store.zipCode && store.latitude != null && store.longitude != null)
+          .map((store) => ({
+            ...store,
+            distanceKm: haversineKm(latitude, longitude, store.latitude, store.longitude),
+          }))
+          .sort((left, right) => left.distanceKm - right.distanceKm)[0];
+
+        if (nearestStore) {
+          resolvedZipCode = nearestStore.zipCode;
+          resolvedStore = {
+            id: nearestStore.id,
+            storeName: nearestStore.storeName,
+            city: nearestStore.city,
+            zipCode: nearestStore.zipCode,
+            distanceKm: Number(nearestStore.distanceKm.toFixed(2)),
+          };
+        }
+      }
+
+      return res.json({
+        ok: true,
+        partnerId,
+        zipCodes,
+        resolvedZipCode,
+        resolvedStore,
+      });
+    } catch (error) {
+      console.error("[coupons.gallery-context] error:", error);
       return res.status(500).json({ ok: false, error: "server" });
     }
   });
@@ -608,7 +814,7 @@ export default function couponsRoutes(prisma) {
           kind,
           variant,
           percent: type === "RANDOM_PERCENT" ? randomPercent : percent,
-          minAmount: toMoney(minAmount),
+          ...(minAmount != null && minAmount > 0 ? { minAmount: toMoney(minAmount) } : {}),
           percentMin,
           percentMax,
           amount: amount != null ? String(amount.toFixed(2)) : null,
@@ -724,7 +930,7 @@ export default function couponsRoutes(prisma) {
           percentMin,
           percentMax,
           amount: amount != null ? String(amount.toFixed(2)) : null,
-          minAmount: toMoney(minAmount),
+          ...(minAmount != null && minAmount > 0 ? { minAmount: toMoney(minAmount) } : {}),
           maxAmount: toMoney(req.body.maxAmount),
           assignedToId: customer.id,
           visibility: "RESERVED",
@@ -910,6 +1116,7 @@ export default function couponsRoutes(prisma) {
     const key = String(req.body.key || "").trim();
     const name = String(req.body.name || "").trim();
     const phone = String(req.body.phone || "").trim();
+    const zipCode = normalizeZipCode(req.body.zipCode);
 
     if (!partnerId) {
       return res.status(400).json({ ok: false, error: "partnerId required" });
@@ -917,6 +1124,10 @@ export default function couponsRoutes(prisma) {
 
     if (!phone) {
       return res.status(400).json({ ok: false, error: "phone required" });
+    }
+
+    if (!zipCode) {
+      return res.status(400).json({ ok: false, error: "zipCode required" });
     }
 
     const typeWhere = buildTypeWhere(type, key);
@@ -927,8 +1138,7 @@ export default function couponsRoutes(prisma) {
     try {
       const customer = await findOrCreateCustomer(prisma, { partnerId, phone, name });
       const now = nowInTZ();
-
-      const coupon = await prisma.coupon.findFirst({
+      const candidates = await prisma.coupon.findMany({
         where: {
           partnerId,
           visibility: "PUBLIC",
@@ -938,13 +1148,25 @@ export default function couponsRoutes(prisma) {
         },
         orderBy: { createdAt: "asc" },
       });
+      const coupon = candidates.find(
+        (candidate) =>
+          matchesCouponTerritory(candidate, zipCode) &&
+          customerMatchesCouponTargetTags(customer, candidate) &&
+          isActiveByDate(candidate, now) &&
+          isWithinWindow(candidate, now)
+      );
 
       if (!coupon) {
-        return res.status(409).json({ ok: false, error: "out_of_stock" });
-      }
-
-      if (!isActiveByDate(coupon, now) || !isWithinWindow(coupon, now)) {
-        return res.status(409).json({ ok: false, error: "unavailable" });
+        const hasTerritorialCandidates = candidates.some((candidate) => hasTerritorialTargeting(candidate));
+        const hasSegmentCandidates = candidates.some((candidate) => !customerMatchesCouponTargetTags(customer, candidate));
+        return res.status(409).json({
+          ok: false,
+          error: hasTerritorialCandidates
+            ? "unavailable_in_area"
+            : hasSegmentCandidates
+              ? "segment_not_eligible"
+              : "out_of_stock",
+        });
       }
 
       const expiresAt = coupon.expiresAt || new Date(now.getTime() + 48 * 3600 * 1000);
