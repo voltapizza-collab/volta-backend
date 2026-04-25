@@ -8,11 +8,19 @@ const PREFIX = {
   RANDOM_PERCENT: "VOL-RC",
   FIXED_PERCENT: "VOL-PF",
   FIXED_AMOUNT: "VOL-CD",
+  SURPRISE_AMOUNT: "VOL-CS",
 };
+const SURPRISE_AMOUNT_CAMPAIGN = "SURPRISE_AMOUNT";
+const SURPRISE_AMOUNT_CAMPAIGNS = [SURPRISE_AMOUNT_CAMPAIGN, "PIZZA_GRATIS_QR"];
+const SURPRISE_DISTRIBUTION = [
+  { key: "min", weight: 75 },
+  { key: "mid", weight: 15 },
+  { key: "max", weight: 10 },
+];
 const VALID_SEGMENTS = ["S1", "S2", "S3", "S4", "S5"];
 const VALID_ACTIVITIES = ["HOT", "COLD"];
 const VALID_TARGET_TAGS = [...VALID_SEGMENTS, ...VALID_ACTIVITIES];
-const VALID_TYPES = ["RANDOM_PERCENT", "FIXED_PERCENT", "FIXED_AMOUNT"];
+const VALID_TYPES = ["RANDOM_PERCENT", "FIXED_PERCENT", "FIXED_AMOUNT", "SURPRISE_AMOUNT"];
 const COLD_DAYS_THRESHOLD = 15;
 
 const toNum = (value) => {
@@ -42,6 +50,21 @@ const parseDecimal = (value) => {
 const toMoney = (value) => {
   const parsed = parseDecimal(value);
   return parsed == null ? null : String(parsed.toFixed(2));
+};
+
+const toCents = (value) => {
+  const parsed = parseDecimal(value);
+  return parsed == null ? null : Math.round(parsed * 100);
+};
+
+const moneyFromCents = (cents) => String((cents / 100).toFixed(2));
+
+const numberFromCents = (cents) => Number((cents / 100).toFixed(2));
+
+const defaultSurpriseMidCents = (minCents, maxCents) => {
+  const halfMax = Math.floor(maxCents / 2);
+  if (halfMax > minCents && halfMax < maxCents) return halfMax;
+  return Math.floor((minCents + maxCents) / 2);
 };
 
 const normalizePhone = (value = "") => String(value).replace(/[^\d]/g, "");
@@ -176,6 +199,26 @@ const readCouponMeta = (coupon) => {
   return coupon.meta;
 };
 
+const isSurpriseAmountCoupon = (coupon) => {
+  const campaign = String(coupon?.campaign || "").toUpperCase();
+  const meta = readCouponMeta(coupon);
+  return SURPRISE_AMOUNT_CAMPAIGNS.includes(campaign) || Boolean(meta.surpriseAmount);
+};
+
+const readSurpriseAmountMeta = (coupon) => {
+  const meta = readCouponMeta(coupon);
+  const surprise =
+    meta.surpriseAmount && typeof meta.surpriseAmount === "object" && !Array.isArray(meta.surpriseAmount)
+      ? meta.surpriseAmount
+      : {};
+
+  return {
+    minAmount: toNum(surprise.minAmount),
+    midAmount: toNum(surprise.midAmount),
+    maxAmount: toNum(surprise.maxAmount),
+  };
+};
+
 const readCouponTargeting = (coupon) => {
   const meta = readCouponMeta(coupon);
   const targeting =
@@ -253,7 +296,7 @@ const isWithinWindow = (coupon, reference = nowInTZ()) => {
 };
 
 const buildCouponTitle = (coupon) => {
-  if (coupon.campaign === "PIZZA_GRATIS_QR") return "Cupon sorpresa";
+  if (isSurpriseAmountCoupon(coupon)) return "Cupon sorpresa";
 
   const percent = toNum(coupon.percent);
   const percentMin = toNum(coupon.percentMin);
@@ -276,7 +319,7 @@ const buildCouponTitle = (coupon) => {
 };
 
 const buildCouponType = (coupon) => {
-  if (coupon.campaign === "PIZZA_GRATIS_QR") return "SURPRISE_AMOUNT";
+  if (isSurpriseAmountCoupon(coupon)) return "SURPRISE_AMOUNT";
   if (coupon.kind === "PERCENT" && coupon.variant === "RANGE") return "RANDOM_PERCENT";
   if (coupon.kind === "PERCENT" && coupon.variant === "FIXED") return "FIXED_PERCENT";
   if (coupon.kind === "AMOUNT" && coupon.variant === "FIXED") return "FIXED_AMOUNT";
@@ -297,7 +340,13 @@ const haversineKm = (leftLat, leftLng, rightLat, rightLng) => {
 };
 
 const buildCouponKey = (coupon) => {
-  if (coupon.campaign === "PIZZA_GRATIS_QR") return "SURPRISE";
+  if (isSurpriseAmountCoupon(coupon)) {
+    const { minAmount, midAmount, maxAmount } = readSurpriseAmountMeta(coupon);
+    if (minAmount != null && midAmount != null && maxAmount != null) {
+      return `SURPRISE:${minAmount.toFixed(2)}:${midAmount.toFixed(2)}:${maxAmount.toFixed(2)}`;
+    }
+    return "SURPRISE";
+  }
 
   const amount = toNum(coupon.amount);
   const percent = toNum(coupon.percent);
@@ -321,7 +370,7 @@ const buildCouponKey = (coupon) => {
 
 const buildTypeWhere = (type, key) => {
   if (type === "SURPRISE_AMOUNT" || key === "SURPRISE") {
-    return { campaign: "PIZZA_GRATIS_QR", kind: "AMOUNT", variant: "FIXED" };
+    return { campaign: { in: SURPRISE_AMOUNT_CAMPAIGNS }, kind: "AMOUNT", variant: "FIXED" };
   }
 
   if (type === "FIXED_PERCENT") {
@@ -377,6 +426,7 @@ const parseCouponDefinition = (type, source) => {
   let percentMin = null;
   let percentMax = null;
   let amount = null;
+  let surprise = null;
 
   if (type === "RANDOM_PERCENT") {
     kind = "PERCENT";
@@ -400,11 +450,142 @@ const parseCouponDefinition = (type, source) => {
     if (!Number.isFinite(amount) || amount <= 0) {
       return { error: "bad_amount" };
     }
+  } else if (type === "SURPRISE_AMOUNT") {
+    kind = "AMOUNT";
+    variant = "FIXED";
+
+    const minCents = toCents(source.surpriseMinAmount);
+    const maxCents = toCents(source.surpriseMaxAmount);
+    const midCents =
+      source.surpriseMidAmount == null || source.surpriseMidAmount === ""
+        ? minCents != null && maxCents != null
+          ? defaultSurpriseMidCents(minCents, maxCents)
+          : null
+        : toCents(source.surpriseMidAmount);
+
+    if (
+      minCents == null ||
+      midCents == null ||
+      maxCents == null ||
+      minCents <= 0 ||
+      maxCents <= 0 ||
+      minCents > maxCents ||
+      midCents < minCents ||
+      midCents > maxCents
+    ) {
+      return { error: "bad_surprise_amounts" };
+    }
+
+    surprise = {
+      minCents,
+      midCents,
+      maxCents,
+      minAmount: numberFromCents(minCents),
+      midAmount: numberFromCents(midCents),
+      maxAmount: numberFromCents(maxCents),
+    };
   } else {
     return { error: "bad_type" };
   }
 
-  return { kind, variant, percent, percentMin, percentMax, amount };
+  return { kind, variant, percent, percentMin, percentMax, amount, surprise };
+};
+
+const shuffle = (items) => {
+  const next = [...items];
+  for (let index = next.length - 1; index > 0; index -= 1) {
+    const swapIndex = Math.floor(Math.random() * (index + 1));
+    [next[index], next[swapIndex]] = [next[swapIndex], next[index]];
+  }
+  return next;
+};
+
+const buildSurpriseAmountAssignments = (total, surprise) => {
+  if (!surprise || total <= 0) return [];
+
+  const bucketCents = {
+    min: surprise.minCents,
+    mid: surprise.midCents,
+    max: surprise.maxCents,
+  };
+
+  if (total < 5) {
+    return shuffle(
+      Array.from({ length: total }, () => ({
+        bucket: "min",
+        cents: bucketCents.min,
+      }))
+    );
+  }
+
+  if (total < 10) {
+    return shuffle([
+      ...Array.from({ length: total - 1 }, () => ({
+        bucket: "min",
+        cents: bucketCents.min,
+      })),
+      {
+        bucket: "mid",
+        cents: bucketCents.mid,
+      },
+    ]);
+  }
+
+  const planned = SURPRISE_DISTRIBUTION.map((bucket) => {
+    const exact = (total * bucket.weight) / 100;
+    return {
+      ...bucket,
+      exact,
+      cents: bucketCents[bucket.key],
+      count: Math.floor(exact),
+      fraction: exact - Math.floor(exact),
+    };
+  });
+
+  const bucketByKey = new Map(planned.map((bucket) => [bucket.key, bucket]));
+
+  if (total >= 10 && bucketByKey.get("max")?.count === 0) {
+    bucketByKey.get("max").count = 1;
+  }
+
+  if (total >= 5 && bucketByKey.get("mid")?.count === 0) {
+    bucketByKey.get("mid").count = 1;
+  }
+
+  let remaining = total - planned.reduce((sum, bucket) => sum + bucket.count, 0);
+  const tiePriority = { mid: 3, min: 2, max: 1 };
+
+  if (remaining > 0) {
+    const remainderOrder = [...planned].sort(
+      (left, right) =>
+        right.exact - right.count - (left.exact - left.count) ||
+        (tiePriority[right.key] || 0) - (tiePriority[left.key] || 0)
+    );
+
+    for (let index = 0; remaining > 0; index = (index + 1) % remainderOrder.length) {
+      remainderOrder[index].count += 1;
+      remaining -= 1;
+    }
+  }
+
+  while (remaining < 0) {
+    const donor = [...planned]
+      .filter((bucket) => bucket.count > 0)
+      .sort((left, right) => left.weight - right.weight)[0];
+
+    if (!donor) break;
+    donor.count -= 1;
+    remaining += 1;
+  }
+
+  const assignments = planned.flatMap((bucket) =>
+    Array.from({ length: bucket.count }, () => ({
+      bucket: bucket.key,
+      cents: bucket.cents,
+    }))
+  );
+
+  return shuffle(assignments);
 };
 
 async function genCouponCode(prisma, prefix) {
@@ -510,7 +691,9 @@ export default function couponsRoutes(prisma) {
         },
         orderBy: { createdAt: "desc" },
       });
-      const scopedRows = rows.filter((coupon) => matchesCouponTerritory(coupon, zipCode));
+      const scopedRows = rows.filter(
+        (coupon) => !hasSegmentTargeting(coupon) && matchesCouponTerritory(coupon, zipCode)
+      );
 
       const groups = new Map();
 
@@ -625,7 +808,7 @@ export default function couponsRoutes(prisma) {
 
       const zipSet = new Set();
 
-      rows.forEach((coupon) => {
+      rows.filter((coupon) => !hasSegmentTargeting(coupon)).forEach((coupon) => {
         const { zipCodes, targetStores } = readCouponTargeting(coupon);
         zipCodes.forEach((zipCode) => zipSet.add(zipCode));
         targetStores.forEach((store) => {
@@ -697,12 +880,22 @@ export default function couponsRoutes(prisma) {
 
     const quantity = Math.max(1, Math.min(parsePositiveInt(req.body.quantity) || 1, 1000));
     const usageLimit = Math.max(1, parsePositiveInt(req.body.usageLimit) || 1);
-    const isVisible =
-      req.body.isVisible == null
-        ? String(req.body.visibility || "PUBLIC").toUpperCase() !== "RESERVED"
-        : Boolean(req.body.isVisible);
+    const requestedVisibility = String(
+      req.body.visibility == null
+        ? req.body.isVisible === false
+          ? "RESERVED"
+          : "PUBLIC"
+        : req.body.visibility
+    ).toUpperCase();
+    const isVisible = !["RESERVED", "PRIVATE"].includes(requestedVisibility);
     const visibility = isVisible ? "PUBLIC" : "RESERVED";
-    const { segments, activities } = splitTargetTags(req.body.segments);
+    const { segments: requestedSegments, activities: requestedActivities } = splitTargetTags(req.body.segments);
+    if (isVisible && (requestedSegments.length || requestedActivities.length)) {
+      return res.status(400).json({ ok: false, error: "public_coupons_cannot_have_segments" });
+    }
+
+    const segments = isVisible ? [] : requestedSegments;
+    const activities = isVisible ? [] : requestedActivities;
     const storeIds = normalizeStoreIds(req.body.storeIds);
     const zipCodes = normalizeZipCodes(req.body.zipCodes);
     const targetTags = [...segments, ...activities];
@@ -716,7 +909,7 @@ export default function couponsRoutes(prisma) {
       return res.status(400).json({ ok: false, error: definition.error });
     }
 
-    const { kind, variant, percent, percentMin, percentMax, amount } = definition;
+    const { kind, variant, percent, percentMin, percentMax, amount, surprise } = definition;
 
     if (minAmount != null && minAmount < 0) {
       return res.status(400).json({ ok: false, error: "bad_min_amount" });
@@ -769,11 +962,15 @@ export default function couponsRoutes(prisma) {
         codes.push(code);
       }
 
+      const surpriseAssignments =
+        type === "SURPRISE_AMOUNT" ? buildSurpriseAmountAssignments(totalToCreate, surprise) : [];
+
       const rows = codes.map((code, index) => {
         const randomPercent =
           type === "RANDOM_PERCENT"
             ? Math.floor(Math.random() * (percentMax - percentMin + 1)) + percentMin
             : null;
+        const surpriseAssignment = surpriseAssignments[index] || null;
         const targetCustomer = !isVisible ? recipients[index] : null;
         const targeting =
           segments.length || activities.length || storeIds.length || zipCodes.length
@@ -806,6 +1003,23 @@ export default function couponsRoutes(prisma) {
                 targetCustomerZipCode: targetCustomer.zipCode || null,
               }
             : {}),
+          ...(surprise
+            ? {
+                surpriseAmount: {
+                  minAmount: surprise.minAmount,
+                  midAmount: surprise.midAmount,
+                  maxAmount: surprise.maxAmount,
+                  weights: {
+                    min: 75,
+                    mid: 15,
+                    max: 10,
+                  },
+                  assignedBucket: surpriseAssignment?.bucket || null,
+                  assignedAmount:
+                    surpriseAssignment?.cents != null ? numberFromCents(surpriseAssignment.cents) : null,
+                },
+              }
+            : {}),
         };
 
         return {
@@ -817,7 +1031,12 @@ export default function couponsRoutes(prisma) {
           ...(minAmount != null && minAmount > 0 ? { minAmount: toMoney(minAmount) } : {}),
           percentMin,
           percentMax,
-          amount: amount != null ? String(amount.toFixed(2)) : null,
+          amount:
+            surpriseAssignment?.cents != null
+              ? moneyFromCents(surpriseAssignment.cents)
+              : amount != null
+                ? String(amount.toFixed(2))
+                : null,
           maxAmount: toMoney(req.body.maxAmount),
           segments: targetTags.length ? targetTags : null,
           assignedToId: targetCustomer?.id || null,
@@ -829,7 +1048,7 @@ export default function couponsRoutes(prisma) {
           windowEnd,
           usageLimit,
           status: "ACTIVE",
-          campaign: req.body.campaign || null,
+          campaign: type === "SURPRISE_AMOUNT" ? SURPRISE_AMOUNT_CAMPAIGN : req.body.campaign || null,
           channel: req.body.channel ? String(req.body.channel).toUpperCase() : null,
           acquisition: req.body.acquisition
             ? String(req.body.acquisition).toUpperCase()
@@ -848,6 +1067,16 @@ export default function couponsRoutes(prisma) {
         created: rows.length,
         visibility,
         recipients: recipients.length,
+        surpriseDistribution:
+          type === "SURPRISE_AMOUNT"
+            ? surpriseAssignments.reduce(
+                (summary, item) => ({
+                  ...summary,
+                  [item.bucket]: (summary[item.bucket] || 0) + 1,
+                }),
+                { min: 0, mid: 0, max: 0 }
+              )
+            : null,
         targeting: {
           storeIds,
           zipCodes,
@@ -918,7 +1147,9 @@ export default function couponsRoutes(prisma) {
       }
 
       const code = await genCouponCode(prisma, PREFIX[type]);
-      const { kind, variant, percent, percentMin, percentMax, amount } = definition;
+      const { kind, variant, percent, percentMin, percentMax, amount, surprise } = definition;
+      const surpriseAssignment =
+        type === "SURPRISE_AMOUNT" ? buildSurpriseAmountAssignments(1, surprise)[0] : null;
 
       const created = await prisma.coupon.create({
         data: {
@@ -929,7 +1160,12 @@ export default function couponsRoutes(prisma) {
           percent,
           percentMin,
           percentMax,
-          amount: amount != null ? String(amount.toFixed(2)) : null,
+          amount:
+            surpriseAssignment?.cents != null
+              ? moneyFromCents(surpriseAssignment.cents)
+              : amount != null
+                ? String(amount.toFixed(2))
+                : null,
           ...(minAmount != null && minAmount > 0 ? { minAmount: toMoney(minAmount) } : {}),
           maxAmount: toMoney(req.body.maxAmount),
           assignedToId: customer.id,
@@ -937,6 +1173,7 @@ export default function couponsRoutes(prisma) {
           status: "ACTIVE",
           acquisition: "DIRECT",
           channel: "CRM",
+          campaign: type === "SURPRISE_AMOUNT" ? SURPRISE_AMOUNT_CAMPAIGN : null,
           usageLimit: 1,
           usedCount: 0,
           expiresAt: new Date(req.body.expiresAt),
@@ -948,6 +1185,23 @@ export default function couponsRoutes(prisma) {
             targetCustomerSegment: customer.segment || null,
             targetCustomerActivity: customer.activity || null,
             messageStatus: "pending",
+            ...(surprise
+              ? {
+                  surpriseAmount: {
+                    minAmount: surprise.minAmount,
+                    midAmount: surprise.midAmount,
+                    maxAmount: surprise.maxAmount,
+                    weights: {
+                      min: 75,
+                      mid: 15,
+                      max: 10,
+                    },
+                    assignedBucket: surpriseAssignment?.bucket || null,
+                    assignedAmount:
+                      surpriseAssignment?.cents != null ? numberFromCents(surpriseAssignment.cents) : null,
+                  },
+                }
+              : {}),
           },
         },
       });
@@ -1150,6 +1404,8 @@ export default function couponsRoutes(prisma) {
       });
       const coupon = candidates.find(
         (candidate) =>
+          !hasSegmentTargeting(candidate) &&
+          buildCouponKey(candidate) === key &&
           matchesCouponTerritory(candidate, zipCode) &&
           customerMatchesCouponTargetTags(customer, candidate) &&
           isActiveByDate(candidate, now) &&
