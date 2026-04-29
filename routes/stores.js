@@ -113,9 +113,11 @@ const attachStorePublicMenu = (router, prisma) => {
           id: true,
           name: true,
           category: true,
+          categoryId: true,
           selectSize: true,
           priceBySize: true,
           image: true,
+          launchAt: true,
           stocks: {
             where: { storeId: store.id },
             select: {
@@ -157,14 +159,16 @@ const attachStorePublicMenu = (router, prisma) => {
         });
       });
 
-      const menu = availablePizzas.map((pizza) => ({
+      const now = new Date();
+      const mapPublicPizza = (pizza, available) => ({
         pizzaId: pizza.id,
         name: pizza.name,
-        categoryId: null,
+        categoryId: pizza.categoryId ?? null,
         category: pizza.category ?? null,
         selectSize: pizza.selectSize ?? [],
         priceBySize: pizza.priceBySize ?? {},
         image: pizza.image ?? null,
+        launchAt: pizza.launchAt ?? null,
         stock: pizza.stocks?.[0]?.stock ?? null,
         ingredients: (pizza.ingredients || []).map((rel) => ({
           id: rel.ingredient.id,
@@ -172,8 +176,35 @@ const attachStorePublicMenu = (router, prisma) => {
           qtyBySize: rel.qtyBySize ?? {},
         })),
         extras: [],
-        available: true,
-      }));
+        available,
+      });
+      const menu = availablePizzas
+        .filter((pizza) => !pizza.launchAt || pizza.launchAt <= now)
+        .map((pizza) => mapPublicPizza(pizza, true));
+      const upcoming = availablePizzas
+        .filter((pizza) => pizza.launchAt && pizza.launchAt > now)
+        .map((pizza) => mapPublicPizza(pizza, false));
+      const promos = await prisma.promo.findMany({
+        where: {
+          partnerId: store.partnerId,
+          status: "ACTIVE",
+          AND: [
+            {
+              OR: [
+                { activeFrom: null },
+                { activeFrom: { lte: now } },
+              ],
+            },
+            {
+              OR: [
+                { expiresAt: null },
+                { expiresAt: { gt: now } },
+              ],
+            },
+          ],
+        },
+        orderBy: { createdAt: "desc" },
+      });
 
       return res.json({
         store: {
@@ -185,6 +216,17 @@ const attachStorePublicMenu = (router, prisma) => {
           acceptsReservations: store.acceptsReservations,
         },
         menu,
+        upcoming,
+        promos: promos.map((promo) => ({
+          id: promo.id,
+          title: promo.title,
+          description: promo.description,
+          items: Array.isArray(promo.items) ? promo.items : [],
+          totalPrice: Number(promo.totalPrice || 0),
+          activeFrom: promo.activeFrom,
+          expiresAt: promo.expiresAt,
+          image: promo.image,
+        })),
       });
     } catch (error) {
       console.error("GET /stores/:partnerSlug/:storeSlug/menu", error);

@@ -10,6 +10,42 @@ const normalizeStoreId = (value) => {
   return Number.isInteger(storeId) && storeId > 0 ? storeId : null;
 };
 
+const normalizePriceBySize = (value, fallbackPrice = 0) => {
+  const source = value && typeof value === "object" && !Array.isArray(value)
+    ? value
+    : {};
+
+  const entries = Object.entries(source).reduce((acc, [size, price]) => {
+    const normalizedSize = String(size || "").trim();
+    if (!normalizedSize) return acc;
+
+    const normalizedPrice = Number(price);
+    acc[normalizedSize] = Number.isFinite(normalizedPrice)
+      ? normalizedPrice
+      : 0;
+    return acc;
+  }, {});
+
+  if (Object.keys(entries).length) return entries;
+
+  const normalizedFallback = Number(fallbackPrice);
+  return Number.isFinite(normalizedFallback) && normalizedFallback > 0
+    ? { S: normalizedFallback, M: normalizedFallback, L: normalizedFallback }
+    : {};
+};
+
+const getPrimaryPrice = (priceBySize, fallbackPrice = 0) => {
+  const prices = priceBySize && typeof priceBySize === "object"
+    ? Object.values(priceBySize)
+    : [];
+  const firstPrice = prices.find((price) => Number.isFinite(Number(price)));
+
+  if (firstPrice != null) return Number(firstPrice);
+
+  const normalizedFallback = Number(fallbackPrice);
+  return Number.isFinite(normalizedFallback) ? normalizedFallback : 0;
+};
+
 const resolvePartnerId = async (prisma, partnerIdValue, storeIdValue) => {
   const directPartnerId = normalizePartnerId(partnerIdValue);
   if (directPartnerId) return directPartnerId;
@@ -43,6 +79,7 @@ const groupExtras = (rows) => {
       id: row.categoryId,
       name: row.category?.name || `Categoria ${row.categoryId}`,
       price: row.price ?? 0,
+      priceBySize: normalizePriceBySize(row.priceBySize, row.price),
       status: row.status ?? "ACTIVE",
     });
   });
@@ -93,6 +130,7 @@ export default function ingredientExtrasRoutes(prisma) {
           ingredientId: row.ingredientId,
           name: row.ingredient?.name || `Ingrediente ${row.ingredientId}`,
           price: Number(row.price || 0),
+          priceBySize: normalizePriceBySize(row.priceBySize, row.price),
         }))
       );
     } catch (err) {
@@ -195,11 +233,17 @@ export default function ingredientExtrasRoutes(prisma) {
         await tx.ingredientExtra.createMany({
           data: categoryIds.map((categoryId) => {
             const link = links.find((item) => Number(item?.categoryId) === categoryId);
+            const priceBySize = normalizePriceBySize(
+              link?.priceBySize,
+              link?.price
+            );
+
             return {
               partnerId,
               ingredientId,
               categoryId,
-              price: Number(link?.price || 0),
+              price: getPrimaryPrice(priceBySize, link?.price),
+              priceBySize,
               status: "ACTIVE",
             };
           }),

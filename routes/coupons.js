@@ -1,4 +1,5 @@
 import express from "express";
+import { normalizeE164Phone, sendTelnyxSms } from "../services/telnyx.js";
 
 const router = express.Router();
 
@@ -635,7 +636,30 @@ async function findOrCreateCustomer(prisma, { partnerId, phone, name }) {
   });
 }
 
-async function resolvePrivateRecipients(prisma, { partnerId, segments, activities, storeIds, zipCodes }) {
+const buildStoreRecipientScope = (storeIds, targetStores = []) => {
+  if (!storeIds.length) return null;
+
+  const storeZipCodes = [...new Set(targetStores.map((store) => normalizeZipCode(store.zipCode)).filter(Boolean))];
+  const storeAreas = [...new Set(storeZipCodes.map((zipCode) => postalAreaKey(zipCode)).filter(Boolean))];
+  const storeCities = [...new Set(targetStores.map((store) => String(store.city || "").trim()).filter(Boolean))];
+
+  return {
+    OR: [
+      { sales: { some: { storeId: { in: storeIds } } } },
+      ...storeZipCodes.flatMap((zipCode) => [
+        { zipCode },
+        { address_1: { contains: zipCode } },
+      ]),
+      ...storeAreas.flatMap((area) => [
+        { zipCode: { startsWith: area } },
+        { address_1: { contains: area } },
+      ]),
+      ...storeCities.map((city) => ({ address_1: { contains: city } })),
+    ],
+  };
+};
+
+async function resolvePrivateRecipients(prisma, { partnerId, segments, activities, storeIds, zipCodes, targetStores = [] }) {
   const customers = [];
   const zipWhere = zipCodes.length
     ? {
@@ -645,6 +669,7 @@ async function resolvePrivateRecipients(prisma, { partnerId, segments, activitie
         ]),
       }
     : null;
+  const storeWhere = buildStoreRecipientScope(storeIds, targetStores);
 
   if (segments.length || activities.length || storeIds.length || zipCodes.length) {
     const filteredCustomers = await prisma.customer.findMany({
@@ -653,8 +678,7 @@ async function resolvePrivateRecipients(prisma, { partnerId, segments, activitie
         isRestricted: false,
         ...(segments.length ? { segment: { in: segments } } : {}),
         ...(activities.length ? { activity: { in: activities } } : {}),
-        ...(storeIds.length ? { sales: { some: { storeId: { in: storeIds } } } } : {}),
-        ...(zipWhere || {}),
+        ...(storeWhere || zipWhere ? { AND: [storeWhere, zipWhere].filter(Boolean) } : {}),
       },
       select: {
         id: true,
@@ -670,6 +694,167 @@ async function resolvePrivateRecipients(prisma, { partnerId, segments, activitie
   }
 
   return uniqueCustomers(customers);
+}
+
+const formatCouponExpiry = (value) => {
+  if (!value) return null;
+  const date = value instanceof Date ? value : new Date(value);
+  if (Number.isNaN(date.getTime())) return null;
+
+  return new Intl.DateTimeFormat("es-ES", {
+    timeZone: TZ,
+    day: "2-digit",
+    month: "2-digit",
+    year: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+  }).format(date);
+};
+
+const cleanSmsPart = (value) => String(value || "").replace(/\s+/g, " ").trim();
+
+const buildPrivateCouponSms = ({ partnerName, coupon }) => {
+  const brand = cleanSmsPart(partnerName || process.env.TELNYX_SMS_BRAND || "PizzaOnline");
+  const title = cleanSmsPart(buildCouponTitle(coupon)).toLowerCase();
+  const expiry = formatCouponExpiry(coupon.expiresAt);
+
+  return cleanSmsPart(
+    `${brand}: tu cupon privado ${coupon.code} (${title}).${
+      expiry ? ` Valido hasta ${expiry}.` : ""
+    } Usalo en tu proximo pedido.`
+  );
+};
+
+const telnyxConcurrency = () => {
+  const parsed = Number(process.env.TELNYX_SEND_CONCURRENCY);
+  return Number.isInteger(parsed) && parsed > 0 ? Math.min(parsed, 20) : 5;
+};
+
+async function mapWithConcurrency(items, limit, worker) {
+  const results = [];
+  let cursor = 0;
+  const workerCount = Math.min(limit, items.length);
+
+  await Promise.all(
+    Array.from({ length: workerCount }, async () => {
+      while (cursor < items.length) {
+        const index = cursor;
+        cursor += 1;
+        results[index] = await worker(items[index], index);
+      }
+    })
+  );
+
+  return results;
+}
+
+const buildMessageMeta = ({ result, phone }) => {
+  const now = new Date().toISOString();
+
+  return {
+    provider: "telnyx",
+    status: result.status,
+    to: result.to || normalizeE164Phone(phone) || null,
+    providerMessageId: result.providerMessageId || null,
+    parts: result.parts || null,
+    cost: result.cost || null,
+    sentAt: result.ok ? result.sentAt || now : null,
+    failedAt: result.ok ? null : now,
+    skipped: Boolean(result.skipped),
+    error: result.error || null,
+    updatedAt: now,
+  };
+};
+
+async function sendCouponSms(prisma, { coupon, recipient, partnerName }) {
+  try {
+    const text = buildPrivateCouponSms({ partnerName, coupon });
+    const result = await sendTelnyxSms({
+      to: recipient?.phone,
+      text,
+    });
+    const meta = readCouponMeta(coupon);
+    const message = buildMessageMeta({ result, phone: recipient?.phone });
+
+    await prisma.coupon.update({
+      where: { code: coupon.code },
+      data: {
+        meta: {
+          ...meta,
+          messageStatus: result.status,
+          message,
+        },
+      },
+    });
+
+    return {
+      code: coupon.code,
+      customerId: recipient?.id || null,
+      ok: Boolean(result.ok),
+      status: result.status,
+      skipped: Boolean(result.skipped),
+      error: result.error || null,
+    };
+  } catch (error) {
+    console.error("[coupons.sms] error:", error);
+    return {
+      code: coupon.code,
+      customerId: recipient?.id || null,
+      ok: false,
+      status: "failed",
+      skipped: false,
+      error: {
+        title: "sms_delivery_failed",
+        detail: error?.message || null,
+      },
+    };
+  }
+}
+
+const summarizeDelivery = (items) => {
+  const errors = items
+    .filter((item) => !item.ok && item.error)
+    .map((item) => ({
+      code: item.error.code || null,
+      statusCode: item.error.statusCode || null,
+      title: item.error.title || null,
+      detail: item.error.detail || null,
+    }));
+
+  return {
+    provider: "telnyx",
+    total: items.length,
+    sent: items.filter((item) => item.ok).length,
+    failed: items.filter((item) => !item.ok && !item.skipped).length,
+    skipped: items.filter((item) => item.skipped).length,
+    statuses: items.reduce((summary, item) => {
+      summary[item.status] = (summary[item.status] || 0) + 1;
+      return summary;
+    }, {}),
+    errors: errors.slice(0, 3),
+  };
+};
+
+async function sendPrivateCouponSmsBatch(prisma, { coupons, recipients, partnerName }) {
+  if (!coupons.length) {
+    return summarizeDelivery([]);
+  }
+
+  const recipientsById = new Map(recipients.map((recipient) => [recipient.id, recipient]));
+  const items = coupons.map((coupon) => ({
+    coupon,
+    recipient: recipientsById.get(coupon.assignedToId),
+  }));
+
+  const results = await mapWithConcurrency(items, telnyxConcurrency(), (item) =>
+    sendCouponSms(prisma, {
+      coupon: item.coupon,
+      recipient: item.recipient,
+      partnerName,
+    })
+  );
+
+  return summarizeDelivery(results);
 }
 
 export default function couponsRoutes(prisma) {
@@ -920,6 +1105,7 @@ export default function couponsRoutes(prisma) {
       let recipients = [];
       let totalToCreate = quantity;
       let targetStores = [];
+      let partner = null;
 
       if (storeIds.length) {
         targetStores = await prisma.store.findMany({
@@ -941,12 +1127,18 @@ export default function couponsRoutes(prisma) {
       }
 
       if (!isVisible) {
+        partner = await prisma.partner.findUnique({
+          where: { id: partnerId },
+          select: { name: true },
+        });
+
         recipients = await resolvePrivateRecipients(prisma, {
           partnerId,
           segments,
           activities,
           storeIds,
           zipCodes,
+          targetStores,
         });
 
         if (!recipients.length) {
@@ -1020,6 +1212,7 @@ export default function couponsRoutes(prisma) {
                 },
               }
             : {}),
+          ...(!isVisible ? { messageStatus: "pending" } : {}),
         };
 
         return {
@@ -1049,7 +1242,7 @@ export default function couponsRoutes(prisma) {
           usageLimit,
           status: "ACTIVE",
           campaign: type === "SURPRISE_AMOUNT" ? SURPRISE_AMOUNT_CAMPAIGN : req.body.campaign || null,
-          channel: req.body.channel ? String(req.body.channel).toUpperCase() : null,
+          channel: req.body.channel ? String(req.body.channel).toUpperCase() : isVisible ? null : "SMS",
           acquisition: req.body.acquisition
             ? String(req.body.acquisition).toUpperCase()
             : isVisible
@@ -1060,11 +1253,18 @@ export default function couponsRoutes(prisma) {
         };
       });
 
-      await prisma.coupon.createMany({ data: rows, skipDuplicates: true });
+      const createResult = await prisma.coupon.createMany({ data: rows, skipDuplicates: true });
+      const delivery = isVisible
+        ? { provider: "telnyx", total: 0, sent: 0, failed: 0, skipped: 0, statuses: {} }
+        : await sendPrivateCouponSmsBatch(prisma, {
+            coupons: rows,
+            recipients,
+            partnerName: partner?.name,
+          });
 
       return res.json({
         ok: true,
-        created: rows.length,
+        created: createResult.count,
         visibility,
         recipients: recipients.length,
         surpriseDistribution:
@@ -1083,6 +1283,7 @@ export default function couponsRoutes(prisma) {
           segments,
           activities,
         },
+        delivery,
         sample: rows.slice(0, 10).map((row) => row.code),
       });
     } catch (error) {
@@ -1150,6 +1351,10 @@ export default function couponsRoutes(prisma) {
       const { kind, variant, percent, percentMin, percentMax, amount, surprise } = definition;
       const surpriseAssignment =
         type === "SURPRISE_AMOUNT" ? buildSurpriseAmountAssignments(1, surprise)[0] : null;
+      const partner = await prisma.partner.findUnique({
+        where: { id: partnerId },
+        select: { name: true },
+      });
 
       const created = await prisma.coupon.create({
         data: {
@@ -1172,7 +1377,7 @@ export default function couponsRoutes(prisma) {
           visibility: "RESERVED",
           status: "ACTIVE",
           acquisition: "DIRECT",
-          channel: "CRM",
+          channel: "SMS",
           campaign: type === "SURPRISE_AMOUNT" ? SURPRISE_AMOUNT_CAMPAIGN : null,
           usageLimit: 1,
           usedCount: 0,
@@ -1205,6 +1410,11 @@ export default function couponsRoutes(prisma) {
           },
         },
       });
+      const deliveryResult = await sendCouponSms(prisma, {
+        coupon: created,
+        recipient: customer,
+        partnerName: partner?.name,
+      });
 
       return res.json({
         ok: true,
@@ -1220,8 +1430,11 @@ export default function couponsRoutes(prisma) {
           phone: customer.phone,
         },
         delivery: {
-          status: "pending",
-          channel: "CRM",
+          status: deliveryResult.status,
+          channel: "SMS",
+          provider: "telnyx",
+          sent: deliveryResult.ok,
+          error: deliveryResult.error,
         },
       });
     } catch (error) {

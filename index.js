@@ -20,6 +20,8 @@ import stockRoutes from "./routes/stock.js";
 import storeHoursRoutes from "./routes/storeHours.js";
 import customersRoutes from "./routes/customers.js";
 import couponsRoutes from "./routes/coupons.js";
+import promosRoutes from "./routes/promos.js";
+import telnyxWebhooksRoutes from "./routes/telnyxWebhooks.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -53,6 +55,8 @@ const stockRouter = stockRoutes(prisma);
 const storeHoursRouter = storeHoursRoutes(prisma);
 const customersRouter = customersRoutes(prisma);
 const couponsRouter = couponsRoutes(prisma);
+const promosRouter = promosRoutes(prisma);
+const telnyxWebhooksRouter = telnyxWebhooksRoutes(prisma);
 
 const envOrigins = (process.env.CORS_ORIGINS || "")
   .split(",")
@@ -76,7 +80,11 @@ const allowedOrigins = [
   .filter((origin, index, arr) => arr.indexOf(origin) === index);
 
 // middlewares
-app.use(express.json());
+app.use(express.json({
+  verify: (req, _res, buf) => {
+    req.rawBody = buf.toString("utf8");
+  },
+}));
 
 app.use(
   cors({
@@ -111,6 +119,8 @@ app.use("/api/ingredient-extras", ingredientExtrasRoutes(prisma));
 app.use("/api/menuDisponible", menuDisponibleRoutes(prisma));
 app.use("/api/bases-pizzas", basesPizzasRoutes(prisma));
 app.use("/api/coupons", couponsRouter);
+app.use("/api/promos", promosRouter);
+app.use("/api/webhooks", telnyxWebhooksRouter);
 
 
 app.get("/", (req, res) => {

@@ -149,6 +149,7 @@ model Partner {
   customers          Customer[]
   sales              Sale[]
   coupons            Coupon[]
+  promos             Promo[]
   couponRedemptions  CouponRedemption[]
   games              Game[]
   gamePlays          GamePlay[]
@@ -213,6 +214,7 @@ model MenuPizza {
   cookingMethod String?
   image         String?
   imagePublicId String?
+  launchAt      DateTime?
   status        ProductStatus         @default(ACTIVE)
   type          ProductType           @default(SELLABLE)
   createdAt     DateTime              @default(now())
@@ -337,6 +339,7 @@ model IngredientExtra {
   partner   Partner @relation(fields: [partnerId], references: [id])
   categoryId   Int
   price        Float      @default(0)
+  priceBySize  Json?
   status       String     @default("ACTIVE")
   createdAt    DateTime   @default(now())
   updatedAt    DateTime   @updatedAt
@@ -503,6 +506,24 @@ model Coupon {
   @@index([channel])
   @@index([gameId])
   @@index([acquisition, gameId])
+}
+model Promo {
+  id            Int      @id @default(autoincrement())
+  partnerId     Int
+  partner       Partner  @relation(fields: [partnerId], references: [id])
+  title         String
+  description   String?  @db.Text
+  items         Json
+  totalPrice    Float    @default(0)
+  activeFrom    DateTime?
+  expiresAt     DateTime?
+  image         String?
+  imagePublicId String?
+  status        String   @default("ACTIVE")
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@index([partnerId, status])
 }
 model GamePlay {
   id         Int        @id @default(autoincrement())

@@ -1,0 +1,2 @@
+ALTER TABLE `MenuPizza`
+  ADD COLUMN `launchAt` DATETIME(3) NULL;

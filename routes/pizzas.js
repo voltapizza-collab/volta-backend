@@ -22,6 +22,13 @@ const parseMaybeJson = (value, fallback) => {
   }
 };
 
+const parseLaunchAt = (value) => {
+  if (value == null || value === "") return null;
+
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? null : date;
+};
+
 const getCategoryOrThrow = async (prisma, rawCategoryId) => {
   const categoryId = Number(rawCategoryId);
 
@@ -196,6 +203,7 @@ export default function pizzasRoutes(prisma) {
         priceBySize,
         cookingMethod,
         ingredients,
+        launchAt,
       } = req.body;
 
       if (!name || !partnerId || !categoryId) {
@@ -250,6 +258,7 @@ export default function pizzasRoutes(prisma) {
         selectSize: parsedSizes,
         priceBySize: parsedPrices,
         cookingMethod: cookingMethod || null,
+        launchAt: parseLaunchAt(launchAt),
         image,
         imagePublicId,
         ingredients: { create: ingredientRelations },
@@ -344,6 +353,7 @@ export default function pizzasRoutes(prisma) {
         selectSize: parsedSizes,
         priceBySize: parsedPrices,
         cookingMethod: req.body.cookingMethod ?? null,
+        launchAt: parseLaunchAt(req.body.launchAt),
         image: nextImage,
         imagePublicId: nextImagePublicId,
       };
