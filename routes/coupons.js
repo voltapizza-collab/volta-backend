@@ -1,5 +1,9 @@
 import express from "express";
 import { normalizeE164Phone, sendTelnyxSms } from "../services/telnyx.js";
+import {
+  reserveSmsCreditForMessage,
+  refundSmsCreditForMessage,
+} from "../services/smsCredits.js";
 
 const router = express.Router();
 
@@ -766,13 +770,102 @@ const buildMessageMeta = ({ result, phone }) => {
 };
 
 async function sendCouponSms(prisma, { coupon, recipient, partnerName }) {
+  const normalizedTo = normalizeE164Phone(recipient?.phone);
+
+  if (!normalizedTo) {
+    const result = {
+      ok: false,
+      status: "failed",
+      skipped: true,
+      error: { title: "invalid_recipient_phone" },
+    };
+    const meta = readCouponMeta(coupon);
+    const message = buildMessageMeta({ result, phone: recipient?.phone });
+
+    await prisma.coupon.update({
+      where: { code: coupon.code },
+      data: {
+        meta: {
+          ...meta,
+          messageStatus: result.status,
+          message,
+        },
+      },
+    });
+
+    return {
+      code: coupon.code,
+      customerId: recipient?.id || null,
+      ok: false,
+      status: result.status,
+      skipped: true,
+      error: result.error,
+    };
+  }
+
+  const reservation = await reserveSmsCreditForMessage(prisma, {
+    partnerId: coupon.partnerId,
+    couponCode: coupon.code,
+    customerId: recipient?.id || null,
+    to: normalizedTo,
+  });
+
+  if (!reservation.ok) {
+    const result = {
+      ok: false,
+      status: "skipped",
+      skipped: true,
+      error: {
+        title: reservation.error || "insufficient_sms_credits",
+        detail: "No SMS credits available for this partner.",
+        balance: reservation.balance || 0,
+      },
+    };
+    const meta = readCouponMeta(coupon);
+    const message = buildMessageMeta({ result, phone: recipient?.phone });
+
+    await prisma.coupon.update({
+      where: { code: coupon.code },
+      data: {
+        meta: {
+          ...meta,
+          messageStatus: result.status,
+          message,
+        },
+      },
+    });
+
+    return {
+      code: coupon.code,
+      customerId: recipient?.id || null,
+      ok: false,
+      status: result.status,
+      skipped: true,
+      error: result.error,
+    };
+  }
+
   try {
     const text = buildPrivateCouponSms({ partnerName, coupon });
     const result = await sendTelnyxSms({
-      to: recipient?.phone,
+      to: normalizedTo,
       text,
       tags: [`coupon:${coupon.code}`],
     });
+
+    if (!result.ok) {
+      try {
+        await refundSmsCreditForMessage(prisma, {
+          partnerId: coupon.partnerId,
+          couponCode: coupon.code,
+          customerId: recipient?.id || null,
+          reason: result.error?.title || result.status,
+        });
+      } catch (refundError) {
+        console.error("[coupons.sms] refund error:", refundError);
+      }
+    }
+
     const meta = readCouponMeta(coupon);
     const message = buildMessageMeta({ result, phone: recipient?.phone });
 
@@ -794,8 +887,23 @@ async function sendCouponSms(prisma, { coupon, recipient, partnerName }) {
       status: result.status,
       skipped: Boolean(result.skipped),
       error: result.error || null,
+      smsCredit: {
+        reserved: true,
+        charged: Boolean(result.ok),
+        balanceAfter: reservation.balanceAfter,
+      },
     };
   } catch (error) {
+    try {
+      await refundSmsCreditForMessage(prisma, {
+        partnerId: coupon.partnerId,
+        couponCode: coupon.code,
+        customerId: recipient?.id || null,
+        reason: "send_exception",
+      });
+    } catch (refundError) {
+      console.error("[coupons.sms] refund error:", refundError);
+    }
     console.error("[coupons.sms] error:", error);
     return {
       code: coupon.code,
@@ -1129,7 +1237,7 @@ export default function couponsRoutes(prisma) {
       if (!isVisible) {
         partner = await prisma.partner.findUnique({
           where: { id: partnerId },
-          select: { name: true },
+          select: { name: true, smsCredits: true },
         });
 
         recipients = await resolvePrivateRecipients(prisma, {
@@ -1143,6 +1251,18 @@ export default function couponsRoutes(prisma) {
 
         if (!recipients.length) {
           return res.status(400).json({ ok: false, error: "no_recipients" });
+        }
+
+        if ((partner?.smsCredits || 0) < recipients.length) {
+          return res.status(402).json({
+            ok: false,
+            error: "insufficient_sms_credits",
+            required: recipients.length,
+            balance: partner?.smsCredits || 0,
+            recharge: {
+              minimumMessages: recipients.length - (partner?.smsCredits || 0),
+            },
+          });
         }
 
         totalToCreate = recipients.length;
@@ -1353,8 +1473,20 @@ export default function couponsRoutes(prisma) {
         type === "SURPRISE_AMOUNT" ? buildSurpriseAmountAssignments(1, surprise)[0] : null;
       const partner = await prisma.partner.findUnique({
         where: { id: partnerId },
-        select: { name: true },
+        select: { name: true, smsCredits: true },
       });
+
+      if ((partner?.smsCredits || 0) < 1) {
+        return res.status(402).json({
+          ok: false,
+          error: "insufficient_sms_credits",
+          required: 1,
+          balance: partner?.smsCredits || 0,
+          recharge: {
+            minimumMessages: 1,
+          },
+        });
+      }
 
       const created = await prisma.coupon.create({
         data: {

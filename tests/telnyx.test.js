@@ -9,6 +9,11 @@ import {
   sendTelnyxSms,
   validateTelnyxEnv,
 } from "../services/telnyx.js";
+import {
+  creditsFromAmount,
+  rechargeSmsCredits,
+  reserveSmsCreditForMessage,
+} from "../services/smsCredits.js";
 
 const TELNYX_ENV_KEYS = [
   "TELNYX_API_KEY",
@@ -37,6 +42,63 @@ const setTelnyxEnv = () => {
   process.env.TELNYX_WEBHOOK_PUBLIC_KEY = Buffer.alloc(32).toString("base64");
 };
 
+const makeSmsCreditPrismaMock = (initialCredits = 0) => {
+  const state = {
+    partner: {
+      id: 1,
+      name: "Partner",
+      smsCredits: initialCredits,
+      smsRecharged: initialCredits,
+      smsConsumed: 0,
+      smsLowBalanceThreshold: 50,
+    },
+    ledger: [],
+  };
+
+  const applyNumberOps = (data = {}) => {
+    Object.entries(data).forEach(([field, operation]) => {
+      if (operation && typeof operation === "object" && "increment" in operation) {
+        state.partner[field] += operation.increment;
+      } else if (operation && typeof operation === "object" && "decrement" in operation) {
+        state.partner[field] -= operation.decrement;
+      } else {
+        state.partner[field] = operation;
+      }
+    });
+  };
+
+  const tx = {
+    partner: {
+      findUnique: async ({ where }) => (where.id === state.partner.id ? { ...state.partner } : null),
+      update: async ({ where, data }) => {
+        assert.equal(where.id, state.partner.id);
+        applyNumberOps(data);
+        return { ...state.partner };
+      },
+      updateMany: async ({ where, data }) => {
+        if (where.id !== state.partner.id || state.partner.smsCredits < (where.smsCredits?.gte || 0)) {
+          return { count: 0 };
+        }
+        applyNumberOps(data);
+        return { count: 1 };
+      },
+    },
+    smsCreditLedger: {
+      create: async ({ data }) => {
+        const row = { id: state.ledger.length + 1, ...data };
+        state.ledger.push(row);
+        return row;
+      },
+    },
+  };
+
+  return {
+    ...tx,
+    state,
+    $transaction: async (worker) => worker(tx),
+  };
+};
+
 test("validateTelnyxEnv reports missing required vars without secret values", () => {
   const env = snapshotEnv();
   TELNYX_ENV_KEYS.forEach((key) => delete process.env[key]);
@@ -60,6 +122,42 @@ test("normalizeE164Phone rejects invalid recipients", () => {
   assert.equal(normalizeE164Phone("not-a-phone"), null);
   assert.equal(normalizeE164Phone("612345678"), "+34612345678");
   assert.equal(normalizeE164Phone("+34612345678"), "+34612345678");
+});
+
+test("SMS credits quote EUR 10 as 12500 messages", () => {
+  assert.equal(creditsFromAmount(10), 12500);
+  assert.equal(creditsFromAmount("10,00"), 12500);
+});
+
+test("rechargeSmsCredits increments balance and writes ledger", async () => {
+  const prisma = makeSmsCreditPrismaMock(0);
+
+  const result = await rechargeSmsCredits(prisma, {
+    partnerId: 1,
+    amount: 10,
+    reference: "test",
+  });
+
+  assert.equal(result.ok, true);
+  assert.equal(result.credits, 12500);
+  assert.equal(result.balance.smsCredits, 12500);
+  assert.equal(prisma.state.ledger[0].type, "RECHARGE");
+  assert.equal(prisma.state.ledger[0].balanceAfter, 12500);
+});
+
+test("reserveSmsCreditForMessage rejects empty balances before send", async () => {
+  const prisma = makeSmsCreditPrismaMock(0);
+
+  const result = await reserveSmsCreditForMessage(prisma, {
+    partnerId: 1,
+    couponCode: "VOL-PFABC123",
+    customerId: 7,
+    to: "+34612345678",
+  });
+
+  assert.equal(result.ok, false);
+  assert.equal(result.error, "insufficient_sms_credits");
+  assert.equal(prisma.state.ledger.length, 0);
 });
 
 test("sendTelnyxSms skips safely when env vars are missing", async () => {
@@ -135,6 +233,7 @@ test("sendTelnyxSms posts expected Telnyx v2 message payload", async () => {
     assert.equal(captured.payload.to, "+34612345678");
     assert.equal(captured.payload.messaging_profile_id, process.env.TELNYX_MESSAGING_PROFILE_ID);
     assert.deepEqual(captured.payload.tags, ["coupon:VOL-PFABC123"]);
+    assert.equal(captured.options.proxy, false);
     assert.match(captured.options.headers.Authorization, /^Bearer /);
   } finally {
     axios.post = originalPost;

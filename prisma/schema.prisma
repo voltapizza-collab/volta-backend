@@ -92,6 +92,12 @@ enum CouponVisibility {
   PUBLIC
   RESERVED
 }
+enum SmsCreditLedgerType {
+  RECHARGE
+  CONSUME
+  REFUND
+  ADJUSTMENT
+}
 enum CustomerSegment {
   S1 // Potencial: 0 compras
   S2 // Nuevo: 1 compra
@@ -142,6 +148,10 @@ model Partner {
   brandOfferButtonStyle String?
   brandLogoUrl        String? @db.Text
   brandLogoPublicId   String?
+  smsCredits          Int      @default(0)
+  smsRecharged        Int      @default(0)
+  smsConsumed         Int      @default(0)
+  smsLowBalanceThreshold Int   @default(50)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
   stores             Store[]
@@ -157,6 +167,7 @@ model Partner {
   ingredientExtras   IngredientExtra[]
   partnerCategories  PartnerCategory[]
   reservations       Reservation[]
+  smsCreditLedger     SmsCreditLedger[]
 }
 model Store {
   id                   Int                @id @default(autoincrement())
@@ -506,6 +517,25 @@ model Coupon {
   @@index([channel])
   @@index([gameId])
   @@index([acquisition, gameId])
+}
+model SmsCreditLedger {
+  id           Int                 @id @default(autoincrement())
+  partnerId    Int
+  partner      Partner             @relation(fields: [partnerId], references: [id], onDelete: Cascade)
+  type         SmsCreditLedgerType
+  quantity     Int
+  balanceAfter Int
+  amount       Decimal?            @db.Decimal(10, 2)
+  unitPrice    Decimal?            @db.Decimal(10, 4)
+  providerCost Decimal?            @db.Decimal(10, 4)
+  provider     String?             @db.VarChar(64)
+  reference    String?             @db.VarChar(191)
+  note         String?             @db.Text
+  meta         Json?
+  createdAt    DateTime            @default(now())
+
+  @@index([partnerId, createdAt])
+  @@index([partnerId, type])
 }
 model Promo {
   id            Int      @id @default(autoincrement())

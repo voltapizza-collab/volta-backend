@@ -119,6 +119,7 @@ export async function sendTelnyxSms({ to, text, tags = [] }) {
         Authorization: `Bearer ${config.apiKey}`,
         "Content-Type": "application/json",
       },
+      proxy: false,
       timeout: 15000,
     });
 

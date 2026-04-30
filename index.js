@@ -22,6 +22,7 @@ import customersRoutes from "./routes/customers.js";
 import couponsRoutes from "./routes/coupons.js";
 import promosRoutes from "./routes/promos.js";
 import telnyxWebhooksRoutes from "./routes/telnyxWebhooks.js";
+import smsCreditsRoutes from "./routes/smsCredits.js";
 import { validateTelnyxEnv } from "./services/telnyx.js";
 
 const __filename = fileURLToPath(import.meta.url);
@@ -64,6 +65,7 @@ const customersRouter = customersRoutes(prisma);
 const couponsRouter = couponsRoutes(prisma);
 const promosRouter = promosRoutes(prisma);
 const telnyxWebhooksRouter = telnyxWebhooksRoutes(prisma);
+const smsCreditsRouter = smsCreditsRoutes(prisma);
 
 const envOrigins = (process.env.CORS_ORIGINS || "")
   .split(",")
@@ -127,6 +129,7 @@ app.use("/api/menuDisponible", menuDisponibleRoutes(prisma));
 app.use("/api/bases-pizzas", basesPizzasRoutes(prisma));
 app.use("/api/coupons", couponsRouter);
 app.use("/api/promos", promosRouter);
+app.use("/api/sms-credits", smsCreditsRouter);
 app.use("/api/webhooks", telnyxWebhooksRouter);
 
 
@@ -136,6 +139,11 @@ app.get("/", (req, res) => {
 
 const PORT = process.env.PORT || 8080;
 
-app.listen(PORT, () => {
+const server = app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
+});
+
+server.on("error", (error) => {
+  console.error("[server] listen error:", error);
+  process.exitCode = 1;
 });
