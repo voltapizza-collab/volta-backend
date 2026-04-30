@@ -12,22 +12,35 @@ const telnyxConfig = () => ({
   messagingProfileId: cleanEnv(process.env.TELNYX_MESSAGING_PROFILE_ID),
   senderId: cleanEnv(process.env.TELNYX_SENDER_ID),
   webhookUrl: cleanEnv(process.env.TELNYX_WEBHOOK_URL),
+  webhookPublicKey: cleanEnv(process.env.TELNYX_WEBHOOK_PUBLIC_KEY),
 });
 
-export const getTelnyxStatus = () => {
+export const validateTelnyxEnv = ({ requireWebhookPublicKey = false } = {}) => {
   const config = telnyxConfig();
   const missing = [];
+  const warnings = [];
 
   if (!config.apiKey) missing.push("TELNYX_API_KEY");
   if (!config.messagingProfileId) missing.push("TELNYX_MESSAGING_PROFILE_ID");
   if (!config.senderId) missing.push("TELNYX_SENDER_ID");
+  if (requireWebhookPublicKey && !config.webhookPublicKey) {
+    missing.push("TELNYX_WEBHOOK_PUBLIC_KEY");
+  }
+  if (!config.webhookUrl) warnings.push("TELNYX_WEBHOOK_URL is not set");
+  if (config.senderId && config.senderId.startsWith("+")) {
+    warnings.push("TELNYX_SENDER_ID should be an alphanumeric sender ID, not a phone number");
+  }
 
   return {
     enabled: missing.length === 0,
     missing,
+    warnings,
     webhookConfigured: Boolean(config.webhookUrl),
+    webhookSignatureConfigured: Boolean(config.webhookPublicKey),
   };
 };
+
+export const getTelnyxStatus = validateTelnyxEnv;
 
 export const normalizeE164Phone = (value = "") => {
   const raw = String(value || "").trim();
@@ -61,7 +74,7 @@ const normalizeTelnyxError = (error) => {
   };
 };
 
-export async function sendTelnyxSms({ to, text }) {
+export async function sendTelnyxSms({ to, text, tags = [] }) {
   const config = telnyxConfig();
   const status = getTelnyxStatus();
 
@@ -90,12 +103,14 @@ export async function sendTelnyxSms({ to, text }) {
 
   try {
     const payload = {
+      // TELNYX_SENDER_ID is intended to be a configurable alphanumeric sender ID.
       from: config.senderId,
       to: toPhone,
       text,
       type: "SMS",
       messaging_profile_id: config.messagingProfileId,
       use_profile_webhooks: true,
+      ...(tags.length ? { tags } : {}),
       ...(config.webhookUrl ? { webhook_url: config.webhookUrl } : {}),
     };
 

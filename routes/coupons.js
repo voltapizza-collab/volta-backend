@@ -714,14 +714,13 @@ const formatCouponExpiry = (value) => {
 const cleanSmsPart = (value) => String(value || "").replace(/\s+/g, " ").trim();
 
 const buildPrivateCouponSms = ({ partnerName, coupon }) => {
-  const brand = cleanSmsPart(partnerName || process.env.TELNYX_SMS_BRAND || "PizzaOnline");
-  const title = cleanSmsPart(buildCouponTitle(coupon)).toLowerCase();
+  const brand = cleanSmsPart(process.env.TELNYX_SMS_BRAND || process.env.TELNYX_SENDER_ID || partnerName || "PizzaOnline");
+  const title = cleanSmsPart(buildCouponTitle(coupon));
   const expiry = formatCouponExpiry(coupon.expiresAt);
+  const details = `${title}${expiry ? ` valid until ${expiry}` : ""}`;
 
   return cleanSmsPart(
-    `${brand}: tu cupon privado ${coupon.code} (${title}).${
-      expiry ? ` Valido hasta ${expiry}.` : ""
-    } Usalo en tu proximo pedido.`
+    `${brand}: Your private pizza offer is ready: ${details}. Use code ${coupon.code}. Reply STOP to opt out.`
   );
 };
 
@@ -772,6 +771,7 @@ async function sendCouponSms(prisma, { coupon, recipient, partnerName }) {
     const result = await sendTelnyxSms({
       to: recipient?.phone,
       text,
+      tags: [`coupon:${coupon.code}`],
     });
     const meta = readCouponMeta(coupon);
     const message = buildMessageMeta({ result, phone: recipient?.phone });

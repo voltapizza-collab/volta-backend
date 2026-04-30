@@ -1,8 +1,8 @@
 import express from "express";
 import { verifyTelnyxWebhookSignature } from "../services/telnyx.js";
 
-const router = express.Router();
 const COUPON_CODE_PATTERN = /\bVOL-(?:RC|PF|CD|CS)[A-Z0-9]{6}\b/i;
+const STOP_WORDS = new Set(["STOP", "STOPALL", "UNSUBSCRIBE", "CANCEL", "END", "QUIT"]);
 
 const readMetaObject = (value) => {
   if (!value || typeof value !== "object" || Array.isArray(value)) return {};
@@ -34,6 +34,19 @@ const extractCouponCode = (payload = {}) => {
 };
 
 const firstRecipient = (payload = {}) => (Array.isArray(payload.to) ? payload.to[0] : null);
+
+const normalizePhoneDigits = (value = "") => String(value || "").replace(/[^\d]/g, "");
+
+const phoneLookups = (phoneNumber) => {
+  const digits = normalizePhoneDigits(phoneNumber);
+  if (!digits) return [];
+
+  const variants = new Set([digits]);
+  if (digits.startsWith("34") && digits.length === 11) variants.add(digits.slice(2));
+  if (digits.length === 9) variants.add(`34${digits}`);
+
+  return [...variants];
+};
 
 async function updateCouponMessageStatus(prisma, event) {
   const data = event?.data || {};
@@ -100,7 +113,46 @@ async function updateCouponMessageStatus(prisma, event) {
   return { ok: true, couponCode, status: nextStatus };
 }
 
+async function handleStopOptOut(prisma, event) {
+  const data = event?.data || {};
+  const payload = data.payload || {};
+
+  if (data.event_type !== "message.received") {
+    return { ignored: true, reason: "event_type" };
+  }
+
+  const text = String(payload.text || "").trim().toUpperCase();
+  if (!STOP_WORDS.has(text)) {
+    return { ignored: true, reason: "not_stop" };
+  }
+
+  const from = payload.from?.phone_number || payload.from?.number || "";
+  const lookups = phoneLookups(from);
+  if (!lookups.length) {
+    return { ignored: true, reason: "phone" };
+  }
+
+  const updated = await prisma.customer.updateMany({
+    where: {
+      OR: lookups.flatMap((phone) => [
+        { phone },
+        { phone: `+${phone}` },
+        { phone: { endsWith: phone } },
+      ]),
+    },
+    data: {
+      isRestricted: true,
+      restrictedAt: new Date(),
+      restrictionReason: "SMS_STOP",
+    },
+  });
+
+  return { ok: true, restricted: updated.count };
+}
+
 export default function telnyxWebhooksRoutes(prisma) {
+  const router = express.Router();
+
   router.post("/telnyx", (req, res) => {
     const verification = verifyTelnyxWebhookSignature({
       rawBody: req.rawBody || JSON.stringify(req.body || {}),
@@ -114,7 +166,10 @@ export default function telnyxWebhooksRoutes(prisma) {
 
     res.status(200).json({ ok: true });
 
-    updateCouponMessageStatus(prisma, req.body).catch((error) => {
+    Promise.all([
+      updateCouponMessageStatus(prisma, req.body),
+      handleStopOptOut(prisma, req.body),
+    ]).catch((error) => {
       console.error("[webhooks.telnyx] error:", error);
     });
   });

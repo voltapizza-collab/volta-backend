@@ -21,6 +21,52 @@ const parseNullableDate = (value) => {
   return Number.isNaN(date.getTime()) ? null : date;
 };
 
+const esDayToNum = (value) => {
+  const map = {
+    domingo: 0,
+    lunes: 1,
+    martes: 2,
+    miercoles: 3,
+    jueves: 4,
+    viernes: 5,
+    sabado: 6,
+  };
+
+  return map[String(value || "").trim().toLowerCase()] ?? null;
+};
+
+const normalizeDaysActive = (value) => {
+  if (!value) return [];
+  let list = value;
+
+  if (typeof value === "string") {
+    try {
+      list = JSON.parse(value);
+    } catch {
+      list = value.split(",");
+    }
+  }
+
+  if (!Array.isArray(list)) return [];
+
+  const mapped = list
+    .map((item) => {
+      if (typeof item === "number" && item >= 0 && item <= 6) return item;
+      return esDayToNum(item);
+    })
+    .filter((item) => item != null);
+
+  return [...new Set(mapped)].sort();
+};
+
+const parseNullableMinutes = (value) => {
+  if (value == null || value === "") return null;
+  const parsed = Number(value);
+  return Number.isInteger(parsed) && parsed >= 0 && parsed <= 24 * 60
+    ? parsed
+    : null;
+};
+
 const parseItems = (value) => {
   const source = typeof value === "string" ? JSON.parse(value || "[]") : value;
   if (!Array.isArray(source)) return [];
@@ -32,6 +78,14 @@ const parseItems = (value) => {
       category: item?.category ? String(item.category).trim() : null,
       quantity: Math.max(1, Number(item?.quantity || 1)),
       size: item?.size ? String(item.size).trim() : null,
+      unitPrice: Number.isFinite(Number(item?.unitPrice)) ? Number(item.unitPrice) : null,
+      sizeOptions: Array.isArray(item?.sizeOptions)
+        ? item.sizeOptions.map((size) => String(size || "").trim()).filter(Boolean)
+        : [],
+      priceBySize:
+        item?.priceBySize && typeof item.priceBySize === "object"
+          ? item.priceBySize
+          : {},
     }))
     .filter((item) => item.pizzaId && item.name);
 };
@@ -59,10 +113,36 @@ const serializePromo = (promo) => ({
   totalPrice: Number(promo.totalPrice || 0),
   activeFrom: promo.activeFrom,
   expiresAt: promo.expiresAt,
+  daysActive: normalizeDaysActive(promo.daysActive),
+  windowStart: promo.windowStart,
+  windowEnd: promo.windowEnd,
   image: promo.image,
   status: promo.status,
+  soldCount: Number(promo.soldCount || 0),
   createdAt: promo.createdAt,
 });
+
+const getPromoSoldCounts = async (prisma, partnerId) => {
+  const sales = await prisma.sale.findMany({
+    where: {
+      partnerId,
+      status: { not: "CANCELED" },
+    },
+    select: { products: true },
+  });
+  const counts = new Map();
+
+  sales.forEach((sale) => {
+    const products = Array.isArray(sale.products) ? sale.products : [];
+    products.forEach((product) => {
+      const promoId = parsePositiveInt(product?.promoId);
+      if (!promoId) return;
+      counts.set(promoId, (counts.get(promoId) || 0) + Math.max(1, Number(product.quantity || 1)));
+    });
+  });
+
+  return counts;
+};
 
 export default function promosRoutes(prisma) {
   const router = express.Router();
@@ -79,8 +159,13 @@ export default function promosRoutes(prisma) {
         where: { partnerId },
         orderBy: { createdAt: "desc" },
       });
+      const soldCounts = await getPromoSoldCounts(prisma, partnerId);
+      const promosWithSoldCounts = promos.map((promo) => ({
+        ...promo,
+        soldCount: soldCounts.get(promo.id) || 0,
+      }));
 
-      return res.json({ ok: true, promos: promos.map(serializePromo) });
+      return res.json({ ok: true, promos: promosWithSoldCounts.map(serializePromo) });
     } catch (error) {
       console.error("[promos.get] error:", error);
       return res.status(500).json({ ok: false, error: "server" });
@@ -125,6 +210,9 @@ export default function promosRoutes(prisma) {
           totalPrice,
           activeFrom: parseNullableDate(req.body.activeFrom),
           expiresAt: parseNullableDate(req.body.expiresAt),
+          daysActive: normalizeDaysActive(req.body.daysActive),
+          windowStart: parseNullableMinutes(req.body.windowStart),
+          windowEnd: parseNullableMinutes(req.body.windowEnd),
           image,
           imagePublicId,
           status: req.body.status ? String(req.body.status) : "ACTIVE",
@@ -188,6 +276,9 @@ export default function promosRoutes(prisma) {
           totalPrice,
           activeFrom: parseNullableDate(req.body.activeFrom),
           expiresAt: parseNullableDate(req.body.expiresAt),
+          daysActive: normalizeDaysActive(req.body.daysActive),
+          windowStart: parseNullableMinutes(req.body.windowStart),
+          windowEnd: parseNullableMinutes(req.body.windowEnd),
           image,
           imagePublicId,
           status: req.body.status ? String(req.body.status) : existing.status,

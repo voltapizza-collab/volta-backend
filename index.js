@@ -22,6 +22,7 @@ import customersRoutes from "./routes/customers.js";
 import couponsRoutes from "./routes/coupons.js";
 import promosRoutes from "./routes/promos.js";
 import telnyxWebhooksRoutes from "./routes/telnyxWebhooks.js";
+import { validateTelnyxEnv } from "./services/telnyx.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -49,6 +50,12 @@ if (fs.existsSync(envPath)) {
 }
 
 const app = express();
+const telnyxEnvStatus = validateTelnyxEnv({ requireWebhookPublicKey: true });
+if (!telnyxEnvStatus.enabled) {
+  console.warn("[telnyx] Missing env vars:", telnyxEnvStatus.missing.join(", "));
+}
+telnyxEnvStatus.warnings.forEach((warning) => console.warn("[telnyx]", warning));
+
 const prisma = new PrismaClient();
 const storesRouter = storesRoutes(prisma);
 const stockRouter = stockRoutes(prisma);

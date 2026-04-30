@@ -1,0 +1,4 @@
+ALTER TABLE `Promo`
+ADD COLUMN `daysActive` JSON NULL,
+ADD COLUMN `windowStart` INTEGER NULL,
+ADD COLUMN `windowEnd` INTEGER NULL;

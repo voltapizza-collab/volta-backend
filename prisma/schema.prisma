@@ -517,6 +517,9 @@ model Promo {
   totalPrice    Float    @default(0)
   activeFrom    DateTime?
   expiresAt     DateTime?
+  daysActive    Json?
+  windowStart   Int?
+  windowEnd     Int?
   image         String?
   imagePublicId String?
   status        String   @default("ACTIVE")

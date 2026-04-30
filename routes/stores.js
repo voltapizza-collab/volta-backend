@@ -1,5 +1,7 @@
 import express from "express";
 
+const TZ = process.env.TIMEZONE || "Europe/Madrid";
+
 const parsePositiveInt = (value) => {
   const parsed = Number(value);
   return Number.isInteger(parsed) && parsed > 0 ? parsed : null;
@@ -78,6 +80,48 @@ const dayLabels = [
   "Viernes",
   "Sabado",
 ];
+
+const normalizePromoDaysActive = (value) => {
+  if (!value) return [];
+  let list = value;
+
+  if (typeof value === "string") {
+    try {
+      list = JSON.parse(value);
+    } catch {
+      list = value.split(",");
+    }
+  }
+
+  if (!Array.isArray(list)) return [];
+
+  return [...new Set(
+    list
+      .map((item) => Number(item))
+      .filter((item) => Number.isInteger(item) && item >= 0 && item <= 6)
+  )].sort();
+};
+
+const minutesOfDay = (date) => date.getHours() * 60 + date.getMinutes();
+
+const nowInTZ = () => {
+  const snapshot = new Date().toLocaleString("sv-SE", { timeZone: TZ });
+  return new Date(snapshot.replace(" ", "T"));
+};
+
+const isPromoWithinWindow = (promo, reference) => {
+  const days = normalizePromoDaysActive(promo.daysActive);
+  if (!days.length && promo.windowStart == null && promo.windowEnd == null) return true;
+
+  if (days.length && !days.includes(reference.getDay())) return false;
+
+  const start = promo.windowStart == null ? 0 : Number(promo.windowStart);
+  const end = promo.windowEnd == null ? 24 * 60 : Number(promo.windowEnd);
+  const minutes = minutesOfDay(reference);
+
+  if (start <= end) return minutes >= start && minutes < end;
+  return minutes >= start || minutes < end;
+};
 
 const attachStorePublicMenu = (router, prisma) => {
   router.get("/:partnerSlug/:storeSlug/menu", async (req, res) => {
@@ -205,6 +249,10 @@ const attachStorePublicMenu = (router, prisma) => {
         },
         orderBy: { createdAt: "desc" },
       });
+      const promoWindowNow = nowInTZ();
+      const visiblePromos = promos.filter((promo) =>
+        isPromoWithinWindow(promo, promoWindowNow)
+      );
 
       return res.json({
         store: {
@@ -217,7 +265,7 @@ const attachStorePublicMenu = (router, prisma) => {
         },
         menu,
         upcoming,
-        promos: promos.map((promo) => ({
+        promos: visiblePromos.map((promo) => ({
           id: promo.id,
           title: promo.title,
           description: promo.description,
@@ -225,6 +273,9 @@ const attachStorePublicMenu = (router, prisma) => {
           totalPrice: Number(promo.totalPrice || 0),
           activeFrom: promo.activeFrom,
           expiresAt: promo.expiresAt,
+          daysActive: normalizePromoDaysActive(promo.daysActive),
+          windowStart: promo.windowStart,
+          windowEnd: promo.windowEnd,
           image: promo.image,
         })),
       });
