@@ -2,6 +2,7 @@ import axios from "axios";
 import crypto from "crypto";
 
 const TELNYX_MESSAGES_URL = "https://api.telnyx.com/v2/messages";
+const TELNYX_BALANCE_URL = "https://api.telnyx.com/v2/balance";
 const ED25519_SPKI_PREFIX = Buffer.from("302a300506032b6570032100", "hex");
 const WEBHOOK_TOLERANCE_SECONDS = 5 * 60;
 
@@ -41,6 +42,48 @@ export const validateTelnyxEnv = ({ requireWebhookPublicKey = false } = {}) => {
 };
 
 export const getTelnyxStatus = validateTelnyxEnv;
+
+export async function getTelnyxBalanceDetails() {
+  const config = telnyxConfig();
+
+  if (!config.apiKey) {
+    return {
+      ok: false,
+      error: {
+        title: "telnyx_not_configured",
+        missing: ["TELNYX_API_KEY"],
+      },
+    };
+  }
+
+  try {
+    const response = await axios.get(TELNYX_BALANCE_URL, {
+      headers: {
+        Authorization: `Bearer ${config.apiKey}`,
+      },
+      proxy: false,
+      timeout: 15000,
+    });
+
+    const data = response.data?.data || {};
+
+    return {
+      ok: true,
+      recordType: data.record_type || "balance",
+      pending: data.pending || null,
+      balance: data.balance || null,
+      creditLimit: data.credit_limit || null,
+      availableCredit: data.available_credit || data.balance || null,
+      currency: data.currency || null,
+      raw: data,
+    };
+  } catch (error) {
+    return {
+      ok: false,
+      error: normalizeTelnyxError(error),
+    };
+  }
+}
 
 export const normalizeE164Phone = (value = "") => {
   const raw = String(value || "").trim();

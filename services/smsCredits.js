@@ -3,6 +3,7 @@ const PROVIDER_COST_UNITS = 4; // EUR 0.0004 in ten-thousandths of one euro.
 
 export const SMS_SELL_PRICE_EUR = "0.0008";
 export const SMS_PROVIDER_COST_EUR = "0.0004";
+export const SMS_CREDIT_PACKAGE_AMOUNTS_EUR = [10, 15, 20, 25, 30, 35, 40, 45, 50];
 
 const parsePositiveInt = (value) => {
   const parsed = Number(value);
@@ -27,6 +28,19 @@ export const amountFromCredits = (credits) => {
   if (!quantity) return null;
   return Number(((quantity * SELL_PRICE_UNITS) / 10000).toFixed(2));
 };
+
+export const providerCreditsFromAmount = (amount) => {
+  const cents = parseAmountCents(amount);
+  if (cents == null) return null;
+  return Math.floor((cents * 100) / PROVIDER_COST_UNITS);
+};
+
+export const getSmsCreditPackages = () =>
+  SMS_CREDIT_PACKAGE_AMOUNTS_EUR.map((amount) => ({
+    amount,
+    credits: creditsFromAmount(amount),
+    label: `${amount} EUR`,
+  }));
 
 export async function getPartnerSmsBalance(prisma, partnerId) {
   const id = parsePositiveInt(partnerId);

@@ -6,11 +6,14 @@ import axios from "axios";
 import telnyxWebhooksRoutes from "../routes/telnyxWebhooks.js";
 import {
   normalizeE164Phone,
+  getTelnyxBalanceDetails,
   sendTelnyxSms,
   validateTelnyxEnv,
 } from "../services/telnyx.js";
 import {
   creditsFromAmount,
+  getSmsCreditPackages,
+  providerCreditsFromAmount,
   rechargeSmsCredits,
   reserveSmsCreditForMessage,
 } from "../services/smsCredits.js";
@@ -127,6 +130,56 @@ test("normalizeE164Phone rejects invalid recipients", () => {
 test("SMS credits quote EUR 10 as 12500 messages", () => {
   assert.equal(creditsFromAmount(10), 12500);
   assert.equal(creditsFromAmount("10,00"), 12500);
+  assert.equal(providerCreditsFromAmount(10), 25000);
+  assert.deepEqual(
+    getSmsCreditPackages().map((item) => [item.amount, item.credits]),
+    [
+      [10, 12500],
+      [15, 18750],
+      [20, 25000],
+      [25, 31250],
+      [30, 37500],
+      [35, 43750],
+      [40, 50000],
+      [45, 56250],
+      [50, 62500],
+    ]
+  );
+});
+
+test("getTelnyxBalanceDetails retrieves account balance without exposing API key", async () => {
+  const env = snapshotEnv();
+  const originalGet = axios.get;
+  process.env.TELNYX_API_KEY = "test_api_key";
+
+  let captured = null;
+  axios.get = async (url, options) => {
+    captured = { url, options };
+    return {
+      data: {
+        data: {
+          record_type: "balance",
+          pending: "0.00",
+          balance: "30.00",
+          available_credit: "30.00",
+          currency: "EUR",
+        },
+      },
+    };
+  };
+
+  try {
+    const result = await getTelnyxBalanceDetails();
+
+    assert.equal(result.ok, true);
+    assert.equal(captured.url, "https://api.telnyx.com/v2/balance");
+    assert.match(captured.options.headers.Authorization, /^Bearer /);
+    assert.equal(result.availableCredit, "30.00");
+    assert.equal(result.currency, "EUR");
+  } finally {
+    axios.get = originalGet;
+    restoreEnv(env);
+  }
 });
 
 test("rechargeSmsCredits increments balance and writes ledger", async () => {
