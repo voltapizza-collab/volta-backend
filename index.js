@@ -132,6 +132,17 @@ app.use("/api/promos", promosRouter);
 app.use("/api/sms-credits", smsCreditsRouter);
 app.use("/api/webhooks", telnyxWebhooksRouter);
 
+const configuredFrontendUrl = process.env.PUBLIC_FRONTEND_URL?.trim();
+const publicBackofficeUrl =
+  process.env.BACKOFFICE_URL?.trim() ||
+  (configuredFrontendUrl && !configuredFrontendUrl.includes("api.voltapizza.com")
+    ? `${configuredFrontendUrl.replace(/\/$/, "")}/Backoffice`
+    : "https://voltapizza.com/Backoffice");
+
+app.get(["/Backoffice", "/backoffice"], (req, res) => {
+  res.redirect(302, publicBackofficeUrl);
+});
+
 
 app.get("/", (req, res) => {
   res.send("Volta Core running 🚀");
