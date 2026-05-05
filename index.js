@@ -21,8 +21,11 @@ import storeHoursRoutes from "./routes/storeHours.js";
 import customersRoutes from "./routes/customers.js";
 import couponsRoutes from "./routes/coupons.js";
 import promosRoutes from "./routes/promos.js";
+import incentivesRoutes from "./routes/incentives.js";
 import telnyxWebhooksRoutes from "./routes/telnyxWebhooks.js";
 import smsCreditsRoutes from "./routes/smsCredits.js";
+import myordersRoutes from "./routes/myorders.js";
+import billingRoutes from "./routes/billing.js";
 import { validateTelnyxEnv } from "./services/telnyx.js";
 
 const __filename = fileURLToPath(import.meta.url);
@@ -64,8 +67,11 @@ const storeHoursRouter = storeHoursRoutes(prisma);
 const customersRouter = customersRoutes(prisma);
 const couponsRouter = couponsRoutes(prisma);
 const promosRouter = promosRoutes(prisma);
+const incentivesRouter = incentivesRoutes(prisma);
 const telnyxWebhooksRouter = telnyxWebhooksRoutes(prisma);
 const smsCreditsRouter = smsCreditsRoutes(prisma);
+const myordersRouter = myordersRoutes(prisma);
+const billingRouter = billingRoutes(prisma);
 
 const envOrigins = (process.env.CORS_ORIGINS || "")
   .split(",")
@@ -129,7 +135,10 @@ app.use("/api/menuDisponible", menuDisponibleRoutes(prisma));
 app.use("/api/bases-pizzas", basesPizzasRoutes(prisma));
 app.use("/api/coupons", couponsRouter);
 app.use("/api/promos", promosRouter);
+app.use("/api/incentives", incentivesRouter);
 app.use("/api/sms-credits", smsCreditsRouter);
+app.use("/api/myorders", myordersRouter);
+app.use("/api/billing", billingRouter);
 app.use("/api/webhooks", telnyxWebhooksRouter);
 
 const configuredFrontendUrl = process.env.PUBLIC_FRONTEND_URL?.trim();
