@@ -159,6 +159,16 @@ const canUseCategoryId = (err) =>
 const uploadPizzaImage = async (file, partnerId) => {
   if (!file) return { image: null, imagePublicId: null };
 
+  if (
+    !process.env.CLOUDINARY_CLOUD_NAME ||
+    !process.env.CLOUDINARY_API_KEY ||
+    !process.env.CLOUDINARY_API_SECRET
+  ) {
+    const error = new Error("Cloudinary not configured");
+    error.status = 503;
+    throw error;
+  }
+
   const result = await cloudinary.uploader.upload(
     `data:${file.mimetype};base64,${file.buffer.toString("base64")}`,
     { folder: `volta/partners/${partnerId}/pizzas` }
@@ -168,6 +178,26 @@ const uploadPizzaImage = async (file, partnerId) => {
     image: result.secure_url,
     imagePublicId: result.public_id,
   };
+};
+
+const assertImageUploadWasMultipart = (req) => {
+  const hasSerializedImage =
+    req.body &&
+    Object.prototype.hasOwnProperty.call(req.body, "image") &&
+    req.body.image != null &&
+    req.body.image !== "";
+
+  if (!req.file && hasSerializedImage) {
+    const error = new Error("Image upload must use multipart/form-data");
+    error.status = 415;
+    throw error;
+  }
+};
+
+const getErrorStatus = (err, fallback = 400) => {
+  if (err?.status) return err.status;
+  if (err?.code === "P1001") return 503;
+  return fallback;
 };
 
 export default function pizzasRoutes(prisma) {
@@ -205,6 +235,8 @@ export default function pizzasRoutes(prisma) {
         ingredients,
         launchAt,
       } = req.body;
+
+      assertImageUploadWasMultipart(req);
 
       if (!name || !partnerId || !categoryId) {
         return res.status(400).json({
@@ -294,7 +326,7 @@ export default function pizzasRoutes(prisma) {
       res.json(mapPizza(createdPizza || pizza));
     } catch (err) {
       console.error("POST /pizzas error:", err);
-      res.status(err.status || 400).json({ error: err.message });
+      res.status(getErrorStatus(err)).json({ error: err.message });
     }
   });
 
@@ -310,6 +342,8 @@ export default function pizzasRoutes(prisma) {
       if (!existing) {
         return res.status(404).json({ error: "Pizza not found" });
       }
+
+      assertImageUploadWasMultipart(req);
 
       const parsedSizes = parseMaybeJson(req.body.sizes, []);
       const parsedPrices = parseMaybeJson(req.body.priceBySize, {});
@@ -333,15 +367,10 @@ export default function pizzasRoutes(prisma) {
         nextCategoryName = category.name;
       }
 
-      if (req.file) {
-        if (existing.imagePublicId) {
-          await cloudinary.uploader.destroy(existing.imagePublicId);
-        }
+      let uploadedImage = null;
 
-        const uploadedImage = await uploadPizzaImage(
-          req.file,
-          existing.partnerId
-        );
+      if (req.file) {
+        uploadedImage = await uploadPizzaImage(req.file, existing.partnerId);
         nextImage = uploadedImage.image;
         nextImagePublicId = uploadedImage.imagePublicId;
       }
@@ -358,44 +387,79 @@ export default function pizzasRoutes(prisma) {
         imagePublicId: nextImagePublicId,
       };
 
-      try {
-        await prisma.menuPizza.update({
-          where: { id },
-          data: updateData,
-        });
-      } catch (err) {
-        if (canUseCategoryId(err)) {
-          throw err;
-        }
+      const ingredientRows = parsedIngredients
+        .filter((x) => Number(x?.id))
+        .map((x) => ({
+          menuPizzaId: id,
+          ingredientId: Number(x.id),
+          qtyBySize: x.qtyBySize || {},
+        }));
 
-        const { categoryId: _ignoredCategoryId, ...fallbackData } = updateData;
-
-        await prisma.menuPizza.update({
-          where: { id },
-          data: fallbackData,
-        });
-      }
-
-      await prisma.menuPizzaIngredient.deleteMany({
+      const existingIngredientCount = await prisma.menuPizzaIngredient.count({
         where: { menuPizzaId: id },
       });
 
-      if (parsedIngredients.length) {
-        await prisma.menuPizzaIngredient.createMany({
-          data: parsedIngredients
-            .filter((x) => Number(x?.id))
-            .map((x) => ({
-              menuPizzaId: id,
-              ingredientId: Number(x.id),
-              qtyBySize: x.qtyBySize || {},
-            })),
+      if (
+        existingIngredientCount > 0 &&
+        ingredientRows.length === 0 &&
+        req.body.allowEmptyIngredients !== "true"
+      ) {
+        const error = new Error(
+          "Refusing to clear existing product ingredients without explicit confirmation"
+        );
+        error.status = 409;
+        throw error;
+      }
+
+      try {
+        await prisma.$transaction(async (tx) => {
+          try {
+            await tx.menuPizza.update({
+              where: { id },
+              data: updateData,
+            });
+          } catch (err) {
+            if (canUseCategoryId(err)) {
+              throw err;
+            }
+
+            const { categoryId: _ignoredCategoryId, ...fallbackData } = updateData;
+
+            await tx.menuPizza.update({
+              where: { id },
+              data: fallbackData,
+            });
+          }
+
+          await tx.menuPizzaIngredient.deleteMany({
+            where: { menuPizzaId: id },
+          });
+
+          if (ingredientRows.length) {
+            await tx.menuPizzaIngredient.createMany({
+              data: ingredientRows,
+            });
+          }
         });
+
+        if (uploadedImage?.imagePublicId && existing.imagePublicId) {
+          await cloudinary.uploader.destroy(existing.imagePublicId).catch((error) => {
+            console.error("Cloudinary old pizza image cleanup failed:", error);
+          });
+        }
+      } catch (err) {
+        if (uploadedImage?.imagePublicId) {
+          await cloudinary.uploader.destroy(uploadedImage.imagePublicId).catch((error) => {
+            console.error("Cloudinary new pizza image rollback failed:", error);
+          });
+        }
+        throw err;
       }
 
       res.json({ ok: true, id });
     } catch (err) {
       console.error("PUT /pizzas error:", err);
-      res.status(err.status || 400).json({ error: err.message });
+      res.status(getErrorStatus(err)).json({ error: err.message });
     }
   });
 
