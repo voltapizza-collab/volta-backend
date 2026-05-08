@@ -338,10 +338,19 @@ model Sale {
   incentive               Incentive?          @relation(fields: [incentiveId], references: [id])
   incentiveAmount         Float?              @default(0)
 
+  boostActive             Boolean             @default(false)
+  boostTargetPosition     Int?
+  boostOriginalPosition   Int?
+  boostQueueCredit        Int                 @default(0)
+  boostAmount             Decimal?            @db.Decimal(10, 2)
+  boostPaidAt             DateTime?
+  boostMeta               Json?
+
   redemptions             CouponRedemption[]  @relation("SaleToRedemptions")
 
   @@index([date])
   @@index([partnerId])
+  @@index([storeId, processed, status, boostActive])
 }
 model IngredientExtra {
   id           Int        @id @default(autoincrement())

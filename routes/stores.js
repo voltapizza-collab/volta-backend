@@ -109,6 +109,181 @@ const nowInTZ = () => {
   return new Date(snapshot.replace(" ", "T"));
 };
 
+const normalizeProductKey = (value) =>
+  String(value || "")
+    .trim()
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z0-9]+/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+
+const getSaleLineQty = (item) => {
+  const qty = Number(item?.quantity ?? item?.qty ?? item?.cantidad ?? 1);
+  return Number.isFinite(qty) && qty > 0 ? qty : 1;
+};
+
+const getSaleLinePizzaId = (item, pizzaIdByName) => {
+  const directId = Number(item?.pizzaId ?? item?.menuPizzaId ?? item?.productId);
+  if (Number.isInteger(directId) && directId > 0) return directId;
+
+  const nameKey = normalizeProductKey(
+    item?.name || item?.pizzaName || item?.title || item?.productName
+  );
+  return pizzaIdByName.get(nameKey) || null;
+};
+
+const formatLastOrderedLabel = (date, reference) => {
+  if (!date) return "Sin pedidos recientes";
+
+  const diffMinutes = Math.max(
+    Math.floor((reference.getTime() - date.getTime()) / 60000),
+    0
+  );
+
+  if (diffMinutes < 1) return "Pedida ahora";
+  if (diffMinutes < 60) return `Pedida hace ${diffMinutes} min`;
+
+  const diffHours = Math.floor(diffMinutes / 60);
+  if (diffHours < 24) return `Pedida hace ${diffHours}h`;
+
+  const diffDays = Math.floor(diffHours / 24);
+  if (diffDays < 7) return `Pedida hace ${diffDays}d`;
+
+  return new Intl.DateTimeFormat("es", {
+    day: "2-digit",
+    month: "short",
+  }).format(date);
+};
+
+const buildTrendingMenu = async (prisma, { storeId, menu, now }) => {
+  const menuById = new Map(menu.map((pizza) => [pizza.pizzaId, pizza]));
+  const pizzaIdByName = new Map(
+    menu.map((pizza) => [normalizeProductKey(pizza.name), pizza.pizzaId])
+  );
+  const currentWeekStart = new Date(now);
+  currentWeekStart.setDate(currentWeekStart.getDate() - 7);
+  const previousWeekStart = new Date(now);
+  previousWeekStart.setDate(previousWeekStart.getDate() - 14);
+
+  const sales = await prisma.sale.findMany({
+    where: {
+      storeId,
+      status: { not: "CANCELED" },
+    },
+    select: {
+      date: true,
+      createdAt: true,
+      products: true,
+    },
+    orderBy: { date: "desc" },
+  });
+
+  const metricsByPizzaId = new Map();
+  const ensureMetrics = (pizzaId) => {
+    const current =
+      metricsByPizzaId.get(pizzaId) || {
+        soldLast7Days: 0,
+        soldPrevious7Days: 0,
+        soldAllTime: 0,
+        lastOrderedAt: null,
+      };
+    metricsByPizzaId.set(pizzaId, current);
+    return current;
+  };
+
+  sales.forEach((sale) => {
+    const saleDate = new Date(sale.date || sale.createdAt);
+    const products = Array.isArray(sale.products) ? sale.products : [];
+
+    products.forEach((item) => {
+      const pizzaId = getSaleLinePizzaId(item, pizzaIdByName);
+      if (!pizzaId || !menuById.has(pizzaId)) return;
+
+      const qty = getSaleLineQty(item);
+      const metrics = ensureMetrics(pizzaId);
+      metrics.soldAllTime += qty;
+
+      if (!metrics.lastOrderedAt || saleDate > metrics.lastOrderedAt) {
+        metrics.lastOrderedAt = saleDate;
+      }
+
+      if (saleDate >= currentWeekStart && saleDate <= now) {
+        metrics.soldLast7Days += qty;
+      } else if (saleDate >= previousWeekStart && saleDate < currentWeekStart) {
+        metrics.soldPrevious7Days += qty;
+      }
+    });
+  });
+
+  const ranked = menu
+    .map((pizza) => {
+      const metrics = ensureMetrics(pizza.pizzaId);
+      const trendDelta = metrics.soldLast7Days - metrics.soldPrevious7Days;
+      const trendPercent =
+        metrics.soldPrevious7Days > 0
+          ? Math.round((trendDelta / metrics.soldPrevious7Days) * 100)
+          : metrics.soldLast7Days > 0
+          ? 100
+          : 0;
+
+      return {
+        ...pizza,
+        trend: {
+          soldLast7Days: metrics.soldLast7Days,
+          soldPrevious7Days: metrics.soldPrevious7Days,
+          soldAllTime: metrics.soldAllTime,
+          trendDelta,
+          trendPercent,
+          lastOrderedAt: metrics.lastOrderedAt,
+          lastOrderedLabel: formatLastOrderedLabel(metrics.lastOrderedAt, now),
+          rankingBasis:
+            metrics.soldLast7Days > 0 ? "last7Days" : "historicalFallback",
+        },
+      };
+    })
+    .filter((pizza) => pizza.trend.soldLast7Days > 0 || pizza.trend.soldAllTime > 0)
+    .sort((left, right) => {
+      if (right.trend.soldLast7Days !== left.trend.soldLast7Days) {
+        return right.trend.soldLast7Days - left.trend.soldLast7Days;
+      }
+      if (right.trend.soldAllTime !== left.trend.soldAllTime) {
+        return right.trend.soldAllTime - left.trend.soldAllTime;
+      }
+      return left.name.localeCompare(right.name);
+    })
+    .slice(0, 3)
+    .map((pizza, index) => ({
+      ...pizza,
+      trend: {
+        ...pizza.trend,
+        rank: index + 1,
+      },
+    }));
+
+  const rankedIds = new Set(ranked.map((pizza) => pizza.pizzaId));
+  const fillers = menu
+    .filter((pizza) => !rankedIds.has(pizza.pizzaId))
+    .slice(0, Math.max(3 - ranked.length, 0))
+    .map((pizza, index) => ({
+      ...pizza,
+      trend: {
+        rank: ranked.length + index + 1,
+        soldLast7Days: 0,
+        soldPrevious7Days: 0,
+        soldAllTime: 0,
+        trendDelta: 0,
+        trendPercent: 0,
+        lastOrderedAt: null,
+        lastOrderedLabel: "Aun sin ventas",
+        rankingBasis: "menuFallback",
+      },
+    }));
+
+  return [...ranked, ...fillers].slice(0, 3);
+};
+
 const isPromoWithinWindow = (promo, reference) => {
   const days = normalizePromoDaysActive(promo.daysActive);
   if (!days.length && promo.windowStart == null && promo.windowEnd == null) return true;
@@ -176,6 +351,7 @@ const attachStorePublicMenu = (router, prisma) => {
                 select: {
                   id: true,
                   name: true,
+                  allergens: true,
                   status: true,
                   storeStocks: {
                     where: { storeId: store.id },
@@ -217,6 +393,9 @@ const attachStorePublicMenu = (router, prisma) => {
         ingredients: (pizza.ingredients || []).map((rel) => ({
           id: rel.ingredient.id,
           name: rel.ingredient.name,
+          allergens: Array.isArray(rel.ingredient.allergens)
+            ? rel.ingredient.allergens
+            : [],
           qtyBySize: rel.qtyBySize ?? {},
         })),
         extras: [],
@@ -228,6 +407,11 @@ const attachStorePublicMenu = (router, prisma) => {
       const upcoming = availablePizzas
         .filter((pizza) => pizza.launchAt && pizza.launchAt > now)
         .map((pizza) => mapPublicPizza(pizza, false));
+      const trending = await buildTrendingMenu(prisma, {
+        storeId: store.id,
+        menu,
+        now,
+      });
       const promos = await prisma.promo.findMany({
         where: {
           partnerId: store.partnerId,
@@ -264,6 +448,7 @@ const attachStorePublicMenu = (router, prisma) => {
           acceptsReservations: store.acceptsReservations,
         },
         menu,
+        trending,
         upcoming,
         promos: visiblePromos.map((promo) => ({
           id: promo.id,

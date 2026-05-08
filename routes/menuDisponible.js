@@ -94,6 +94,7 @@ export default function menuDisponibleRoutes(prisma) {
                 select: {
                   id: true,
                   name: true,
+                  allergens: true,
                   status: true,
                   storeStocks: {
                     where: { storeId },
@@ -135,6 +136,9 @@ export default function menuDisponibleRoutes(prisma) {
             ingredients: visibleIngredients.map((rel) => ({
               id: rel.ingredient.id,
               name: rel.ingredient.name,
+              allergens: Array.isArray(rel.ingredient.allergens)
+                ? rel.ingredient.allergens
+                : [],
               qtyBySize: rel.qtyBySize,
             })),
             available: true,

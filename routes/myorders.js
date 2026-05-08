@@ -1,6 +1,7 @@
 import express from "express";
 
 const TZ = process.env.TIMEZONE || "Europe/Madrid";
+const BOOST_PRICE_PER_POSITION = Number(process.env.BOOST_PRICE_PER_POSITION || 0.1);
 
 const parsePositiveInt = (value) => {
   const parsed = Number(value);
@@ -75,6 +76,18 @@ const asObject = (value) => {
   return parsed && typeof parsed === "object" && !Array.isArray(parsed) ? parsed : {};
 };
 
+const roundMoney = (value) => Math.round(Number(value || 0) * 100) / 100;
+
+const normalizePhone = (value) =>
+  String(value || "")
+    .replace(/[^\d+]/g, "")
+    .trim();
+
+const getBoostUnitPrice = () =>
+  Number.isFinite(BOOST_PRICE_PER_POSITION) && BOOST_PRICE_PER_POSITION > 0
+    ? BOOST_PRICE_PER_POSITION
+    : 0.1;
+
 const getLineQty = (item) => {
   const qty = Number(item?.quantity ?? item?.qty ?? item?.cantidad ?? 1);
   return Number.isFinite(qty) && qty > 0 ? qty : 1;
@@ -91,6 +104,8 @@ const getLineName = (item) =>
 
 const formatSale = (sale) => {
   const customerData = asObject(sale.customerData);
+  const boostAmount =
+    sale.boostAmount == null ? 0 : Number(sale.boostAmount || 0);
 
   return {
     id: sale.id,
@@ -105,6 +120,15 @@ const formatSale = (sale) => {
     processed: sale.processed,
     total: Number(sale.total || 0),
     discounts: Number(sale.discounts || 0),
+    boost: {
+      active: Boolean(sale.boostActive),
+      targetPosition: sale.boostTargetPosition,
+      originalPosition: sale.boostOriginalPosition,
+      queueCredit: Number(sale.boostQueueCredit || 0),
+      amount: Number.isFinite(boostAmount) ? boostAmount : 0,
+      paidAt: sale.boostPaidAt,
+      meta: asObject(sale.boostMeta),
+    },
     notes: sale.notes || "",
     storeId: sale.storeId,
     storeName: sale.store?.storeName || "",
@@ -125,14 +149,336 @@ const formatSale = (sale) => {
   };
 };
 
+const buildRepeatCartDraft = (sale) => {
+  const formatted = formatSale(sale);
+  const items = formatted.products.map((item, index) => ({
+    ...item,
+    repeatLineId: `${sale.id}-${index}`,
+    quantity: getLineQty(item),
+  }));
+
+  return {
+    source: "repeat_last_order",
+    sourceOrderId: sale.id,
+    sourceOrderCode: sale.code,
+    partnerId: sale.partnerId,
+    partnerName: sale.partner?.name || "",
+    storeId: sale.storeId,
+    storeName: sale.store?.storeName || "",
+    storeSlug: sale.store?.slug || "",
+    currency: sale.currency || sale.partner?.currency || "EUR",
+    customerId: sale.customerId,
+    customerData: formatted.customerData,
+    items,
+    extras: formatted.extras,
+    totalProducts: Number(sale.totalProducts || 0),
+    discounts: formatted.discounts,
+    total: formatted.total,
+    editable: true,
+    clearable: true,
+    createdFromOrderAt: sale.date || sale.createdAt,
+  };
+};
+
 const orderScopeWhere = ({ partnerId, storeId, activeStoresOnly = true }) => ({
   ...(partnerId ? { partnerId } : {}),
   ...(storeId ? { storeId } : {}),
   ...(activeStoresOnly ? { store: { active: true } } : {}),
 });
 
+const pendingOrderWhere = ({ partnerId, storeId, activeStoresOnly = true }) => ({
+  ...orderScopeWhere({ partnerId, storeId, activeStoresOnly }),
+  processed: false,
+  status: { in: ["PENDING", "PAID"] },
+});
+
+const queueOrderBy = [
+  { boostActive: "desc" },
+  { boostTargetPosition: "asc" },
+  { boostQueueCredit: "desc" },
+  { boostPaidAt: "asc" },
+  { date: "asc" },
+  { createdAt: "asc" },
+];
+
+const clampTargetPosition = (value, currentPosition) => {
+  const parsed = parsePositiveInt(value) || 1;
+  return Math.min(Math.max(parsed, 1), Math.max(currentPosition, 1));
+};
+
+const buildBoostQuote = ({ sale, queue, targetPosition }) => {
+  const currentIndex = queue.findIndex((item) => item.id === sale.id);
+  const currentPosition = currentIndex >= 0 ? currentIndex + 1 : queue.length + 1;
+  const target = clampTargetPosition(targetPosition, currentPosition);
+  const positionsToJump = Math.max(currentPosition - target, 0);
+  const unitPrice = getBoostUnitPrice();
+  const amount = roundMoney(positionsToJump * unitPrice);
+
+  return {
+    orderId: sale.id,
+    code: sale.code,
+    storeId: sale.storeId,
+    storeName: sale.store?.storeName || "",
+    partnerId: sale.partnerId,
+    partnerName: sale.partner?.name || "",
+    currency: sale.currency || sale.partner?.currency || "EUR",
+    currentPosition,
+    targetPosition: target,
+    positionsToJump,
+    unitPrice,
+    amount,
+    alreadyBoosted: Boolean(sale.boostActive),
+    paidAt: sale.boostPaidAt,
+  };
+};
+
+const findBoostableSale = async (prisma, { orderId, orderCode }) => {
+  const id = parsePositiveInt(orderId);
+  const code = String(orderCode || "").trim().toUpperCase();
+
+  if (!id && !code) return null;
+
+  return prisma.sale.findFirst({
+    where: {
+      ...(id ? { id } : { code }),
+      processed: false,
+      status: { in: ["PENDING", "PAID"] },
+    },
+    include: {
+      partner: { select: { id: true, name: true, currency: true } },
+      store: { select: { id: true, storeName: true, slug: true, active: true } },
+      customer: {
+        select: {
+          id: true,
+          name: true,
+          phone: true,
+          email: true,
+          address_1: true,
+          portal: true,
+          observations: true,
+        },
+      },
+    },
+  });
+};
+
+const loadStoreQueue = (prisma, sale) =>
+  prisma.sale.findMany({
+    where: pendingOrderWhere({
+      partnerId: sale.partnerId,
+      storeId: sale.storeId,
+      activeStoresOnly: false,
+    }),
+    select: {
+      id: true,
+      code: true,
+      date: true,
+      createdAt: true,
+      boostActive: true,
+      boostTargetPosition: true,
+      boostQueueCredit: true,
+      boostPaidAt: true,
+    },
+    orderBy: queueOrderBy,
+  });
+
 export default function myordersRoutes(prisma) {
   const router = express.Router();
+
+  router.get("/repeat/latest", async (req, res) => {
+    const partnerId = parsePositiveInt(req.query.partnerId);
+    const storeId = parsePositiveInt(req.query.storeId);
+    const customerId = parsePositiveInt(req.query.customerId);
+    const rawPhone = String(req.query.phone || "").trim();
+    const phone = normalizePhone(req.query.phone);
+
+    if (!partnerId) {
+      return res.status(400).json({ error: "partnerId requerido" });
+    }
+
+    if (!customerId && !phone) {
+      return res.status(400).json({ error: "Telefono o customerId requerido" });
+    }
+
+    try {
+      const matchingCustomerIds = phone
+        ? (
+            await prisma.customer.findMany({
+              where: {
+                partnerId,
+                OR: [
+                  { phone: { contains: phone } },
+                  ...(rawPhone && rawPhone !== phone
+                    ? [{ phone: { contains: rawPhone } }]
+                    : []),
+                ],
+              },
+              select: { id: true },
+              take: 10,
+            })
+          ).map((customer) => customer.id)
+        : [];
+
+      const sale = await prisma.sale.findFirst({
+        where: {
+          partnerId,
+          ...(storeId ? { storeId } : {}),
+          status: { not: "CANCELED" },
+          OR: [
+            ...(customerId ? [{ customerId }] : []),
+            ...(matchingCustomerIds.length
+              ? [{ customerId: { in: matchingCustomerIds } }]
+              : []),
+            ...(phone
+              ? [
+                  {
+                    customerData: {
+                      path: "$.phone",
+                      string_contains: phone,
+                    },
+                  },
+                ]
+              : []),
+            ...(rawPhone && rawPhone !== phone
+              ? [
+                  {
+                    customerData: {
+                      path: "$.phone",
+                      string_contains: rawPhone,
+                    },
+                  },
+                ]
+              : []),
+          ],
+        },
+        include: {
+          partner: { select: { id: true, name: true, currency: true } },
+          store: { select: { id: true, storeName: true, slug: true, active: true } },
+          customer: {
+            select: {
+              id: true,
+              name: true,
+              phone: true,
+              email: true,
+              address_1: true,
+              portal: true,
+              observations: true,
+            },
+          },
+        },
+        orderBy: [{ date: "desc" }, { createdAt: "desc" }],
+      });
+
+      if (!sale) {
+        return res.status(404).json({ error: "No encontramos un pedido anterior para repetir" });
+      }
+
+      return res.json({
+        ok: true,
+        order: formatSale(sale),
+        cartDraft: buildRepeatCartDraft(sale),
+      });
+    } catch (error) {
+      console.error("[myorders.repeat.latest] error:", error);
+      return res.status(500).json({ error: "Error buscando el ultimo pedido" });
+    }
+  });
+
+  router.get("/boosts/quote", async (req, res) => {
+    try {
+      const sale = await findBoostableSale(prisma, {
+        orderId: req.query.orderId,
+        orderCode: req.query.orderCode || req.query.code,
+      });
+
+      if (!sale) {
+        return res.status(404).json({ error: "Pedido pendiente no encontrado" });
+      }
+
+      const queue = await loadStoreQueue(prisma, sale);
+      const quote = buildBoostQuote({
+        sale,
+        queue,
+        targetPosition: req.query.targetPosition,
+      });
+
+      return res.json({ ok: true, quote });
+    } catch (error) {
+      console.error("[myorders.boosts.quote] error:", error);
+      return res.status(500).json({ error: "Error cotizando Boots" });
+    }
+  });
+
+  router.post("/boosts/activate", async (req, res) => {
+    try {
+      const sale = await findBoostableSale(prisma, {
+        orderId: req.body?.orderId,
+        orderCode: req.body?.orderCode || req.body?.code,
+      });
+
+      if (!sale) {
+        return res.status(404).json({ error: "Pedido pendiente no encontrado" });
+      }
+
+      const queue = await loadStoreQueue(prisma, sale);
+      const quote = buildBoostQuote({
+        sale,
+        queue,
+        targetPosition: req.body?.targetPosition,
+      });
+
+      if (quote.positionsToJump <= 0) {
+        return res.status(409).json({
+          error: "Este pedido ya esta en la mejor posicion disponible",
+          quote,
+        });
+      }
+
+      const updated = await prisma.sale.update({
+        where: { id: sale.id },
+        data: {
+          boostActive: true,
+          boostTargetPosition: quote.targetPosition,
+          boostOriginalPosition: sale.boostOriginalPosition || quote.currentPosition,
+          boostQueueCredit: quote.positionsToJump,
+          boostAmount: quote.amount,
+          boostPaidAt: new Date(),
+          boostMeta: {
+            source: "storefront_footer",
+            paymentMode: req.body?.paymentMode || "manual_mvp",
+            paymentReference: req.body?.paymentReference || null,
+            quotedAt: new Date().toISOString(),
+            unitPrice: quote.unitPrice,
+            previousTargetPosition: sale.boostTargetPosition || null,
+          },
+        },
+        include: {
+          partner: { select: { id: true, name: true, currency: true } },
+          store: { select: { id: true, storeName: true, slug: true, active: true } },
+          customer: {
+            select: {
+              id: true,
+              name: true,
+              phone: true,
+              email: true,
+              address_1: true,
+              portal: true,
+              observations: true,
+            },
+          },
+        },
+      });
+
+      return res.json({
+        ok: true,
+        quote,
+        order: formatSale(updated),
+      });
+    } catch (error) {
+      console.error("[myorders.boosts.activate] error:", error);
+      return res.status(500).json({ error: "Error activando Boots" });
+    }
+  });
 
   router.get("/pending", async (req, res) => {
     const partnerId = parsePositiveInt(req.query.partnerId);
@@ -143,9 +489,7 @@ export default function myordersRoutes(prisma) {
     try {
       const rows = await prisma.sale.findMany({
         where: {
-          ...orderScopeWhere({ partnerId, storeId }),
-          processed: false,
-          status: { in: ["PENDING", "PAID"] },
+          ...pendingOrderWhere({ partnerId, storeId }),
           ...(since
             ? {
                 OR: [
@@ -170,12 +514,15 @@ export default function myordersRoutes(prisma) {
             },
           },
         },
-        orderBy: [{ date: "asc" }, { createdAt: "asc" }],
+        orderBy: queueOrderBy,
         take,
       });
 
       return res.json({
-        items: rows.map(formatSale),
+        items: rows.map((row, index) => ({
+          ...formatSale(row),
+          queuePosition: index + 1,
+        })),
         updatedAt: new Date().toISOString(),
       });
     } catch (error) {
@@ -213,11 +560,7 @@ export default function myordersRoutes(prisma) {
           orderBy: { date: "desc" },
         }),
         prisma.sale.count({
-          where: {
-            ...scope,
-            processed: false,
-            status: { in: ["PENDING", "PAID"] },
-          },
+          where: pendingOrderWhere({ partnerId, storeId }),
         }),
         prisma.customer.count({
           where: {
@@ -292,11 +635,7 @@ export default function myordersRoutes(prisma) {
 
       const pendingRows = await prisma.sale.groupBy({
         by: ["storeId"],
-        where: {
-          ...scope,
-          processed: false,
-          status: { in: ["PENDING", "PAID"] },
-        },
+        where: pendingOrderWhere({ partnerId, storeId }),
         _count: { _all: true },
       });
 
