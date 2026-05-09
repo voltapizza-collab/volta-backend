@@ -20,6 +20,7 @@ router.get("/", async (req, res) => {
 router.post("/", async (req, res) => {
   try {
     const rawName = String(req.body?.name || "").trim();
+    const customizable = Boolean(req.body?.customizable);
 
     if (!rawName) {
       return res.status(400).json({ error: "name required" });
@@ -48,6 +49,7 @@ router.post("/", async (req, res) => {
     const row = await prisma.category.create({
       data: {
         name: rawName,
+        customizable,
         position,
       },
     });
@@ -69,6 +71,10 @@ router.patch("/:id", async (req, res) => {
   try {
     const id = Number(req.params.id);
     const nextName = String(req.body?.name || "").trim();
+    const hasCustomizable = Object.prototype.hasOwnProperty.call(
+      req.body || {},
+      "customizable"
+    );
 
     if (!Number.isInteger(id) || id <= 0) {
       return res.status(400).json({ error: "Invalid category id" });
@@ -101,7 +107,12 @@ router.patch("/:id", async (req, res) => {
     const updated = await prisma.$transaction(async (tx) => {
       const category = await tx.category.update({
         where: { id },
-        data: { name: nextName },
+        data: {
+          name: nextName,
+          ...(hasCustomizable
+            ? { customizable: Boolean(req.body.customizable) }
+            : {}),
+        },
       });
 
       if (existing.name !== nextName) {

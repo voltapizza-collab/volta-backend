@@ -54,6 +54,7 @@ router.get("/", async (req, res) => {
         id: ing.id,
         name: ing.name,
         category: ing.category,
+        status: ing.status,
         allergens: normalizeAllergens(ing.allergens),
         unit: ing.unit,
         costPrice: ing.costPrice,

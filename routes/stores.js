@@ -333,10 +333,17 @@ const attachStorePublicMenu = (router, prisma) => {
           name: true,
           category: true,
           categoryId: true,
+          cookingMethod: true,
           selectSize: true,
           priceBySize: true,
           image: true,
           launchAt: true,
+          categoryRef: {
+            select: {
+              position: true,
+              customizable: true,
+            },
+          },
           stocks: {
             where: { storeId: store.id },
             select: {
@@ -385,6 +392,9 @@ const attachStorePublicMenu = (router, prisma) => {
         name: pizza.name,
         categoryId: pizza.categoryId ?? null,
         category: pizza.category ?? null,
+        categoryPosition: pizza.categoryRef?.position ?? 999,
+        categoryCustomizable: pizza.categoryRef?.customizable ?? false,
+        cookingMethod: pizza.cookingMethod ?? null,
         selectSize: pizza.selectSize ?? [],
         priceBySize: pizza.priceBySize ?? {},
         image: pizza.image ?? null,

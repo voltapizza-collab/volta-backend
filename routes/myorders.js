@@ -1,7 +1,7 @@
 import express from "express";
 
 const TZ = process.env.TIMEZONE || "Europe/Madrid";
-const BOOST_PRICE_PER_POSITION = Number(process.env.BOOST_PRICE_PER_POSITION || 0.1);
+const BOOST_PRICE_PER_POSITION = Number(process.env.BOOST_PRICE_PER_POSITION || 0.2);
 
 const parsePositiveInt = (value) => {
   const parsed = Number(value);
@@ -86,7 +86,7 @@ const normalizePhone = (value) =>
 const getBoostUnitPrice = () =>
   Number.isFinite(BOOST_PRICE_PER_POSITION) && BOOST_PRICE_PER_POSITION > 0
     ? BOOST_PRICE_PER_POSITION
-    : 0.1;
+    : 0.2;
 
 const getLineQty = (item) => {
   const qty = Number(item?.quantity ?? item?.qty ?? item?.cantidad ?? 1);
@@ -487,42 +487,48 @@ export default function myordersRoutes(prisma) {
     const take = Math.min(parsePositiveInt(req.query.take) || 80, 200);
 
     try {
-      const rows = await prisma.sale.findMany({
-        where: {
-          ...pendingOrderWhere({ partnerId, storeId }),
-          ...(since
-            ? {
-                OR: [
-                  { date: { gt: since } },
-                  { createdAt: { gt: since } },
-                ],
-              }
-            : {}),
-        },
-        include: {
-          partner: { select: { id: true, name: true, currency: true } },
-          store: { select: { id: true, storeName: true, slug: true, active: true } },
-          customer: {
-            select: {
-              id: true,
-              name: true,
-              phone: true,
-              email: true,
-              address_1: true,
-              portal: true,
-              observations: true,
+      const where = {
+        ...pendingOrderWhere({ partnerId, storeId }),
+        ...(since
+          ? {
+              OR: [
+                { date: { gt: since } },
+                { createdAt: { gt: since } },
+              ],
+            }
+          : {}),
+      };
+
+      const [rows, queueSize] = await Promise.all([
+        prisma.sale.findMany({
+          where,
+          include: {
+            partner: { select: { id: true, name: true, currency: true } },
+            store: { select: { id: true, storeName: true, slug: true, active: true } },
+            customer: {
+              select: {
+                id: true,
+                name: true,
+                phone: true,
+                email: true,
+                address_1: true,
+                portal: true,
+                observations: true,
+              },
             },
           },
-        },
-        orderBy: queueOrderBy,
-        take,
-      });
+          orderBy: queueOrderBy,
+          take,
+        }),
+        prisma.sale.count({ where }),
+      ]);
 
       return res.json({
         items: rows.map((row, index) => ({
           ...formatSale(row),
           queuePosition: index + 1,
         })),
+        queueSize,
         updatedAt: new Date().toISOString(),
       });
     } catch (error) {

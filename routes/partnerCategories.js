@@ -32,6 +32,7 @@ const loadGlobalCategoryFallback = async (prisma) => {
     id: category.id,
     partnerCategoryId: null,
     name: category.name,
+    customizable: category.customizable ?? false,
     enabled: true,
     position: category.position ?? index,
     createdAt: category.createdAt,
@@ -108,7 +109,7 @@ const syncPartnerCategories = async (prisma, partnerId) => {
       include: {
         category: true,
       },
-      orderBy: [{ position: "asc" }, { category: { name: "asc" } }],
+      orderBy: [{ category: { position: "asc" } }, { category: { name: "asc" } }],
     });
   } catch (err) {
     console.error("partnerCategories final fallback:", err.message);
@@ -119,8 +120,9 @@ const syncPartnerCategories = async (prisma, partnerId) => {
     id: link.category.id,
     partnerCategoryId: link.id,
     name: link.category.name,
+    customizable: link.category.customizable ?? false,
     enabled: link.enabled,
-    position: link.position,
+    position: link.category.position ?? link.position,
     createdAt: link.category.createdAt,
     updatedAt: link.category.updatedAt,
   }));
@@ -168,6 +170,7 @@ export default function partnerCategoriesRoutes(prisma) {
       }
 
       await syncPartnerCategories(prisma, partnerId);
+      await persistGlobalCategoryOrder(prisma, orderedIds);
 
       const reordered = await withPartnerCategoryFallback(
         prisma,
@@ -268,6 +271,7 @@ export default function partnerCategoriesRoutes(prisma) {
         id: updated.category.id,
         partnerCategoryId: updated.id,
         name: updated.category.name,
+        customizable: updated.category.customizable ?? false,
         enabled: updated.enabled,
         position: updated.position,
       });

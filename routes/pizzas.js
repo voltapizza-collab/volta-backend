@@ -29,6 +29,123 @@ const parseLaunchAt = (value) => {
   return Number.isNaN(date.getTime()) ? null : date;
 };
 
+const normalizeBaseLabel = (value) => {
+  const clean = String(value || "")
+    .trim()
+    .replace(/\s+/g, " ");
+
+  return clean || "Tradicional";
+};
+
+const normalizeBaseKey = (value) =>
+  normalizeBaseLabel(value)
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "");
+
+const getOrderedSizes = (sizes) => {
+  const order = ["S", "M", "L", "XL", "XXL", "ST"];
+  const unique = [...new Set((Array.isArray(sizes) ? sizes : []).filter(Boolean))];
+
+  return unique.sort((left, right) => {
+    const leftIndex = order.indexOf(left);
+    const rightIndex = order.indexOf(right);
+    return (leftIndex === -1 ? 999 : leftIndex) - (rightIndex === -1 ? 999 : rightIndex);
+  });
+};
+
+const ensurePizzaBaseForProduct = async (
+  prisma,
+  {
+    partnerId,
+    baseName,
+    sizes,
+    priceBySize,
+  }
+) => {
+  const baseLabel = normalizeBaseLabel(baseName);
+  const baseKey = normalizeBaseKey(baseLabel);
+  const baseSizes = getOrderedSizes(sizes);
+
+  if (!partnerId || !baseSizes.length) return null;
+
+  const existingBases = await prisma.menuPizza.findMany({
+    where: {
+      partnerId,
+      type: "BASE",
+    },
+    select: {
+      id: true,
+      name: true,
+      selectSize: true,
+      priceBySize: true,
+      cookingMethod: true,
+    },
+  });
+
+  const existingBase = existingBases.find(
+    (row) =>
+      normalizeBaseKey(row.cookingMethod || row.name.replace(/^BASE\s*[-:]?\s*/i, "")) ===
+      baseKey
+  );
+
+  if (!existingBase) {
+    const createdBase = await prisma.menuPizza.create({
+      data: {
+        name: baseLabel,
+        partnerId,
+        category: null,
+        categoryId: null,
+        selectSize: baseSizes,
+        priceBySize: baseSizes.reduce((acc, size) => {
+          acc[size] = priceBySize?.[size] ?? "";
+          return acc;
+        }, {}),
+        cookingMethod: baseLabel,
+        status: "ACTIVE",
+        type: "BASE",
+      },
+    });
+
+    await zeroStockForNewPizza(prisma, createdBase.id, partnerId);
+    return createdBase;
+  }
+
+  const currentSizes = Array.isArray(existingBase.selectSize)
+    ? existingBase.selectSize.filter(Boolean)
+    : [];
+  const nextSizes = getOrderedSizes([...currentSizes, ...baseSizes]);
+  const currentPrices =
+    existingBase.priceBySize &&
+    typeof existingBase.priceBySize === "object" &&
+    !Array.isArray(existingBase.priceBySize)
+      ? existingBase.priceBySize
+      : {};
+  const nextPrices = { ...currentPrices };
+  let changed = nextSizes.length !== currentSizes.length;
+
+  baseSizes.forEach((size) => {
+    if (nextPrices[size] == null || nextPrices[size] === "") {
+      nextPrices[size] = priceBySize?.[size] ?? "";
+      changed = true;
+    }
+  });
+
+  if (!changed) return existingBase;
+
+  return prisma.menuPizza.update({
+    where: { id: existingBase.id },
+    data: {
+      name: baseLabel,
+      cookingMethod: baseLabel,
+      selectSize: nextSizes,
+      priceBySize: nextPrices,
+      status: "ACTIVE",
+      type: "BASE",
+    },
+  });
+};
+
 const getCategoryOrThrow = async (prisma, rawCategoryId) => {
   const categoryId = Number(rawCategoryId);
 
@@ -229,6 +346,7 @@ export default function pizzasRoutes(prisma) {
         partnerId,
         storeId,
         categoryId,
+        baseName,
         sizes,
         priceBySize,
         cookingMethod,
@@ -289,7 +407,7 @@ export default function pizzasRoutes(prisma) {
         category: category.name,
         selectSize: parsedSizes,
         priceBySize: parsedPrices,
-        cookingMethod: cookingMethod || null,
+        cookingMethod: normalizeBaseLabel(baseName || cookingMethod),
         launchAt: parseLaunchAt(launchAt),
         image,
         imagePublicId,
@@ -322,6 +440,12 @@ export default function pizzasRoutes(prisma) {
       });
 
       await zeroStockForNewPizza(prisma, pizza.id, parsedPartnerId);
+      await ensurePizzaBaseForProduct(prisma, {
+        partnerId: parsedPartnerId,
+        baseName: createData.cookingMethod,
+        sizes: parsedSizes,
+        priceBySize: parsedPrices,
+      });
 
       res.json(mapPizza(createdPizza || pizza));
     } catch (err) {
@@ -348,6 +472,9 @@ export default function pizzasRoutes(prisma) {
       const parsedSizes = parseMaybeJson(req.body.sizes, []);
       const parsedPrices = parseMaybeJson(req.body.priceBySize, {});
       const parsedIngredients = parseMaybeJson(req.body.ingredients, []);
+      const nextBaseName = normalizeBaseLabel(
+        req.body.baseName || req.body.cookingMethod || existing.cookingMethod
+      );
 
       await assertIngredientsAvailableForStore(
         prisma,
@@ -381,7 +508,7 @@ export default function pizzasRoutes(prisma) {
         category: nextCategoryName,
         selectSize: parsedSizes,
         priceBySize: parsedPrices,
-        cookingMethod: req.body.cookingMethod ?? null,
+        cookingMethod: nextBaseName,
         launchAt: parseLaunchAt(req.body.launchAt),
         image: nextImage,
         imagePublicId: nextImagePublicId,
@@ -454,6 +581,15 @@ export default function pizzasRoutes(prisma) {
           });
         }
         throw err;
+      }
+
+      if (existing.type !== "BASE") {
+        await ensurePizzaBaseForProduct(prisma, {
+          partnerId: existing.partnerId,
+          baseName: nextBaseName,
+          sizes: parsedSizes,
+          priceBySize: parsedPrices,
+        });
       }
 
       res.json({ ok: true, id });
