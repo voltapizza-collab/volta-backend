@@ -198,10 +198,6 @@ export default function basesPizzasRoutes(prisma) {
         }
       }
 
-      if (partnerId) {
-        await ensureLegacyBases(prisma, { partnerId });
-      }
-
       const rows = await prisma.menuPizza.findMany({
         where: {
           ...(partnerId ? { partnerId } : {}),

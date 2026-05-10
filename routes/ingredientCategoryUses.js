@@ -1,19 +1,13 @@
 import express from "express";
 
-const normalizePartnerId = (value) => {
-  const partnerId = Number(value);
-  return Number.isInteger(partnerId) && partnerId > 0 ? partnerId : null;
-};
-
-const normalizeStoreId = (value) => {
-  const storeId = Number(value);
-  return Number.isInteger(storeId) && storeId > 0 ? storeId : null;
+const normalizePositiveId = (value) => {
+  const id = Number(value);
+  return Number.isInteger(id) && id > 0 ? id : null;
 };
 
 const normalizePriceBySize = (value, fallbackPrice = 0) => {
-  const source = value && typeof value === "object" && !Array.isArray(value)
-    ? value
-    : {};
+  const source =
+    value && typeof value === "object" && !Array.isArray(value) ? value : {};
 
   const entries = Object.entries(source).reduce((acc, [size, price]) => {
     const normalizedSize = String(size || "").trim();
@@ -35,9 +29,10 @@ const normalizePriceBySize = (value, fallbackPrice = 0) => {
 };
 
 const getPrimaryPrice = (priceBySize, fallbackPrice = 0) => {
-  const prices = priceBySize && typeof priceBySize === "object"
-    ? Object.values(priceBySize)
-    : [];
+  const prices =
+    priceBySize && typeof priceBySize === "object"
+      ? Object.values(priceBySize)
+      : [];
   const firstPrice = prices.find((price) => Number.isFinite(Number(price)));
 
   if (firstPrice != null) return Number(firstPrice);
@@ -47,10 +42,10 @@ const getPrimaryPrice = (priceBySize, fallbackPrice = 0) => {
 };
 
 const resolvePartnerId = async (prisma, partnerIdValue, storeIdValue) => {
-  const directPartnerId = normalizePartnerId(partnerIdValue);
+  const directPartnerId = normalizePositiveId(partnerIdValue);
   if (directPartnerId) return directPartnerId;
 
-  const storeId = normalizeStoreId(storeIdValue);
+  const storeId = normalizePositiveId(storeIdValue);
   if (!storeId) return null;
 
   const store = await prisma.store.findUnique({
@@ -58,10 +53,10 @@ const resolvePartnerId = async (prisma, partnerIdValue, storeIdValue) => {
     select: { partnerId: true },
   });
 
-  return normalizePartnerId(store?.partnerId);
+  return normalizePositiveId(store?.partnerId);
 };
 
-const groupExtras = (rows) => {
+const groupUses = (rows) => {
   const grouped = new Map();
 
   rows.forEach((row) => {
@@ -71,6 +66,8 @@ const groupExtras = (rows) => {
       grouped.set(key, {
         ingredientId: row.ingredientId,
         ingredientName: row.ingredient?.name || `Ingrediente ${row.ingredientId}`,
+        ingredientCategory: row.ingredient?.category || "OTROS",
+        costPrice: row.ingredient?.costPrice ?? null,
         categories: [],
       });
     }
@@ -80,7 +77,10 @@ const groupExtras = (rows) => {
       name: row.category?.name || `Categoria ${row.categoryId}`,
       price: row.price ?? 0,
       priceBySize: normalizePriceBySize(row.priceBySize, row.price),
-      status: row.status ?? "ACTIVE",
+      costPrice: row.costPrice ?? null,
+      costBySize:
+        row.costBySize && typeof row.costBySize === "object" ? row.costBySize : {},
+      active: row.active !== false,
     });
   });
 
@@ -91,7 +91,7 @@ const groupExtras = (rows) => {
   );
 };
 
-export default function ingredientExtrasRoutes(prisma) {
+export default function ingredientCategoryUsesRoutes(prisma) {
   const router = express.Router();
 
   router.get("/", async (req, res) => {
@@ -101,23 +101,51 @@ export default function ingredientExtrasRoutes(prisma) {
         req.query.partnerId,
         req.query.storeId
       );
-      const categoryId = Number(req.query.categoryId);
+      const storeId = normalizePositiveId(req.query.storeId);
+      const categoryId = normalizePositiveId(req.query.categoryId);
 
-      if (!partnerId || !Number.isInteger(categoryId) || categoryId <= 0) {
+      if (!partnerId || !categoryId) {
         return res
           .status(400)
           .json({ error: "partnerId or storeId, and categoryId required" });
       }
 
-      const rows = await prisma.ingredientExtra.findMany({
+      const rows = await prisma.ingredientCategoryUse.findMany({
         where: {
           partnerId,
-          status: "ACTIVE",
           categoryId,
+          active: true,
+          ingredient: {
+            menuPizzas: {
+              some: {
+                menuPizza: {
+                  partnerId,
+                  categoryId,
+                  status: "ACTIVE",
+                  type: "SELLABLE",
+                },
+              },
+            },
+          },
         },
         include: {
           ingredient: {
-            select: { id: true, name: true, allergens: true },
+            select: {
+              id: true,
+              name: true,
+              category: true,
+              allergens: true,
+              costPrice: true,
+              status: true,
+              ...(storeId
+                ? {
+                    storeStocks: {
+                    where: { storeId },
+                    select: { active: true },
+                    },
+                  }
+                : {}),
+            },
           },
         },
         orderBy: {
@@ -125,20 +153,35 @@ export default function ingredientExtrasRoutes(prisma) {
         },
       });
 
+      const availableRows = rows.filter((row) => {
+        const ingredient = row.ingredient;
+        if (ingredient?.status !== "ACTIVE") return false;
+        if (!storeId) return true;
+
+        return ingredient?.storeStocks?.[0]?.active === true;
+      });
+
       res.json(
-        rows.map((row) => ({
+        availableRows.map((row) => ({
+          id: row.ingredientId,
           ingredientId: row.ingredientId,
           name: row.ingredient?.name || `Ingrediente ${row.ingredientId}`,
+          category: row.ingredient?.category || "OTROS",
           allergens: Array.isArray(row.ingredient?.allergens)
             ? row.ingredient.allergens
             : [],
           price: Number(row.price || 0),
           priceBySize: normalizePriceBySize(row.priceBySize, row.price),
+          costPrice: row.costPrice ?? row.ingredient?.costPrice ?? null,
+          costBySize:
+            row.costBySize && typeof row.costBySize === "object"
+              ? row.costBySize
+              : {},
         }))
       );
     } catch (err) {
-      console.error(err);
-      res.status(500).json({ error: "Error fetching extras by category" });
+      console.error("ingredientCategoryUses GET error:", err);
+      res.status(500).json({ error: "Error fetching ingredient uses" });
     }
   });
 
@@ -154,14 +197,16 @@ export default function ingredientExtrasRoutes(prisma) {
         return res.status(400).json({ error: "partnerId or storeId required" });
       }
 
-      const extras = await prisma.ingredientExtra.findMany({
-        where: {
-          partnerId,
-          status: "ACTIVE",
-        },
+      const rows = await prisma.ingredientCategoryUse.findMany({
+        where: { partnerId },
         include: {
           ingredient: {
-            select: { id: true, name: true, allergens: true },
+            select: {
+              id: true,
+              name: true,
+              category: true,
+              costPrice: true,
+            },
           },
           category: {
             select: { id: true, name: true },
@@ -173,10 +218,10 @@ export default function ingredientExtrasRoutes(prisma) {
         ],
       });
 
-      res.json(groupExtras(extras));
+      res.json(groupUses(rows));
     } catch (err) {
-      console.error(err);
-      res.status(500).json({ error: "Error fetching extras" });
+      console.error("ingredientCategoryUses all error:", err);
+      res.status(500).json({ error: "Error fetching ingredient uses" });
     }
   });
 
@@ -187,10 +232,10 @@ export default function ingredientExtrasRoutes(prisma) {
         req.body?.partnerId,
         req.body?.storeId
       );
-      const ingredientId = Number(req.body?.ingredientId);
+      const ingredientId = normalizePositiveId(req.body?.ingredientId);
       const links = Array.isArray(req.body?.links) ? req.body.links : [];
 
-      if (!partnerId || !Number.isInteger(ingredientId) || ingredientId <= 0) {
+      if (!partnerId || !ingredientId) {
         return res
           .status(400)
           .json({ error: "partnerId or storeId, and ingredientId required" });
@@ -205,14 +250,16 @@ export default function ingredientExtrasRoutes(prisma) {
         return res.status(404).json({ error: "Ingredient not found" });
       }
 
-      const categoryIds = [...new Set(
-        links
-          .map((link) => Number(link?.categoryId))
-          .filter((id) => Number.isInteger(id) && id > 0)
-      )];
+      const categoryIds = [
+        ...new Set(
+          links
+            .map((link) => normalizePositiveId(link?.categoryId))
+            .filter(Boolean)
+        ),
+      ];
 
       if (!categoryIds.length) {
-        await prisma.ingredientExtra.deleteMany({
+        await prisma.ingredientCategoryUse.deleteMany({
           where: { partnerId, ingredientId },
         });
 
@@ -225,21 +272,32 @@ export default function ingredientExtrasRoutes(prisma) {
       });
 
       if (categories.length !== categoryIds.length) {
-        return res.status(404).json({ error: "One or more categories were not found" });
+        return res
+          .status(404)
+          .json({ error: "One or more categories were not found" });
       }
 
       await prisma.$transaction(async (tx) => {
-        await tx.ingredientExtra.deleteMany({
+        await tx.ingredientCategoryUse.deleteMany({
           where: { partnerId, ingredientId },
         });
 
-        await tx.ingredientExtra.createMany({
+        await tx.ingredientCategoryUse.createMany({
           data: categoryIds.map((categoryId) => {
-            const link = links.find((item) => Number(item?.categoryId) === categoryId);
+            const link = links.find(
+              (item) => normalizePositiveId(item?.categoryId) === categoryId
+            );
             const priceBySize = normalizePriceBySize(
               link?.priceBySize,
               link?.price
             );
+            const costBySize =
+              link?.costBySize &&
+              typeof link.costBySize === "object" &&
+              !Array.isArray(link.costBySize)
+                ? link.costBySize
+                : {};
+            const costPrice = Number(link?.costPrice);
 
             return {
               partnerId,
@@ -247,7 +305,9 @@ export default function ingredientExtrasRoutes(prisma) {
               categoryId,
               price: getPrimaryPrice(priceBySize, link?.price),
               priceBySize,
-              status: "ACTIVE",
+              costPrice: Number.isFinite(costPrice) ? costPrice : null,
+              costBySize,
+              active: link?.active !== false,
             };
           }),
         });
@@ -255,8 +315,8 @@ export default function ingredientExtrasRoutes(prisma) {
 
       res.json({ ok: true, ingredientId });
     } catch (err) {
-      console.error(err);
-      res.status(500).json({ error: "Error saving extras" });
+      console.error("ingredientCategoryUses POST error:", err);
+      res.status(500).json({ error: "Error saving ingredient uses" });
     }
   });
 
@@ -267,22 +327,22 @@ export default function ingredientExtrasRoutes(prisma) {
         req.query.partnerId,
         req.query.storeId
       );
-      const ingredientId = Number(req.params.ingredientId);
+      const ingredientId = normalizePositiveId(req.params.ingredientId);
 
-      if (!partnerId || !Number.isInteger(ingredientId) || ingredientId <= 0) {
+      if (!partnerId || !ingredientId) {
         return res
           .status(400)
           .json({ error: "partnerId or storeId, and ingredientId required" });
       }
 
-      await prisma.ingredientExtra.deleteMany({
+      await prisma.ingredientCategoryUse.deleteMany({
         where: { partnerId, ingredientId },
       });
 
       res.json({ ok: true });
     } catch (err) {
-      console.error(err);
-      res.status(500).json({ error: "Error deleting extra" });
+      console.error("ingredientCategoryUses DELETE error:", err);
+      res.status(500).json({ error: "Error deleting ingredient uses" });
     }
   });
 

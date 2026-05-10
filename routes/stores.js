@@ -1,4 +1,5 @@
 import express from "express";
+import { getBoostSettings } from "../services/boostSettings.js";
 
 const TZ = process.env.TIMEZONE || "Europe/Madrid";
 
@@ -372,6 +373,22 @@ const attachStorePublicMenu = (router, prisma) => {
         orderBy: { id: "asc" },
       });
 
+      const categoryIds = [
+        ...new Set(
+          pizzas
+            .map((pizza) => Number(pizza.categoryId))
+            .filter((id) => Number.isInteger(id) && id > 0)
+        ),
+      ];
+      const categoryHalfRows = categoryIds.length
+        ? await prisma.$queryRawUnsafe(
+            `SELECT id, halfAndHalf FROM Category WHERE id IN (${categoryIds.join(",")})`
+          )
+        : [];
+      const categoryHalfAndHalfById = new Map(
+        categoryHalfRows.map((row) => [Number(row.id), Boolean(row.halfAndHalf)])
+      );
+
       const availablePizzas = pizzas.filter((pizza) => {
         const storePizzaState = pizza.stocks?.[0];
 
@@ -394,6 +411,8 @@ const attachStorePublicMenu = (router, prisma) => {
         category: pizza.category ?? null,
         categoryPosition: pizza.categoryRef?.position ?? 999,
         categoryCustomizable: pizza.categoryRef?.customizable ?? false,
+        categoryHalfAndHalf:
+          categoryHalfAndHalfById.get(Number(pizza.categoryId)) ?? false,
         cookingMethod: pizza.cookingMethod ?? null,
         selectSize: pizza.selectSize ?? [],
         priceBySize: pizza.priceBySize ?? {},
@@ -422,6 +441,7 @@ const attachStorePublicMenu = (router, prisma) => {
         menu,
         now,
       });
+      const boostSettings = await getBoostSettings(prisma);
       const promos = await prisma.promo.findMany({
         where: {
           partnerId: store.partnerId,
@@ -460,6 +480,7 @@ const attachStorePublicMenu = (router, prisma) => {
         menu,
         trending,
         upcoming,
+        boostSettings,
         promos: visiblePromos.map((promo) => ({
           id: promo.id,
           title: promo.title,

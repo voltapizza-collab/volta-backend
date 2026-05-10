@@ -4,13 +4,32 @@ import { PrismaClient } from "@prisma/client";
 const prisma = new PrismaClient();
 const router = express.Router();
 
+const normalizeCategory = (row) => ({
+  ...row,
+  customizable: Boolean(row?.customizable),
+  halfAndHalf: Boolean(row?.halfAndHalf),
+});
+
+const getCategoryById = async (id) => {
+  const rows = await prisma.$queryRaw`
+    SELECT *
+    FROM Category
+    WHERE id = ${id}
+    LIMIT 1
+  `;
+
+  return rows[0] ? normalizeCategory(rows[0]) : null;
+};
+
 router.get("/", async (req, res) => {
   try {
-    const rows = await prisma.category.findMany({
-      orderBy: { name: "asc" },
-    });
+    const rows = await prisma.$queryRaw`
+      SELECT *
+      FROM Category
+      ORDER BY name ASC
+    `;
 
-    res.json(rows);
+    res.json(rows.map(normalizeCategory));
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: "Failed to load categories" });
@@ -21,6 +40,7 @@ router.post("/", async (req, res) => {
   try {
     const rawName = String(req.body?.name || "").trim();
     const customizable = Boolean(req.body?.customizable);
+    const halfAndHalf = Boolean(req.body?.halfAndHalf);
 
     if (!rawName) {
       return res.status(400).json({ error: "name required" });
@@ -54,7 +74,13 @@ router.post("/", async (req, res) => {
       },
     });
 
-    res.json(row);
+    await prisma.$executeRaw`
+      UPDATE Category
+      SET halfAndHalf = ${halfAndHalf}
+      WHERE id = ${row.id}
+    `;
+
+    res.json(await getCategoryById(row.id));
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: "Failed to create category" });
@@ -74,6 +100,10 @@ router.patch("/:id", async (req, res) => {
     const hasCustomizable = Object.prototype.hasOwnProperty.call(
       req.body || {},
       "customizable"
+    );
+    const hasHalfAndHalf = Object.prototype.hasOwnProperty.call(
+      req.body || {},
+      "halfAndHalf"
     );
 
     if (!Number.isInteger(id) || id <= 0) {
@@ -115,6 +145,14 @@ router.patch("/:id", async (req, res) => {
         },
       });
 
+      if (hasHalfAndHalf) {
+        await tx.$executeRaw`
+          UPDATE Category
+          SET halfAndHalf = ${Boolean(req.body.halfAndHalf)}
+          WHERE id = ${id}
+        `;
+      }
+
       if (existing.name !== nextName) {
         await tx.menuPizza.updateMany({
           where: {
@@ -130,7 +168,7 @@ router.patch("/:id", async (req, res) => {
       return category;
     });
 
-    res.json(updated);
+    res.json(await getCategoryById(updated.id));
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: "Failed to update category" });

@@ -37,115 +37,6 @@ const normalizeBaseLabel = (value) => {
   return clean || "Tradicional";
 };
 
-const normalizeBaseKey = (value) =>
-  normalizeBaseLabel(value)
-    .toLowerCase()
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "");
-
-const getOrderedSizes = (sizes) => {
-  const order = ["S", "M", "L", "XL", "XXL", "ST"];
-  const unique = [...new Set((Array.isArray(sizes) ? sizes : []).filter(Boolean))];
-
-  return unique.sort((left, right) => {
-    const leftIndex = order.indexOf(left);
-    const rightIndex = order.indexOf(right);
-    return (leftIndex === -1 ? 999 : leftIndex) - (rightIndex === -1 ? 999 : rightIndex);
-  });
-};
-
-const ensurePizzaBaseForProduct = async (
-  prisma,
-  {
-    partnerId,
-    baseName,
-    sizes,
-    priceBySize,
-  }
-) => {
-  const baseLabel = normalizeBaseLabel(baseName);
-  const baseKey = normalizeBaseKey(baseLabel);
-  const baseSizes = getOrderedSizes(sizes);
-
-  if (!partnerId || !baseSizes.length) return null;
-
-  const existingBases = await prisma.menuPizza.findMany({
-    where: {
-      partnerId,
-      type: "BASE",
-    },
-    select: {
-      id: true,
-      name: true,
-      selectSize: true,
-      priceBySize: true,
-      cookingMethod: true,
-    },
-  });
-
-  const existingBase = existingBases.find(
-    (row) =>
-      normalizeBaseKey(row.cookingMethod || row.name.replace(/^BASE\s*[-:]?\s*/i, "")) ===
-      baseKey
-  );
-
-  if (!existingBase) {
-    const createdBase = await prisma.menuPizza.create({
-      data: {
-        name: baseLabel,
-        partnerId,
-        category: null,
-        categoryId: null,
-        selectSize: baseSizes,
-        priceBySize: baseSizes.reduce((acc, size) => {
-          acc[size] = priceBySize?.[size] ?? "";
-          return acc;
-        }, {}),
-        cookingMethod: baseLabel,
-        status: "ACTIVE",
-        type: "BASE",
-      },
-    });
-
-    await zeroStockForNewPizza(prisma, createdBase.id, partnerId);
-    return createdBase;
-  }
-
-  const currentSizes = Array.isArray(existingBase.selectSize)
-    ? existingBase.selectSize.filter(Boolean)
-    : [];
-  const nextSizes = getOrderedSizes([...currentSizes, ...baseSizes]);
-  const currentPrices =
-    existingBase.priceBySize &&
-    typeof existingBase.priceBySize === "object" &&
-    !Array.isArray(existingBase.priceBySize)
-      ? existingBase.priceBySize
-      : {};
-  const nextPrices = { ...currentPrices };
-  let changed = nextSizes.length !== currentSizes.length;
-
-  baseSizes.forEach((size) => {
-    if (nextPrices[size] == null || nextPrices[size] === "") {
-      nextPrices[size] = priceBySize?.[size] ?? "";
-      changed = true;
-    }
-  });
-
-  if (!changed) return existingBase;
-
-  return prisma.menuPizza.update({
-    where: { id: existingBase.id },
-    data: {
-      name: baseLabel,
-      cookingMethod: baseLabel,
-      selectSize: nextSizes,
-      priceBySize: nextPrices,
-      status: "ACTIVE",
-      type: "BASE",
-    },
-  });
-};
-
 const getCategoryOrThrow = async (prisma, rawCategoryId) => {
   const categoryId = Number(rawCategoryId);
 
@@ -246,6 +137,86 @@ const assertIngredientsAvailableForStore = async (
   }
 };
 
+const syncIngredientCategoryUsesForCategory = async (
+  prismaClient,
+  {
+    partnerId,
+    categoryId,
+  }
+) => {
+  const parsedPartnerId = Number(partnerId);
+  const parsedCategoryId = Number(categoryId);
+
+  if (
+    !Number.isInteger(parsedPartnerId) ||
+    parsedPartnerId <= 0 ||
+    !Number.isInteger(parsedCategoryId) ||
+    parsedCategoryId <= 0
+  ) {
+    return;
+  }
+
+  const recipeRows = await prismaClient.menuPizzaIngredient.findMany({
+    where: {
+      menuPizza: {
+        partnerId: parsedPartnerId,
+        categoryId: parsedCategoryId,
+        status: "ACTIVE",
+        type: "SELLABLE",
+      },
+      ingredient: {
+        status: "ACTIVE",
+      },
+    },
+    select: {
+      ingredientId: true,
+      ingredient: {
+        select: { costPrice: true },
+      },
+    },
+  });
+
+  const ingredientsById = new Map();
+  recipeRows.forEach((row) => {
+    if (!ingredientsById.has(row.ingredientId)) {
+      ingredientsById.set(row.ingredientId, row.ingredient?.costPrice ?? null);
+    }
+  });
+  const ingredientIds = [...ingredientsById.keys()];
+
+  await prismaClient.ingredientCategoryUse.deleteMany({
+    where: {
+      partnerId: parsedPartnerId,
+      categoryId: parsedCategoryId,
+      ...(ingredientIds.length
+        ? { ingredientId: { notIn: ingredientIds } }
+        : {}),
+    },
+  });
+
+  if (!ingredientIds.length) return;
+
+  await prismaClient.ingredientCategoryUse.createMany({
+    data: ingredientIds.map((ingredientId) => ({
+      partnerId: parsedPartnerId,
+      categoryId: parsedCategoryId,
+      ingredientId,
+      costPrice: ingredientsById.get(ingredientId),
+      active: true,
+    })),
+    skipDuplicates: true,
+  });
+
+  await prismaClient.ingredientCategoryUse.updateMany({
+    where: {
+      partnerId: parsedPartnerId,
+      categoryId: parsedCategoryId,
+      ingredientId: { in: ingredientIds },
+    },
+    data: { active: true },
+  });
+};
+
 const mapPizza = (pizza) => ({
   ...pizza,
   categoryId: pizza.categoryId ?? null,
@@ -325,7 +296,10 @@ export default function pizzasRoutes(prisma) {
         : null;
 
       const pizzas = await prisma.menuPizza.findMany({
-        where: partnerId ? { partnerId } : undefined,
+        where: {
+          ...(partnerId ? { partnerId } : {}),
+          type: "SELLABLE",
+        },
         orderBy: { id: "desc" },
         include: {
           ingredients: { include: { ingredient: true } },
@@ -440,11 +414,9 @@ export default function pizzasRoutes(prisma) {
       });
 
       await zeroStockForNewPizza(prisma, pizza.id, parsedPartnerId);
-      await ensurePizzaBaseForProduct(prisma, {
+      await syncIngredientCategoryUsesForCategory(prisma, {
         partnerId: parsedPartnerId,
-        baseName: createData.cookingMethod,
-        sizes: parsedSizes,
-        priceBySize: parsedPrices,
+        categoryId: category.id,
       });
 
       res.json(mapPizza(createdPizza || pizza));
@@ -583,12 +555,14 @@ export default function pizzasRoutes(prisma) {
         throw err;
       }
 
-      if (existing.type !== "BASE") {
-        await ensurePizzaBaseForProduct(prisma, {
+      await syncIngredientCategoryUsesForCategory(prisma, {
+        partnerId: existing.partnerId,
+        categoryId: nextCategoryId,
+      });
+      if (existing.categoryId && existing.categoryId !== nextCategoryId) {
+        await syncIngredientCategoryUsesForCategory(prisma, {
           partnerId: existing.partnerId,
-          baseName: nextBaseName,
-          sizes: parsedSizes,
-          priceBySize: parsedPrices,
+          categoryId: existing.categoryId,
         });
       }
 

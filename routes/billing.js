@@ -1,4 +1,5 @@
 import express from "express";
+import { getBoostSettings } from "../services/boostSettings.js";
 
 const parsePositiveInt = (value) => {
   const parsed = Number(value);
@@ -96,6 +97,7 @@ export default function billingRoutes(prisma) {
       const monthStart = startOfMonth(now);
       const nextMonthStart = startOfNextMonth(now);
       const policy = getPolicy();
+      const boostSettings = await getBoostSettings(prisma);
       const standardCutoff = addBusinessDays(now, -policy.standardDelayBusinessDays);
 
       const sales = await prisma.sale.findMany({
@@ -110,6 +112,9 @@ export default function billingRoutes(prisma) {
           status: true,
           total: true,
           currency: true,
+          boostActive: true,
+          boostAmount: true,
+          boostMeta: true,
           store: {
             select: {
               id: true,
@@ -149,6 +154,20 @@ export default function billingRoutes(prisma) {
       const monthPaid = sum(monthPaidSales);
       const platformFeeDraft = monthGross * policy.platformFeeRate;
       const instantQuote = quoteInstantCashout(instantBridgeable, policy);
+      const monthBoostSales = monthSales.filter((sale) => sale.boostActive);
+      const monthBoostAmount = monthBoostSales.reduce(
+        (sum, sale) => sum + Number(sale.boostAmount || 0),
+        0
+      );
+      const monthBoostVolta = monthBoostSales.reduce((sum, sale) => {
+        const meta = sale.boostMeta && typeof sale.boostMeta === "object"
+          ? sale.boostMeta
+          : {};
+        const stored = Number(meta.voltaAmount);
+        if (Number.isFinite(stored)) return sum + stored;
+        return sum + Number(sale.boostAmount || 0) * (boostSettings.voltaSharePercent / 100);
+      }, 0);
+      const monthBoostPartner = Math.max(monthBoostAmount - monthBoostVolta, 0);
 
       const stores = new Map();
       safeSales.forEach((sale) => {
@@ -195,6 +214,10 @@ export default function billingRoutes(prisma) {
           paidSales: monthPaid,
           platformFeeRate: policy.platformFeeRate,
           platformFeeAmount: platformFeeDraft,
+          boostGross: monthBoostAmount,
+          boostVoltaAmount: monthBoostVolta,
+          boostPartnerAmount: monthBoostPartner,
+          boostVoltaSharePercent: boostSettings.voltaSharePercent,
           currency: partner.currency || "EUR",
         },
         instantQuote,

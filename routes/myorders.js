@@ -1,7 +1,7 @@
 import express from "express";
+import { getBoostSettings } from "../services/boostSettings.js";
 
 const TZ = process.env.TIMEZONE || "Europe/Madrid";
-const BOOST_PRICE_PER_POSITION = Number(process.env.BOOST_PRICE_PER_POSITION || 0.2);
 
 const parsePositiveInt = (value) => {
   const parsed = Number(value);
@@ -82,11 +82,6 @@ const normalizePhone = (value) =>
   String(value || "")
     .replace(/[^\d+]/g, "")
     .trim();
-
-const getBoostUnitPrice = () =>
-  Number.isFinite(BOOST_PRICE_PER_POSITION) && BOOST_PRICE_PER_POSITION > 0
-    ? BOOST_PRICE_PER_POSITION
-    : 0.2;
 
 const getLineQty = (item) => {
   const qty = Number(item?.quantity ?? item?.qty ?? item?.cantidad ?? 1);
@@ -206,13 +201,15 @@ const clampTargetPosition = (value, currentPosition) => {
   return Math.min(Math.max(parsed, 1), Math.max(currentPosition, 1));
 };
 
-const buildBoostQuote = ({ sale, queue, targetPosition }) => {
+const buildBoostQuote = ({ sale, queue, targetPosition, settings }) => {
   const currentIndex = queue.findIndex((item) => item.id === sale.id);
   const currentPosition = currentIndex >= 0 ? currentIndex + 1 : queue.length + 1;
   const target = clampTargetPosition(targetPosition, currentPosition);
   const positionsToJump = Math.max(currentPosition - target, 0);
-  const unitPrice = getBoostUnitPrice();
+  const unitPrice = settings.unitPrice;
   const amount = roundMoney(positionsToJump * unitPrice);
+  const voltaAmount = roundMoney(amount * (settings.voltaSharePercent / 100));
+  const partnerAmount = roundMoney(amount - voltaAmount);
 
   return {
     orderId: sale.id,
@@ -227,6 +224,10 @@ const buildBoostQuote = ({ sale, queue, targetPosition }) => {
     positionsToJump,
     unitPrice,
     amount,
+    voltaSharePercent: settings.voltaSharePercent,
+    partnerSharePercent: settings.partnerSharePercent,
+    voltaAmount,
+    partnerAmount,
     alreadyBoosted: Boolean(sale.boostActive),
     paidAt: sale.boostPaidAt,
   };
@@ -396,10 +397,16 @@ export default function myordersRoutes(prisma) {
       }
 
       const queue = await loadStoreQueue(prisma, sale);
+      const settings = await getBoostSettings(prisma);
+      if (!settings.active) {
+        return res.status(409).json({ error: "Boost no esta activo ahora mismo" });
+      }
+
       const quote = buildBoostQuote({
         sale,
         queue,
         targetPosition: req.query.targetPosition,
+        settings,
       });
 
       return res.json({ ok: true, quote });
@@ -421,10 +428,16 @@ export default function myordersRoutes(prisma) {
       }
 
       const queue = await loadStoreQueue(prisma, sale);
+      const settings = await getBoostSettings(prisma);
+      if (!settings.active) {
+        return res.status(409).json({ error: "Boost no esta activo ahora mismo" });
+      }
+
       const quote = buildBoostQuote({
         sale,
         queue,
         targetPosition: req.body?.targetPosition,
+        settings,
       });
 
       if (quote.positionsToJump <= 0) {
@@ -449,6 +462,10 @@ export default function myordersRoutes(prisma) {
             paymentReference: req.body?.paymentReference || null,
             quotedAt: new Date().toISOString(),
             unitPrice: quote.unitPrice,
+            voltaSharePercent: quote.voltaSharePercent,
+            partnerSharePercent: quote.partnerSharePercent,
+            voltaAmount: quote.voltaAmount,
+            partnerAmount: quote.partnerAmount,
             previousTargetPosition: sale.boostTargetPosition || null,
           },
         },

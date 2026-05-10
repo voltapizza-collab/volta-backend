@@ -165,6 +165,7 @@ model Partner {
   gamePlays          GamePlay[]
   incentives         Incentive[]
   ingredientExtras   IngredientExtra[]
+  ingredientCategoryUses IngredientCategoryUse[]
   partnerCategories  PartnerCategory[]
   reservations       Reservation[]
   smsCreditLedger     SmsCreditLedger[]
@@ -288,6 +289,7 @@ model Ingredient {
   updatedAt        DateTime              @updatedAt
   menuPizzas       MenuPizzaIngredient[]
   ingredientExtras IngredientExtra[]
+  categoryUses     IngredientCategoryUse[]
   storeStocks      StoreIngredientStock[]
 }
 model IngredientSuggestion {
@@ -366,6 +368,27 @@ model IngredientExtra {
   ingredient   Ingredient @relation(fields: [ingredientId], references: [id])
   category     Category   @relation(fields: [categoryId], references: [id])
   @@unique([partnerId, ingredientId, categoryId])
+}
+model IngredientCategoryUse {
+  id           Int        @id @default(autoincrement())
+  ingredientId Int
+  partnerId    Int
+  categoryId   Int
+  price        Float?
+  priceBySize  Json?
+  costPrice    Float?
+  costBySize   Json?
+  active       Boolean    @default(true)
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+  ingredient   Ingredient @relation(fields: [ingredientId], references: [id], onDelete: Cascade)
+  partner      Partner    @relation(fields: [partnerId], references: [id], onDelete: Cascade)
+  category     Category   @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+
+  @@unique([partnerId, ingredientId, categoryId])
+  @@index([partnerId, categoryId, active])
+  @@index([ingredientId])
+  @@index([categoryId])
 }
 model StoreIngredientStock {
   storeId      Int
@@ -458,11 +481,13 @@ model Category {
   id               Int               @id @default(autoincrement())
   name             String            @unique
   customizable     Boolean           @default(false)
+  halfAndHalf      Boolean           @default(false)
   position         Int               @default(0)
   createdAt        DateTime          @default(now())
   updatedAt        DateTime          @updatedAt
   menuPizzas       MenuPizza[]
   ingredientExtras IngredientExtra[]
+  ingredientUses   IngredientCategoryUse[]
   partnerCategories PartnerCategory[]
 }
 model PartnerCategory {
@@ -546,6 +571,15 @@ model SmsCreditLedger {
 
   @@index([partnerId, createdAt])
   @@index([partnerId, type])
+}
+model BoostSetting {
+  id                Int      @id @default(1)
+  active            Boolean  @default(true)
+  unitPrice         Float    @default(0.2)
+  maxOptions        Int      @default(3)
+  voltaSharePercent Float    @default(25)
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
 }
 model Promo {
   id            Int      @id @default(autoincrement())

@@ -14,8 +14,8 @@ import categoriesRoutes from "./routes/categories.js";
 import partnerCategoriesRoutes from "./routes/partnerCategories.js";
 import pizzasRoutes from "./routes/pizzas.js";
 import menuDisponibleRoutes from "./routes/menuDisponible.js";
-import basesPizzasRoutes from "./routes/basesPizzas.js";
 import ingredientExtrasRoutes from "./routes/ingredientExtras.js";
+import ingredientCategoryUsesRoutes from "./routes/ingredientCategoryUses.js";
 import stockRoutes from "./routes/stock.js";
 import storeHoursRoutes from "./routes/storeHours.js";
 import customersRoutes from "./routes/customers.js";
@@ -26,6 +26,7 @@ import telnyxWebhooksRoutes from "./routes/telnyxWebhooks.js";
 import smsCreditsRoutes from "./routes/smsCredits.js";
 import myordersRoutes from "./routes/myorders.js";
 import billingRoutes from "./routes/billing.js";
+import boostSettingsRoutes from "./routes/boostSettings.js";
 import { validateTelnyxEnv } from "./services/telnyx.js";
 
 const __filename = fileURLToPath(import.meta.url);
@@ -72,6 +73,7 @@ const telnyxWebhooksRouter = telnyxWebhooksRoutes(prisma);
 const smsCreditsRouter = smsCreditsRoutes(prisma);
 const myordersRouter = myordersRoutes(prisma);
 const billingRouter = billingRoutes(prisma);
+const boostSettingsRouter = boostSettingsRoutes(prisma);
 
 const envOrigins = (process.env.CORS_ORIGINS || "")
   .split(",")
@@ -131,14 +133,15 @@ app.use("/api/categories", categoriesRoutes);
 app.use("/api", partnerCategoriesRoutes(prisma));
 app.use("/api/pizzas", pizzasRoutes(prisma));
 app.use("/api/ingredient-extras", ingredientExtrasRoutes(prisma));
+app.use("/api/ingredient-category-uses", ingredientCategoryUsesRoutes(prisma));
 app.use("/api/menuDisponible", menuDisponibleRoutes(prisma));
-app.use("/api/bases-pizzas", basesPizzasRoutes(prisma));
 app.use("/api/coupons", couponsRouter);
 app.use("/api/promos", promosRouter);
 app.use("/api/incentives", incentivesRouter);
 app.use("/api/sms-credits", smsCreditsRouter);
 app.use("/api/myorders", myordersRouter);
 app.use("/api/billing", billingRouter);
+app.use("/api/boost-settings", boostSettingsRouter);
 app.use("/api/webhooks", telnyxWebhooksRouter);
 
 const configuredFrontendUrl = process.env.PUBLIC_FRONTEND_URL?.trim();
