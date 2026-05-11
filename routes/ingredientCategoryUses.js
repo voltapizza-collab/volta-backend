@@ -77,7 +77,7 @@ const groupUses = (rows) => {
       name: row.category?.name || `Categoria ${row.categoryId}`,
       price: row.price ?? 0,
       priceBySize: normalizePriceBySize(row.priceBySize, row.price),
-      costPrice: row.costPrice ?? null,
+      costPrice: row.ingredient?.costPrice ?? row.costPrice ?? null,
       costBySize:
         row.costBySize && typeof row.costBySize === "object" ? row.costBySize : {},
       active: row.active !== false,
@@ -172,7 +172,7 @@ export default function ingredientCategoryUsesRoutes(prisma) {
             : [],
           price: Number(row.price || 0),
           priceBySize: normalizePriceBySize(row.priceBySize, row.price),
-          costPrice: row.costPrice ?? row.ingredient?.costPrice ?? null,
+          costPrice: row.ingredient?.costPrice ?? row.costPrice ?? null,
           costBySize:
             row.costBySize && typeof row.costBySize === "object"
               ? row.costBySize

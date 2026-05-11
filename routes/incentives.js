@@ -86,8 +86,11 @@ const serializeIncentive = (incentive) => ({
     ? {
         id: incentive.rewardPizza.id,
         name: incentive.rewardPizza.name,
+        category: incentive.rewardPizza.category,
         image: incentive.rewardPizza.image,
         status: incentive.rewardPizza.status,
+        selectSize: incentive.rewardPizza.selectSize,
+        priceBySize: incentive.rewardPizza.priceBySize,
       }
     : null,
   active: incentive.active,
@@ -152,7 +155,15 @@ export default function incentivesRoutes(prisma) {
         orderBy: [{ active: "desc" }, { windowStart: "asc" }, { createdAt: "desc" }],
         include: {
           rewardPizza: {
-            select: { id: true, name: true, image: true, status: true },
+            select: {
+              id: true,
+              name: true,
+              category: true,
+              image: true,
+              status: true,
+              selectSize: true,
+              priceBySize: true,
+            },
           },
         },
       });
@@ -180,7 +191,15 @@ export default function incentivesRoutes(prisma) {
         orderBy: { windowStart: "asc" },
         include: {
           rewardPizza: {
-            select: { id: true, name: true, image: true, status: true },
+            select: {
+              id: true,
+              name: true,
+              category: true,
+              image: true,
+              status: true,
+              selectSize: true,
+              priceBySize: true,
+            },
           },
         },
       });

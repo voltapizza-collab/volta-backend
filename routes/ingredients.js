@@ -64,6 +64,47 @@ router.post("/", async (req, res) => {
     res.status(500).json({ error: "error creating ingredient" });
   }
 });
+
+router.patch("/:id", async (req, res) => {
+  try {
+    const id = Number(req.params.id);
+
+    if (!Number.isInteger(id) || id <= 0) {
+      return res.status(400).json({ error: "Invalid ingredient id" });
+    }
+
+    const data = {};
+
+    if (Object.prototype.hasOwnProperty.call(req.body, "costPrice")) {
+      if (req.body.costPrice === "" || req.body.costPrice == null) {
+        data.costPrice = null;
+      } else {
+        const costPrice = Number(req.body.costPrice);
+
+        if (!Number.isFinite(costPrice) || costPrice < 0) {
+          return res.status(400).json({ error: "Invalid ingredient price" });
+        }
+
+        data.costPrice = Math.round(costPrice * 100) / 100;
+      }
+    }
+
+    if (!Object.keys(data).length) {
+      return res.status(400).json({ error: "No valid fields to update" });
+    }
+
+    const ingredient = await prisma.ingredient.update({
+      where: { id },
+      data,
+    });
+
+    res.json(ingredient);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "error updating ingredient" });
+  }
+});
+
 router.delete("/:id", async (req, res) => {
   try {
     const id = Number(req.params.id);

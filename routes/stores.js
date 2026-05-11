@@ -467,6 +467,13 @@ const attachStorePublicMenu = (router, prisma) => {
       const visiblePromos = promos.filter((promo) =>
         isPromoWithinWindow(promo, promoWindowNow)
       );
+      const salesSummary = await prisma.sale.aggregate({
+        where: {
+          storeId: store.id,
+          status: { not: "CANCELED" },
+        },
+        _avg: { total: true },
+      });
 
       return res.json({
         store: {
@@ -481,6 +488,9 @@ const attachStorePublicMenu = (router, prisma) => {
         trending,
         upcoming,
         boostSettings,
+        incentiveStats: {
+          averageTicket: Number(salesSummary._avg.total || 0),
+        },
         promos: visiblePromos.map((promo) => ({
           id: promo.id,
           title: promo.title,
