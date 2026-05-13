@@ -27,6 +27,23 @@ const VALID_ACTIVITIES = ["HOT", "COLD"];
 const VALID_TARGET_TAGS = [...VALID_SEGMENTS, ...VALID_ACTIVITIES];
 const VALID_TYPES = ["RANDOM_PERCENT", "FIXED_PERCENT", "FIXED_AMOUNT", "SURPRISE_AMOUNT"];
 const COLD_DAYS_THRESHOLD = 15;
+const BUILT_IN_GAMES = [
+  {
+    name: "Numero ganador",
+    slug: "winning-number",
+    description: "Tres intentos para acertar el numero ganador.",
+  },
+  {
+    name: "Perfect Timing",
+    slug: "perfect-timing",
+    description: "Deten el cronometro lo mas cerca posible de 9.99 segundos.",
+  },
+  {
+    name: "Borde perfecto",
+    slug: "crust-ring",
+    description: "Ajusta el borde al diametro exacto de la pizza.",
+  },
+];
 
 const toNum = (value) => {
   if (value == null) return null;
@@ -966,6 +983,50 @@ async function sendPrivateCouponSmsBatch(prisma, { coupons, recipients, partnerN
 }
 
 export default function couponsRoutes(prisma) {
+  router.get("/games", async (req, res) => {
+    const partnerId = parsePositiveInt(req.query.partnerId);
+
+    if (!partnerId) {
+      return res.status(400).json({ ok: false, error: "partnerId required" });
+    }
+
+    try {
+      await Promise.all(
+        BUILT_IN_GAMES.map((game) =>
+          prisma.game.upsert({
+            where: { partnerId_slug: { partnerId, slug: game.slug } },
+            update: { active: true },
+            create: {
+              partnerId,
+              name: game.name,
+              slug: game.slug,
+              description: game.description,
+              active: true,
+            },
+          })
+        )
+      );
+
+      const games = await prisma.game.findMany({
+        where: { partnerId, active: true },
+        orderBy: [{ createdAt: "asc" }],
+        select: {
+          id: true,
+          name: true,
+          slug: true,
+          description: true,
+          image: true,
+          storeId: true,
+        },
+      });
+
+      return res.json({ ok: true, partnerId, games });
+    } catch (error) {
+      console.error("[coupons.games] error:", error);
+      return res.status(500).json({ ok: false, error: "server" });
+    }
+  });
+
   router.get("/gallery", async (req, res) => {
     const partnerId = parsePositiveInt(req.query.partnerId);
     const zipCode = normalizeZipCode(req.query.zipCode);
@@ -982,6 +1043,17 @@ export default function couponsRoutes(prisma) {
           status: "ACTIVE",
           visibility: "PUBLIC",
         },
+        include: {
+          game: {
+            select: {
+              id: true,
+              name: true,
+              slug: true,
+              description: true,
+              image: true,
+            },
+          },
+        },
         orderBy: { createdAt: "desc" },
       });
       const scopedRows = rows.filter(
@@ -993,7 +1065,8 @@ export default function couponsRoutes(prisma) {
       scopedRows.forEach((coupon) => {
         const type = buildCouponType(coupon);
         const key = buildCouponKey(coupon);
-        const mapKey = `${type}:${key}`;
+        const isGameCoupon = coupon.acquisition === "GAME" || coupon.channel === "GAME" || coupon.gameId;
+        const mapKey = `${isGameCoupon ? `GAME:${coupon.gameId || "unknown"}:` : ""}${type}:${key}`;
         const usedCount = toNum(coupon.usedCount) ?? 0;
         const usageLimit = toNum(coupon.usageLimit);
         const available =
@@ -1047,10 +1120,25 @@ export default function couponsRoutes(prisma) {
           visibility: group.sample.visibility,
           acquisition: group.sample.acquisition,
           channel: group.sample.channel,
+          gameId: group.sample.gameId,
+          game: group.sample.game
+            ? {
+                id: group.sample.game.id,
+                name: group.sample.game.name,
+                slug: group.sample.game.slug,
+                description: group.sample.game.description,
+                image: group.sample.game.image,
+              }
+            : null,
           campaign: group.sample.campaign,
           isSegmented: hasSegmentTargeting(group.sample),
         }))
-        .sort((left, right) => String(left.title).localeCompare(String(right.title), "es"));
+        .sort((left, right) => {
+          const leftGame = left.acquisition === "GAME" || left.channel === "GAME" || left.gameId;
+          const rightGame = right.acquisition === "GAME" || right.channel === "GAME" || right.gameId;
+          if (leftGame !== rightGame) return leftGame ? -1 : 1;
+          return String(left.title).localeCompare(String(right.title), "es");
+        });
 
       return res.json({
         ok: true,
