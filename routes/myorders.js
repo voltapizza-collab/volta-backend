@@ -175,6 +175,80 @@ const buildRepeatCartDraft = (sale) => {
   };
 };
 
+const findRepeatSales = async (
+  prisma,
+  { partnerId, storeId, customerId, phone, rawPhone, take = 1 }
+) => {
+  const matchingCustomerIds = phone
+    ? (
+        await prisma.customer.findMany({
+          where: {
+            partnerId,
+            OR: [
+              { phone: { contains: phone } },
+              ...(rawPhone && rawPhone !== phone
+                ? [{ phone: { contains: rawPhone } }]
+                : []),
+            ],
+          },
+          select: { id: true },
+          take: 10,
+        })
+      ).map((customer) => customer.id)
+    : [];
+
+  return prisma.sale.findMany({
+    where: {
+      partnerId,
+      ...(storeId ? { storeId } : {}),
+      status: { not: "CANCELED" },
+      OR: [
+        ...(customerId ? [{ customerId }] : []),
+        ...(matchingCustomerIds.length
+          ? [{ customerId: { in: matchingCustomerIds } }]
+          : []),
+        ...(phone
+          ? [
+              {
+                customerData: {
+                  path: "$.phone",
+                  string_contains: phone,
+                },
+              },
+            ]
+          : []),
+        ...(rawPhone && rawPhone !== phone
+          ? [
+              {
+                customerData: {
+                  path: "$.phone",
+                  string_contains: rawPhone,
+                },
+              },
+            ]
+          : []),
+      ],
+    },
+    include: {
+      partner: { select: { id: true, name: true, currency: true } },
+      store: { select: { id: true, storeName: true, slug: true, active: true } },
+      customer: {
+        select: {
+          id: true,
+          name: true,
+          phone: true,
+          email: true,
+          address_1: true,
+          portal: true,
+          observations: true,
+        },
+      },
+    },
+    orderBy: [{ date: "desc" }, { createdAt: "desc" }],
+    take,
+  });
+};
+
 const orderScopeWhere = ({ partnerId, storeId, activeStoresOnly = true }) => ({
   ...(partnerId ? { partnerId } : {}),
   ...(storeId ? { storeId } : {}),
@@ -286,6 +360,44 @@ const loadStoreQueue = (prisma, sale) =>
 export default function myordersRoutes(prisma) {
   const router = express.Router();
 
+  router.get("/repeat/recent", async (req, res) => {
+    const partnerId = parsePositiveInt(req.query.partnerId);
+    const storeId = parsePositiveInt(req.query.storeId);
+    const customerId = parsePositiveInt(req.query.customerId);
+    const rawPhone = String(req.query.phone || "").trim();
+    const phone = normalizePhone(req.query.phone);
+
+    if (!partnerId) {
+      return res.status(400).json({ error: "partnerId requerido" });
+    }
+
+    if (!customerId && !phone) {
+      return res.status(400).json({ error: "Telefono o customerId requerido" });
+    }
+
+    try {
+      const sales = await findRepeatSales(prisma, {
+        partnerId,
+        storeId,
+        customerId,
+        phone,
+        rawPhone,
+        take: 3,
+      });
+
+      return res.json({
+        ok: true,
+        orders: sales.map((sale) => ({
+          order: formatSale(sale),
+          cartDraft: buildRepeatCartDraft(sale),
+        })),
+      });
+    } catch (error) {
+      console.error("[myorders.repeat.recent] error:", error);
+      return res.status(500).json({ error: "Error buscando pedidos anteriores" });
+    }
+  });
+
   router.get("/repeat/latest", async (req, res) => {
     const partnerId = parsePositiveInt(req.query.partnerId);
     const storeId = parsePositiveInt(req.query.storeId);
@@ -302,72 +414,13 @@ export default function myordersRoutes(prisma) {
     }
 
     try {
-      const matchingCustomerIds = phone
-        ? (
-            await prisma.customer.findMany({
-              where: {
-                partnerId,
-                OR: [
-                  { phone: { contains: phone } },
-                  ...(rawPhone && rawPhone !== phone
-                    ? [{ phone: { contains: rawPhone } }]
-                    : []),
-                ],
-              },
-              select: { id: true },
-              take: 10,
-            })
-          ).map((customer) => customer.id)
-        : [];
-
-      const sale = await prisma.sale.findFirst({
-        where: {
-          partnerId,
-          ...(storeId ? { storeId } : {}),
-          status: { not: "CANCELED" },
-          OR: [
-            ...(customerId ? [{ customerId }] : []),
-            ...(matchingCustomerIds.length
-              ? [{ customerId: { in: matchingCustomerIds } }]
-              : []),
-            ...(phone
-              ? [
-                  {
-                    customerData: {
-                      path: "$.phone",
-                      string_contains: phone,
-                    },
-                  },
-                ]
-              : []),
-            ...(rawPhone && rawPhone !== phone
-              ? [
-                  {
-                    customerData: {
-                      path: "$.phone",
-                      string_contains: rawPhone,
-                    },
-                  },
-                ]
-              : []),
-          ],
-        },
-        include: {
-          partner: { select: { id: true, name: true, currency: true } },
-          store: { select: { id: true, storeName: true, slug: true, active: true } },
-          customer: {
-            select: {
-              id: true,
-              name: true,
-              phone: true,
-              email: true,
-              address_1: true,
-              portal: true,
-              observations: true,
-            },
-          },
-        },
-        orderBy: [{ date: "desc" }, { createdAt: "desc" }],
+      const [sale] = await findRepeatSales(prisma, {
+        partnerId,
+        storeId,
+        customerId,
+        phone,
+        rawPhone,
+        take: 1,
       });
 
       if (!sale) {

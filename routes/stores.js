@@ -478,8 +478,10 @@ const attachStorePublicMenu = (router, prisma) => {
       return res.json({
         store: {
           id: store.id,
+          partnerId: store.partnerId,
           storeName: store.storeName,
           slug: store.slug,
+          address: store.address,
           city: store.city,
           tlf: store.tlf,
           acceptsReservations: store.acceptsReservations,
