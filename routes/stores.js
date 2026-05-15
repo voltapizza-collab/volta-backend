@@ -299,6 +299,113 @@ const isPromoWithinWindow = (promo, reference) => {
   return minutes >= start || minutes < end;
 };
 
+const asIdSet = (value) => {
+  const list = Array.isArray(value) ? value : [];
+  return new Set(
+    list
+      .map((item) => Number(item))
+      .filter((item) => Number.isInteger(item) && item > 0)
+  );
+};
+
+const normalizeComparableText = (value = "") =>
+  String(value || "")
+    .trim()
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "");
+
+const discountAppliesToPizza = (discount, pizza) => {
+  const targetType = String(discount?.targetType || "").toUpperCase();
+  const productIds = asIdSet(discount.productIds);
+
+  if (productIds.has(Number(pizza.id))) return true;
+
+  if (targetType === "PRODUCT") {
+    return false;
+  }
+
+  if (targetType !== "CATEGORY") return false;
+
+  const categoryIds = asIdSet(discount.categoryIds);
+  if (categoryIds.has(Number(pizza.categoryId))) return true;
+
+  const categoryNames = Array.isArray(discount.categoryNames) ? discount.categoryNames : [];
+  const pizzaCategory = normalizeComparableText(pizza.category);
+  return categoryNames.some((categoryName) => normalizeComparableText(categoryName) === pizzaCategory);
+};
+
+const discountAppliesToStore = (discount, storeId) => {
+  const storeIds = asIdSet(discount.storeIds);
+  return storeIds.size === 0 || storeIds.has(Number(storeId));
+};
+
+const getDiscountedPrice = (price, discount) => {
+  const original = Number(price || 0);
+  const value = Number(discount?.value || 0);
+
+  if (!Number.isFinite(original) || original <= 0 || !Number.isFinite(value) || value <= 0) {
+    return original;
+  }
+
+  if (discount.discountType === "PERCENT") {
+    return Math.max(0, Math.round(original * (1 - Math.min(value, 100) / 100) * 100) / 100);
+  }
+
+  return Math.max(0, Math.round((original - value) * 100) / 100);
+};
+
+const getDiscountSaving = (price, discount) => {
+  const original = Number(price || 0);
+  return Math.max(0, Math.round((original - getDiscountedPrice(original, discount)) * 100) / 100);
+};
+
+const chooseBestDiscountForPizza = (pizza, discounts, storeId) => {
+  const candidates = discounts.filter(
+    (discount) => discountAppliesToStore(discount, storeId) && discountAppliesToPizza(discount, pizza)
+  );
+
+  if (!candidates.length) return null;
+
+  const prices = Object.values(pizza.priceBySize || {})
+    .map((value) => Number(value))
+    .filter((value) => Number.isFinite(value) && value > 0);
+  const referencePrice = prices.length ? Math.min(...prices) : 0;
+
+  return candidates
+    .slice()
+    .sort((left, right) => getDiscountSaving(referencePrice, right) - getDiscountSaving(referencePrice, left))[0];
+};
+
+const applyDirectDiscountToPizza = (pizza, discount) => {
+  if (!discount) return pizza;
+
+  const originalPriceBySize = pizza.priceBySize || {};
+  const priceBySize = Object.fromEntries(
+    Object.entries(originalPriceBySize).map(([size, price]) => [
+      size,
+      getDiscountedPrice(price, discount),
+    ])
+  );
+
+  return {
+    ...pizza,
+    originalPriceBySize,
+    priceBySize,
+    directDiscount: {
+      id: discount.id,
+      title: discount.title,
+      discountType: discount.discountType,
+      value: Number(discount.value || 0),
+      activeFrom: discount.activeFrom,
+      expiresAt: discount.expiresAt,
+      windowStart: discount.windowStart,
+      windowEnd: discount.windowEnd,
+      daysActive: normalizePromoDaysActive(discount.daysActive),
+    },
+  };
+};
+
 const attachStorePublicMenu = (router, prisma) => {
   router.get("/:partnerSlug/:storeSlug/menu", async (req, res) => {
     try {
@@ -404,32 +511,67 @@ const attachStorePublicMenu = (router, prisma) => {
       });
 
       const now = new Date();
-      const mapPublicPizza = (pizza, available) => ({
-        pizzaId: pizza.id,
-        name: pizza.name,
-        categoryId: pizza.categoryId ?? null,
-        category: pizza.category ?? null,
-        categoryPosition: pizza.categoryRef?.position ?? 999,
-        categoryCustomizable: pizza.categoryRef?.customizable ?? false,
-        categoryHalfAndHalf:
-          categoryHalfAndHalfById.get(Number(pizza.categoryId)) ?? false,
-        cookingMethod: pizza.cookingMethod ?? null,
-        selectSize: pizza.selectSize ?? [],
-        priceBySize: pizza.priceBySize ?? {},
-        image: pizza.image ?? null,
-        launchAt: pizza.launchAt ?? null,
-        stock: pizza.stocks?.[0]?.stock ?? null,
-        ingredients: (pizza.ingredients || []).map((rel) => ({
-          id: rel.ingredient.id,
-          name: rel.ingredient.name,
-          allergens: Array.isArray(rel.ingredient.allergens)
-            ? rel.ingredient.allergens
-            : [],
-          qtyBySize: rel.qtyBySize ?? {},
-        })),
-        extras: [],
-        available,
-      });
+      let directDiscountRows = [];
+      try {
+        directDiscountRows = await prisma.directDiscount.findMany({
+          where: {
+            partnerId: store.partnerId,
+            status: "ACTIVE",
+            AND: [
+              {
+                OR: [
+                  { activeFrom: null },
+                  { activeFrom: { lte: now } },
+                ],
+              },
+              {
+                OR: [
+                  { expiresAt: null },
+                  { expiresAt: { gt: now } },
+                ],
+              },
+            ],
+          },
+          orderBy: { createdAt: "desc" },
+        });
+      } catch (discountError) {
+        console.warn("[stores.menu] direct discounts unavailable:", discountError?.code || discountError?.message);
+        directDiscountRows = [];
+      }
+      const directDiscountWindowNow = nowInTZ();
+      const activeDirectDiscounts = directDiscountRows.filter((discount) =>
+        isPromoWithinWindow(discount, directDiscountWindowNow)
+      );
+      const mapPublicPizza = (pizza, available) => {
+        const publicPizza = {
+          pizzaId: pizza.id,
+          name: pizza.name,
+          categoryId: pizza.categoryId ?? null,
+          category: pizza.category ?? null,
+          categoryPosition: pizza.categoryRef?.position ?? 999,
+          categoryCustomizable: pizza.categoryRef?.customizable ?? false,
+          categoryHalfAndHalf:
+            categoryHalfAndHalfById.get(Number(pizza.categoryId)) ?? false,
+          cookingMethod: pizza.cookingMethod ?? null,
+          selectSize: pizza.selectSize ?? [],
+          priceBySize: pizza.priceBySize ?? {},
+          image: pizza.image ?? null,
+          launchAt: pizza.launchAt ?? null,
+          stock: pizza.stocks?.[0]?.stock ?? null,
+          ingredients: (pizza.ingredients || []).map((rel) => ({
+            id: rel.ingredient.id,
+            name: rel.ingredient.name,
+            allergens: Array.isArray(rel.ingredient.allergens)
+              ? rel.ingredient.allergens
+              : [],
+            qtyBySize: rel.qtyBySize ?? {},
+          })),
+          extras: [],
+          available,
+        };
+        const bestDiscount = chooseBestDiscountForPizza(pizza, activeDirectDiscounts, store.id);
+        return applyDirectDiscountToPizza(publicPizza, bestDiscount);
+      };
       const menu = availablePizzas
         .filter((pizza) => !pizza.launchAt || pizza.launchAt <= now)
         .map((pizza) => mapPublicPizza(pizza, true));

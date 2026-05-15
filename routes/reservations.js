@@ -1,6 +1,8 @@
 import express from "express";
 import { normalizeE164Phone, sendTelnyxSms } from "../services/telnyx.js";
 
+const TZ = process.env.TIMEZONE || "Europe/Madrid";
+
 const parsePositiveInt = (value) => {
   const parsed = Number(value);
   return Number.isInteger(parsed) && parsed > 0 ? parsed : null;
@@ -58,6 +60,11 @@ const dayBounds = (date) => {
   end.setDate(end.getDate() + 1);
 
   return { start, end };
+};
+
+const nowInTZ = () => {
+  const snapshot = new Date().toLocaleString("sv-SE", { timeZone: TZ });
+  return new Date(snapshot.replace(" ", "T"));
 };
 
 const normalizeStatus = (status) => {
@@ -225,7 +232,7 @@ export default function reservationsRoutes(prisma) {
         return res.json({ capacity, availability: [] });
       }
 
-      const now = new Date();
+      const now = nowInTZ();
       const nowMinutes = now.getHours() * 60 + now.getMinutes();
       const isToday = isSameLocalDay(date, now);
       const step = 30;
@@ -234,7 +241,7 @@ export default function reservationsRoutes(prisma) {
       storeHours.forEach((hours) => {
         const windowStart = Number(hours.openTime) + 30;
         const windowEnd = Number(hours.closeTime) - 60;
-        const earliest = isToday ? Math.max(windowStart, nowMinutes) : windowStart;
+        const earliest = isToday ? Math.max(windowStart, nowMinutes + 1) : windowStart;
         const start = roundUpToStep(earliest, step);
 
         for (let minute = start; minute <= windowEnd; minute += step) {
@@ -334,7 +341,13 @@ export default function reservationsRoutes(prisma) {
 
         if (!hours) throw new Error("time outside store hours");
 
-        const now = new Date();
+        const now = nowInTZ();
+        const nowMinutes = now.getHours() * 60 + now.getMinutes();
+
+        if (isSameLocalDay(reservationDate, now) && timeMinutes <= nowMinutes) {
+          throw new Error("reservation time already passed");
+        }
+
         const reservationDateTime = new Date(reservationDate);
         reservationDateTime.setHours(
           Math.floor(timeMinutes / 60),

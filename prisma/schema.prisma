@@ -124,6 +124,14 @@ enum SuggestionStatus {
   APPROVED
   REJECTED
 }
+enum DirectDiscountType {
+  PERCENT
+  FIXED_AMOUNT
+}
+enum DirectDiscountTargetType {
+  CATEGORY
+  PRODUCT
+}
 model Partner {
   id        Int      @id @default(autoincrement())
   name      String
@@ -160,6 +168,7 @@ model Partner {
   sales              Sale[]
   coupons            Coupon[]
   promos             Promo[]
+  directDiscounts    DirectDiscount[]
   couponRedemptions  CouponRedemption[]
   games              Game[]
   gamePlays          GamePlay[]
@@ -599,6 +608,29 @@ model Promo {
   status        String   @default("ACTIVE")
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
+
+  @@index([partnerId, status])
+}
+model DirectDiscount {
+  id            Int                      @id @default(autoincrement())
+  partnerId     Int
+  partner       Partner                  @relation(fields: [partnerId], references: [id])
+  title         String
+  discountType  DirectDiscountType
+  value         Decimal                  @db.Decimal(10, 2)
+  targetType    DirectDiscountTargetType
+  productIds    Json?
+  categoryIds   Json?
+  categoryNames Json?
+  storeIds      Json?
+  activeFrom    DateTime?
+  expiresAt     DateTime?
+  daysActive    Json?
+  windowStart   Int?
+  windowEnd     Int?
+  status        String                   @default("ACTIVE")
+  createdAt     DateTime                 @default(now())
+  updatedAt     DateTime                 @updatedAt
 
   @@index([partnerId, status])
 }

@@ -1,0 +1,65 @@
+[stores.menu] direct discounts unavailable: P2021
+[stores.menu] direct discounts unavailable: P2021
+[direct-discounts.get] error: PrismaClientKnownRequestError: 
+Invalid `prisma.directDiscount.findMany()` invocation:
+
+
+The table `DirectDiscount` does not exist in the current database.
+    at vn.handleRequestError (C:\Users\Luigi\Desktop\volta-core\volta-backend\node_modules\@prisma\client\runtime\library.js:123:6730)
+    at vn.handleAndLogRequestError (C:\Users\Luigi\Desktop\volta-core\volta-backend\node_modules\@prisma\client\runtime\library.js:123:6119)
+    at vn.request (C:\Users\Luigi\Desktop\volta-core\volta-backend\node_modules\@prisma\client\runtime\library.js:123:5839)
+    at async l (C:\Users\Luigi\Desktop\volta-core\volta-backend\node_modules\@prisma\client\runtime\library.js:128:9763)
+    at async file:///C:/Users/Luigi/Desktop/volta-core/volta-backend/routes/directDiscounts.js:201:25 {
+  code: 'P2021',
+  clientVersion: '5.2.0',
+  meta: { table: 'DirectDiscount' }
+}
+[stores.menu] direct discounts unavailable: P2021
+[direct-discounts.post] error: PrismaClientKnownRequestError: 
+Invalid `prisma.directDiscount.create()` invocation:
+
+
+The table `DirectDiscount` does not exist in the current database.
+    at vn.handleRequestError (C:\Users\Luigi\Desktop\volta-core\volta-backend\node_modules\@prisma\client\runtime\library.js:123:6730)
+    at vn.handleAndLogRequestError (C:\Users\Luigi\Desktop\volta-core\volta-backend\node_modules\@prisma\client\runtime\library.js:123:6119)
+    at vn.request (C:\Users\Luigi\Desktop\volta-core\volta-backend\node_modules\@prisma\client\runtime\library.js:123:5839)
+    at async l (C:\Users\Luigi\Desktop\volta-core\volta-backend\node_modules\@prisma\client\runtime\library.js:128:9763)
+    at async file:///C:/Users/Luigi/Desktop/volta-core/volta-backend/routes/directDiscounts.js:227:24 {
+  code: 'P2021',
+  clientVersion: '5.2.0',
+  meta: { table: 'DirectDiscount' }
+}
+[direct-discounts.post] error: PrismaClientKnownRequestError: 
+Invalid `prisma.directDiscount.create()` invocation:
+
+
+The table `DirectDiscount` does not exist in the current database.
+    at vn.handleRequestError (C:\Users\Luigi\Desktop\volta-core\volta-backend\node_modules\@prisma\client\runtime\library.js:123:6730)
+    at vn.handleAndLogRequestError (C:\Users\Luigi\Desktop\volta-core\volta-backend\node_modules\@prisma\client\runtime\library.js:123:6119)
+    at vn.request (C:\Users\Luigi\Desktop\volta-core\volta-backend\node_modules\@prisma\client\runtime\library.js:123:5839)
+    at async l (C:\Users\Luigi\Desktop\volta-core\volta-backend\node_modules\@prisma\client\runtime\library.js:128:9763)
+    at async file:///C:/Users/Luigi/Desktop/volta-core/volta-backend/routes/directDiscounts.js:227:24 {
+  code: 'P2021',
+  clientVersion: '5.2.0',
+  meta: { table: 'DirectDiscount' }
+}
+[stores.menu] direct discounts unavailable: P2021
+[stores.menu] direct discounts unavailable: P2021
+[stores.menu] direct discounts unavailable: P2021
+[stores.menu] direct discounts unavailable: P2021
+[stores.menu] direct discounts unavailable: P2021
+[stores.menu] direct discounts unavailable: P2021
+[direct-discounts.get] error: PrismaClientKnownRequestError: 
+Invalid `prisma.directDiscount.findMany()` invocation:
+
+
+The table `DirectDiscount` does not exist in the current database.
+    at vn.handleRequestError (C:\Users\Luigi\Desktop\volta-core\volta-backend\node_modules\@prisma\client\runtime\library.js:123:6730)
+    at vn.handleAndLogRequestError (C:\Users\Luigi\Desktop\volta-core\volta-backend\node_modules\@prisma\client\runtime\library.js:123:6119)
+    at vn.request (C:\Users\Luigi\Desktop\volta-core\volta-backend\node_modules\@prisma\client\runtime\library.js:123:5839)
+    at async l (C:\Users\Luigi\Desktop\volta-core\volta-backend\node_modules\@prisma\client\runtime\library.js:128:9763)
+    at async file:///C:/Users/Luigi/Desktop/volta-core/volta-backend/routes/directDiscounts.js:201:25 {
+  code: 'P2021',
+  clientVersion: '5.2.0',
+  meta: { table: 'DirectDiscount' }
+}
