@@ -288,6 +288,83 @@ const matchesCouponTerritory = (coupon, zipCode) => {
   });
 };
 
+const matchesCouponStoreScope = (coupon, store) => {
+  const { storeIds, zipCodes, targetStores } = readCouponTargeting(coupon);
+  if (!storeIds.length && !zipCodes.length) return true;
+
+  const storeId = parsePositiveInt(store?.id);
+  if (storeId && storeIds.includes(storeId)) return true;
+  if (storeId && targetStores.some((target) => target.id === storeId)) return true;
+
+  return matchesCouponTerritory(coupon, store?.zipCode);
+};
+
+const isPortalClaimedCoupon = (coupon) =>
+  coupon?.visibility === "RESERVED" &&
+  coupon?.acquisition === "CLAIM" &&
+  coupon?.channel === "WEB" &&
+  coupon?.assignedToId != null;
+
+const parseMaybeJson = (value, fallback) => {
+  if (value == null) return fallback;
+  if (typeof value !== "string") return value;
+
+  try {
+    return JSON.parse(value);
+  } catch {
+    return fallback;
+  }
+};
+
+const asArray = (value) => {
+  const first = parseMaybeJson(value, []);
+  const second = parseMaybeJson(first, []);
+  return Array.isArray(second) ? second : [];
+};
+
+const getSaleLineQty = (item) => {
+  const parsed = Number(item?.quantity ?? item?.qty ?? item?.cantidad ?? 1);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : 1;
+};
+
+const getSaleLineName = (item) =>
+  String(
+    item?.name ||
+      item?.pizzaName ||
+      item?.title ||
+      item?.productName ||
+      (item?.leftName && item?.rightName ? `${item.leftName} / ${item.rightName}` : "") ||
+      (item?.pizzaId ? `Producto #${item.pizzaId}` : "Producto")
+  ).trim();
+
+const isSalePromoLine = (item) => {
+  const type = String(item?.type || "").toUpperCase();
+  const source = String(item?.source || "").toLowerCase();
+  return Boolean(parsePositiveInt(item?.promoId)) || type === "PROMO" || source === "promo";
+};
+
+const isSaleCouponLine = (item) => {
+  const type = String(item?.type || "").toUpperCase();
+  const source = String(item?.source || "").toLowerCase();
+  return type === "COUPON" || source === "coupon";
+};
+
+const isSaleIncentiveLine = (item) => {
+  const type = String(item?.type || "").toUpperCase();
+  const source = String(item?.source || "").toLowerCase();
+  return type === "INCENTIVE_REWARD" || source === "incentive_reward";
+};
+
+const isOfferCurrentlyOperational = (offer, reference = nowInTZ()) => {
+  if (String(offer?.status || "ACTIVE").toUpperCase() !== "ACTIVE") return false;
+  return isActiveByDate(offer, reference) && isWithinWindow(offer, reference);
+};
+
+const isIncentiveCurrentlyOperational = (incentive, reference = nowInTZ()) => {
+  if (!incentive?.active) return false;
+  return isActiveByDate(incentive, reference) && isWithinWindow(incentive, reference);
+};
+
 const uniqueCustomers = (rows = []) => {
   const map = new Map();
   rows.forEach((item) => {
@@ -388,6 +465,79 @@ const buildCouponKey = (coupon) => {
   }
 
   return coupon.code;
+};
+
+const couponAmountNumber = (value) => {
+  const parsed = toNum(value);
+  return parsed == null ? 0 : parsed;
+};
+
+const calculateCouponDiscount = (coupon, subtotal) => {
+  const base = Math.max(0, Number(subtotal || 0));
+  if (base <= 0) return 0;
+
+  if (coupon.kind === "AMOUNT") {
+    return numberFromCents(Math.min(Math.round(couponAmountNumber(coupon.amount) * 100), Math.round(base * 100)));
+  }
+
+  if (coupon.kind === "PERCENT") {
+    const percent = toNum(coupon.percent) || 0;
+    const rawCents = Math.round(base * percent);
+    const maxAmount = toNum(coupon.maxAmount);
+    const cappedCents = maxAmount != null ? Math.min(rawCents, Math.round(maxAmount * 100)) : rawCents;
+    return numberFromCents(cappedCents);
+  }
+
+  return 0;
+};
+
+const serializeCouponValidation = (coupon) => ({
+  id: coupon.id,
+  code: coupon.code,
+  title: buildCouponTitle(coupon),
+  kind: coupon.kind,
+  variant: coupon.variant,
+  percent: toNum(coupon.percent),
+  percentMin: toNum(coupon.percentMin),
+  percentMax: toNum(coupon.percentMax),
+  amount: toNum(coupon.amount),
+  minAmount: toNum(coupon.minAmount),
+  maxAmount: toNum(coupon.maxAmount),
+  expiresAt: coupon.expiresAt,
+  activeFrom: coupon.activeFrom,
+  usageLimit: toNum(coupon.usageLimit),
+  usedCount: toNum(coupon.usedCount) || 0,
+  acquisition: coupon.acquisition,
+  channel: coupon.channel,
+  campaign: coupon.campaign,
+});
+
+const normalizeCouponInputCode = (value = "") =>
+  String(value || "").trim().toUpperCase().replace(/\s+/g, "");
+
+const buildCouponLookupCodes = (code) => {
+  const normalized = normalizeCouponInputCode(code);
+  if (!normalized) return [];
+
+  const candidates = [normalized];
+  if (!normalized.startsWith("VOL-")) {
+    candidates.push(`VOL-${normalized}`);
+  }
+
+  return [...new Set(candidates)];
+};
+
+const findCouponByInputCode = async (prisma, code) => {
+  const candidates = buildCouponLookupCodes(code);
+  if (!candidates.length) return null;
+
+  const rows = await prisma.coupon.findMany({
+    where: { code: { in: candidates } },
+  });
+
+  return rows.sort(
+    (left, right) => candidates.indexOf(left.code) - candidates.indexOf(right.code)
+  )[0] || null;
 };
 
 const buildTypeWhere = (type, key) => {
@@ -983,6 +1133,135 @@ async function sendPrivateCouponSmsBatch(prisma, { coupons, recipients, partnerN
 }
 
 export default function couponsRoutes(prisma) {
+  router.post("/validate", async (req, res) => {
+    const partnerId = parsePositiveInt(req.body.partnerId);
+    const storeId = parsePositiveInt(req.body.storeId);
+    const code = normalizeCouponInputCode(req.body.code);
+    const subtotal = Math.max(0, Number(req.body.subtotal || 0));
+
+    if (!code) {
+      return res.json({
+        ok: true,
+        valid: false,
+        status: "empty",
+        message: "Escribe un cupon para validarlo.",
+      });
+    }
+
+    if (!partnerId) {
+      return res.json({
+        ok: true,
+        valid: false,
+        status: "missing_partner",
+        message: "No pudimos validar el cupon en esta tienda.",
+      });
+    }
+
+    try {
+      const now = nowInTZ();
+      await prisma.coupon.updateMany({
+        where: {
+          partnerId,
+          status: "ACTIVE",
+          expiresAt: { lte: now },
+        },
+        data: { status: "EXPIRED" },
+      });
+
+      let coupon = await findCouponByInputCode(prisma, code);
+
+      if (!coupon || Number(coupon.partnerId) !== partnerId) {
+        return res.json({
+          ok: true,
+          valid: false,
+          status: "not_found",
+          message: "Cupon no encontrado.",
+          code,
+        });
+      }
+
+      const usageLimit = toNum(coupon.usageLimit);
+      const usedCount = toNum(coupon.usedCount) || 0;
+      const minAmount = toNum(coupon.minAmount) || 0;
+      let store = null;
+
+      if (storeId) {
+        store = await prisma.store.findFirst({
+          where: { id: storeId, partnerId },
+          select: { id: true, zipCode: true },
+        });
+      }
+
+      let status = "valid";
+      let message = "Cupon valido. Descuento aplicado al carrito.";
+
+      if (coupon.status !== "ACTIVE") {
+        status = String(coupon.status || "").toLowerCase() || "inactive";
+        message =
+          coupon.status === "EXPIRED"
+            ? "Este cupon ya caduco."
+            : coupon.status === "USED"
+              ? "Este cupon ya fue usado o alcanzo su limite."
+              : "Este cupon no esta activo.";
+      } else if (usageLimit != null && usedCount >= usageLimit) {
+        status = "used";
+        message = "Este cupon ya fue usado o alcanzo su limite.";
+      } else if (!isActiveByDate(coupon, now)) {
+        status = coupon.expiresAt && new Date(coupon.expiresAt).getTime() <= now.getTime()
+          ? "expired"
+          : "not_started";
+        message = status === "expired" ? "Este cupon ya caduco." : "Este cupon todavia no esta activo.";
+      } else if (!isWithinWindow(coupon, now)) {
+        status = "outside_window";
+        message = "Este cupon no esta disponible en este horario.";
+      } else if (
+        hasTerritorialTargeting(coupon) &&
+        !isPortalClaimedCoupon(coupon) &&
+        !matchesCouponStoreScope(coupon, store)
+      ) {
+        status = "wrong_area";
+        message = "Este cupon no esta disponible para esta tienda.";
+      } else if (subtotal <= 0) {
+        status = "empty_cart";
+        message = "Agrega productos sin promocion ni Top Deal para aplicar el cupon.";
+      } else if (minAmount > 0 && subtotal < minAmount) {
+        status = "min_not_met";
+        message = `Este cupon requiere un minimo de EUR ${minAmount.toFixed(2)} en productos.`;
+      }
+
+      if (coupon.status === "ACTIVE" && status === "expired") {
+        coupon = await prisma.coupon.update({
+          where: { id: coupon.id },
+          data: { status: "EXPIRED" },
+        });
+      } else if (coupon.status === "ACTIVE" && status === "used") {
+        coupon = await prisma.coupon.update({
+          where: { id: coupon.id },
+          data: {
+            status: "USED",
+            usedAt: coupon.usedAt || now,
+          },
+        });
+      }
+
+      const valid = status === "valid";
+      const discount = valid ? calculateCouponDiscount(coupon, subtotal) : 0;
+
+      return res.json({
+        ok: true,
+        valid,
+        status,
+        message,
+        subtotal,
+        discount,
+        coupon: serializeCouponValidation(coupon),
+      });
+    } catch (error) {
+      console.error("[coupons.validate] error:", error);
+      return res.status(500).json({ ok: false, error: "server" });
+    }
+  });
+
   router.get("/games", async (req, res) => {
     const partnerId = parsePositiveInt(req.query.partnerId);
 
@@ -1685,7 +1964,15 @@ export default function couponsRoutes(prisma) {
         ...(segment ? { segmentAtRedeem: segment } : {}),
       };
 
-      const [issued, redemptions] = await Promise.all([
+      const [
+        issued,
+        redemptions,
+        activeCouponRows,
+        promoRows,
+        directDiscountRows,
+        incentiveRows,
+        sales,
+      ] = await Promise.all([
         prisma.coupon.count(couponWhere ? { where: couponWhere } : undefined),
         prisma.couponRedemption.findMany({
           where: redemptionWhere,
@@ -1698,6 +1985,71 @@ export default function couponsRoutes(prisma) {
           },
           orderBy: { redeemedAt: "asc" },
         }),
+        prisma.coupon.findMany({
+          where: { partnerId, status: "ACTIVE" },
+          select: {
+            id: true,
+            status: true,
+            activeFrom: true,
+            expiresAt: true,
+            daysActive: true,
+            windowStart: true,
+            windowEnd: true,
+          },
+        }),
+        prisma.promo.findMany({
+          where: { partnerId },
+          select: {
+            id: true,
+            title: true,
+            status: true,
+            activeFrom: true,
+            expiresAt: true,
+            daysActive: true,
+            windowStart: true,
+            windowEnd: true,
+          },
+        }),
+        prisma.directDiscount.findMany({
+          where: { partnerId },
+          select: {
+            id: true,
+            title: true,
+            status: true,
+            activeFrom: true,
+            expiresAt: true,
+            daysActive: true,
+            windowStart: true,
+            windowEnd: true,
+          },
+        }),
+        prisma.incentive.findMany({
+          where: { partnerId },
+          select: {
+            id: true,
+            name: true,
+            active: true,
+            startsAt: true,
+            endsAt: true,
+            daysActive: true,
+            windowStart: true,
+            windowEnd: true,
+          },
+        }),
+        prisma.sale.findMany({
+          where: {
+            partnerId,
+            date: { gte: from, lte: to },
+            status: { not: "CANCELED" },
+          },
+          select: {
+            date: true,
+            createdAt: true,
+            products: true,
+            incentiveId: true,
+            incentiveAmount: true,
+          },
+        }),
       ]);
 
       const byKindMap = new Map();
@@ -1706,6 +2058,10 @@ export default function couponsRoutes(prisma) {
       const byDayMap = new Map();
 
       let discountTotal = 0;
+      let promoSales = 0;
+      let topDealSales = 0;
+      let incentiveRewards = 0;
+      const trendingMap = new Map();
 
       redemptions.forEach((item) => {
         const kind = item.kind || "UNKNOWN";
@@ -1718,6 +2074,86 @@ export default function couponsRoutes(prisma) {
         byDayMap.set(day, (byDayMap.get(day) || 0) + 1);
         discountTotal += toNum(item.discountValue) || 0;
       });
+
+      sales.forEach((sale) => {
+        const products = asArray(sale.products);
+        let saleHasIncentiveLine = false;
+
+        products.forEach((item) => {
+          const qty = getSaleLineQty(item);
+
+          if (isSaleCouponLine(item)) return;
+
+          if (isSalePromoLine(item)) {
+            promoSales += qty;
+            return;
+          }
+
+          if (item?.directDiscount) {
+            topDealSales += qty;
+          }
+
+          if (isSaleIncentiveLine(item)) {
+            incentiveRewards += qty;
+            saleHasIncentiveLine = true;
+            return;
+          }
+
+          const name = getSaleLineName(item);
+          if (!name) return;
+
+          const saleDate = new Date(sale.date || sale.createdAt);
+          const current = trendingMap.get(name) || {
+            name,
+            units: 0,
+            lastOrderedAt: null,
+          };
+          current.units += qty;
+          if (!current.lastOrderedAt || saleDate > current.lastOrderedAt) {
+            current.lastOrderedAt = saleDate;
+          }
+          trendingMap.set(name, current);
+        });
+
+        if (!saleHasIncentiveLine && (sale.incentiveId || Number(sale.incentiveAmount || 0) > 0)) {
+          incentiveRewards += 1;
+        }
+      });
+
+      const now = nowInTZ();
+      const activeCoupons = activeCouponRows.filter((item) =>
+        isOfferCurrentlyOperational(item, now)
+      ).length;
+      const activePromos = promoRows.filter((item) =>
+        isOfferCurrentlyOperational(item, now)
+      ).length;
+      const activeTopDeals = directDiscountRows.filter((item) =>
+        isOfferCurrentlyOperational(item, now)
+      ).length;
+      const activeIncentives = incentiveRows.filter((item) =>
+        isIncentiveCurrentlyOperational(
+          {
+            ...item,
+            activeFrom: item.startsAt,
+            expiresAt: item.endsAt,
+          },
+          now
+        )
+      ).length;
+
+      const interactionMix = [
+        { key: "coupons", label: "Cupones", value: redemptions.length },
+        { key: "promos", label: "Promos", value: promoSales },
+        { key: "topDeals", label: "Top Deals", value: topDealSales },
+        { key: "incentives", label: "Incentivos", value: incentiveRewards },
+      ];
+
+      const topTrending = Array.from(trendingMap.values())
+        .sort((left, right) => {
+          if (right.units !== left.units) return right.units - left.units;
+          return String(left.name).localeCompare(String(right.name));
+        })
+        .slice(0, 5);
 
       const dailySpark = [];
       for (let time = new Date(from); time <= to; time = new Date(time.getTime() + 864e5)) {
@@ -1732,6 +2168,28 @@ export default function couponsRoutes(prisma) {
           redeemed: redemptions.length,
           redemptionRate: issued > 0 ? redemptions.length / issued : null,
           discountTotal,
+          activeOperational: activeCoupons + activePromos + activeTopDeals + activeIncentives,
+          operational: {
+            coupons: activeCoupons,
+            promos: activePromos,
+            topDeals: activeTopDeals,
+            incentives: activeIncentives,
+          },
+          interactions: {
+            couponsUsed: redemptions.length,
+            promosSold: promoSales,
+            topDealsUsed: topDealSales,
+            incentivesUsed: incentiveRewards,
+            mix: interactionMix,
+          },
+          trending: {
+            totalUnits: topTrending.reduce((sum, item) => sum + item.units, 0),
+            topProducts: topTrending.map((item) => ({
+              name: item.name,
+              units: item.units,
+              lastOrderedAt: item.lastOrderedAt,
+            })),
+          },
           byKind: Array.from(byKindMap.entries()).map(([kind, count]) => ({ kind, count })),
           byCodeTop: Array.from(byCodeMap.entries())
             .map(([code, count]) => ({ code, count }))

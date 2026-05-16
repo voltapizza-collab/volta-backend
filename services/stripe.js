@@ -1,6 +1,7 @@
 import crypto from "crypto";
 
 const STRIPE_API_BASE = "https://api.stripe.com/v1";
+const CHECKOUT_DISPLAY_NAME = process.env.STRIPE_CHECKOUT_DISPLAY_NAME?.trim() || "Volta Pizza";
 
 const getStripeSecretKey = () => process.env.STRIPE_SECRET_KEY?.trim();
 const getStripeWebhookSecret = () => process.env.STRIPE_WEBHOOK_SECRET?.trim();
@@ -12,6 +13,16 @@ const appendParam = (params, key, value) => {
   if (value !== undefined && value !== null && value !== "") {
     params.append(key, String(value));
   }
+};
+
+const appendPaymentMethodTypes = (params) => {
+  const methods = ["card"];
+  if (process.env.STRIPE_ENABLE_LINK === "1") methods.push("link");
+  if (process.env.STRIPE_ENABLE_KLARNA === "1") methods.push("klarna");
+
+  methods.forEach((method, index) => {
+    appendParam(params, `payment_method_types[${index}]`, method);
+  });
 };
 
 const stripeRequest = async (path, params, idempotencyKey) => {
@@ -60,13 +71,14 @@ export const createSmsCreditsCheckoutSession = async ({
   const creditsLabel = new Intl.NumberFormat("es-ES").format(credits);
 
   appendParam(params, "mode", "payment");
+  appendParam(params, "branding_settings[display_name]", CHECKOUT_DISPLAY_NAME);
   appendParam(params, "success_url", successUrl);
   appendParam(params, "cancel_url", cancelUrl);
   appendParam(params, "client_reference_id", `sms:${partnerId}`);
   appendParam(params, "line_items[0][quantity]", 1);
   appendParam(params, "line_items[0][price_data][currency]", "eur");
   appendParam(params, "line_items[0][price_data][unit_amount]", amountCents);
-  appendParam(params, "line_items[0][price_data][product_data][name]", `Paquete Volta SMS - ${creditsLabel} mensajes`);
+  appendParam(params, "line_items[0][price_data][product_data][name]", `Paquete ${CHECKOUT_DISPLAY_NAME} SMS - ${creditsLabel} mensajes`);
   appendParam(params, "line_items[0][price_data][product_data][description]", partner.name);
   appendParam(params, "metadata[purpose]", "sms_credit_purchase");
   appendParam(params, "metadata[partnerId]", partnerId);
@@ -81,6 +93,54 @@ export const createSmsCreditsCheckoutSession = async ({
     "/checkout/sessions",
     params,
     `sms-credits-${partnerId}-${amountCents}-${credits}-${Date.now()}`
+  );
+};
+
+export const createOrderCheckoutSession = async ({
+  sale,
+  partner,
+  store,
+  amountCents,
+  currency = "eur",
+  successUrl,
+  cancelUrl,
+}) => {
+  const params = new URLSearchParams();
+  const partnerId = String(partner.id);
+  const storeId = String(store.id);
+  const saleId = String(sale.id);
+  const orderCode = String(sale.code);
+  const cleanCurrency = String(currency || "eur").trim().toLowerCase();
+
+  appendParam(params, "mode", "payment");
+  appendParam(params, "branding_settings[display_name]", CHECKOUT_DISPLAY_NAME);
+  appendPaymentMethodTypes(params);
+  appendParam(params, "success_url", successUrl);
+  appendParam(params, "cancel_url", cancelUrl);
+  appendParam(params, "locale", "es");
+  appendParam(params, "client_reference_id", `order:${saleId}`);
+  appendParam(params, "phone_number_collection[enabled]", "true");
+  appendParam(params, "billing_address_collection", "auto");
+  appendParam(params, "line_items[0][quantity]", 1);
+  appendParam(params, "line_items[0][price_data][currency]", cleanCurrency);
+  appendParam(params, "line_items[0][price_data][unit_amount]", amountCents);
+  appendParam(params, "line_items[0][price_data][product_data][name]", `Pedido ${CHECKOUT_DISPLAY_NAME} - ${orderCode}`);
+  appendParam(params, "line_items[0][price_data][product_data][description]", store.storeName);
+  appendParam(params, "metadata[purpose]", "order_checkout");
+  appendParam(params, "metadata[partnerId]", partnerId);
+  appendParam(params, "metadata[storeId]", storeId);
+  appendParam(params, "metadata[saleId]", saleId);
+  appendParam(params, "metadata[orderCode]", orderCode);
+  appendParam(params, "payment_intent_data[metadata][purpose]", "order_checkout");
+  appendParam(params, "payment_intent_data[metadata][partnerId]", partnerId);
+  appendParam(params, "payment_intent_data[metadata][storeId]", storeId);
+  appendParam(params, "payment_intent_data[metadata][saleId]", saleId);
+  appendParam(params, "payment_intent_data[metadata][orderCode]", orderCode);
+
+  return stripeRequest(
+    "/checkout/sessions",
+    params,
+    `order-${saleId}-${amountCents}-${Date.now()}`
   );
 };
 

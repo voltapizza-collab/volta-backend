@@ -32,6 +32,7 @@ import smsCreditsRoutes from "./routes/smsCredits.js";
 import myordersRoutes from "./routes/myorders.js";
 import billingRoutes from "./routes/billing.js";
 import boostSettingsRoutes from "./routes/boostSettings.js";
+import checkoutRoutes from "./routes/checkout.js";
 import { validateTelnyxEnv } from "./services/telnyx.js";
 
 const __filename = fileURLToPath(import.meta.url);
@@ -84,6 +85,7 @@ const smsCreditsRouter = smsCreditsRoutes(prisma);
 const myordersRouter = myordersRoutes(prisma);
 const billingRouter = billingRoutes(prisma);
 const boostSettingsRouter = boostSettingsRoutes(prisma);
+const checkoutRouter = checkoutRoutes(prisma);
 
 const envOrigins = (process.env.CORS_ORIGINS || "")
   .split(",")
@@ -154,6 +156,7 @@ app.use("/api/games", gamesRouter);
 app.use("/api/reservations", reservationsRouter);
 app.use("/api/scheduled-orders", scheduledOrdersRouter);
 app.use("/api/sms-credits", smsCreditsRouter);
+app.use("/api/checkout", checkoutRouter);
 app.use("/api/myorders", myordersRouter);
 app.use("/api/billing", billingRouter);
 app.use("/api/boost-settings", boostSettingsRouter);
