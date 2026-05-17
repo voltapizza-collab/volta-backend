@@ -27,6 +27,119 @@ const normalizeAllergens = (value) => {
   return [];
 };
 
+const serializeIngredient = (ing, storeStock, extra = {}) => ({
+  id: ing.id,
+  name: ing.name,
+  category: ing.category,
+  status: ing.status,
+  allergens: normalizeAllergens(ing.allergens),
+  unit: ing.unit,
+  costPrice: ing.costPrice,
+  exists: !!storeStock,
+  active: storeStock ? storeStock.active : false,
+  stock: storeStock ? storeStock.stock : 0,
+  ...extra,
+});
+
+const getMenuScopedIngredients = async (storeId) => {
+  const store = await prisma.store.findUnique({
+    where: { id: storeId },
+    select: { id: true, partnerId: true },
+  });
+
+  if (!store) return null;
+
+  const pizzas = await prisma.menuPizza.findMany({
+    where: {
+      partnerId: store.partnerId,
+      status: "ACTIVE",
+      type: "SELLABLE",
+      stocks: {
+        some: {
+          storeId,
+          active: true,
+        },
+      },
+    },
+    select: {
+      id: true,
+      name: true,
+      category: true,
+      ingredients: {
+        select: {
+          ingredient: {
+            select: {
+              id: true,
+              name: true,
+              category: true,
+              status: true,
+              allergens: true,
+              unit: true,
+              costPrice: true,
+              storeStocks: {
+                where: { storeId },
+                select: {
+                  active: true,
+                  stock: true,
+                },
+              },
+            },
+          },
+        },
+      },
+    },
+    orderBy: [{ category: "asc" }, { name: "asc" }],
+  });
+
+  const byIngredient = new Map();
+
+  pizzas.forEach((pizza) => {
+    (pizza.ingredients || []).forEach((rel) => {
+      const ingredient = rel.ingredient;
+      if (!ingredient) return;
+
+      if (!byIngredient.has(ingredient.id)) {
+        byIngredient.set(ingredient.id, {
+          ingredient,
+          products: [],
+        });
+      }
+
+      byIngredient.get(ingredient.id).products.push({
+        id: pizza.id,
+        name: pizza.name,
+        category: pizza.category,
+      });
+    });
+  });
+
+  return [...byIngredient.values()]
+    .map(({ ingredient, products }) => {
+      const uniqueProducts = [
+        ...new Map(products.map((product) => [product.id, product])).values(),
+      ].sort((left, right) =>
+        left.name.localeCompare(right.name, "es", { sensitivity: "base" })
+      );
+
+      return serializeIngredient(ingredient, ingredient.storeStocks?.[0], {
+        affectedProducts: uniqueProducts.length,
+        affectedProductNames: uniqueProducts.map((product) => product.name),
+      });
+    })
+    .sort((left, right) => {
+      const categoryOrder = String(left.category || "").localeCompare(
+        String(right.category || ""),
+        "es",
+        { sensitivity: "base" }
+      );
+
+      return (
+        categoryOrder ||
+        left.name.localeCompare(right.name, "es", { sensitivity: "base" })
+      );
+    });
+};
+
 /*
  * GET /stores/:storeId/ingredients
  * → devuelve TODOS los ingredientes + estado en la tienda
@@ -36,6 +149,14 @@ router.get("/", async (req, res) => {
     const storeId = parseId(req.params.storeId);
     if (!storeId) {
       return res.status(400).json({ error: "Invalid storeId" });
+    }
+
+    if (req.query.scope === "menu") {
+      const scoped = await getMenuScopedIngredients(storeId);
+      if (!scoped) {
+        return res.status(404).json({ error: "Store not found" });
+      }
+      return res.json(scoped);
     }
 
     const ingredients = await prisma.ingredient.findMany({

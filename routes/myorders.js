@@ -261,14 +261,43 @@ const pendingOrderWhere = ({ partnerId, storeId, activeStoresOnly = true }) => (
   status: { in: ["PENDING", "PAID"] },
 });
 
-const queueOrderBy = [
-  { boostActive: "desc" },
-  { boostTargetPosition: "asc" },
-  { boostQueueCredit: "desc" },
-  { boostPaidAt: "asc" },
-  { date: "asc" },
-  { createdAt: "asc" },
-];
+const queueOrderBy = [{ date: "asc" }, { createdAt: "asc" }];
+
+const compareBoosts = (left, right) => {
+  const leftTarget = parsePositiveInt(left.boostTargetPosition) || 1;
+  const rightTarget = parsePositiveInt(right.boostTargetPosition) || 1;
+  if (leftTarget !== rightTarget) return leftTarget - rightTarget;
+
+  const leftCredit = Number(left.boostQueueCredit || 0);
+  const rightCredit = Number(right.boostQueueCredit || 0);
+  if (leftCredit !== rightCredit) return rightCredit - leftCredit;
+
+  const leftPaid = left.boostPaidAt ? new Date(left.boostPaidAt).getTime() : 0;
+  const rightPaid = right.boostPaidAt ? new Date(right.boostPaidAt).getTime() : 0;
+  if (leftPaid !== rightPaid) return leftPaid - rightPaid;
+
+  const leftDate = new Date(left.date || left.createdAt || 0).getTime();
+  const rightDate = new Date(right.date || right.createdAt || 0).getTime();
+  return leftDate - rightDate;
+};
+
+const applyBoostQueueOrder = (rows) => {
+  const regular = rows.filter((row) => !row.boostActive);
+  const boosted = rows.filter((row) => row.boostActive).sort(compareBoosts);
+  const insertedByTarget = new Map();
+  const queue = [...regular];
+
+  boosted.forEach((row) => {
+    const target = parsePositiveInt(row.boostTargetPosition) || 1;
+    const previousAtTarget = insertedByTarget.get(target) || 0;
+    const insertAt = Math.min(Math.max(target - 1 + previousAtTarget, 0), queue.length);
+
+    queue.splice(insertAt, 0, row);
+    insertedByTarget.set(target, previousAtTarget + 1);
+  });
+
+  return queue;
+};
 
 const clampTargetPosition = (value, currentPosition) => {
   const parsed = parsePositiveInt(value) || 1;
@@ -337,8 +366,8 @@ const findBoostableSale = async (prisma, { orderId, orderCode }) => {
   });
 };
 
-const loadStoreQueue = (prisma, sale) =>
-  prisma.sale.findMany({
+const loadStoreQueue = async (prisma, sale) => {
+  const rows = await prisma.sale.findMany({
     where: pendingOrderWhere({
       partnerId: sale.partnerId,
       storeId: sale.storeId,
@@ -356,6 +385,9 @@ const loadStoreQueue = (prisma, sale) =>
     },
     orderBy: queueOrderBy,
   });
+
+  return applyBoostQueueOrder(rows);
+};
 
 export default function myordersRoutes(prisma) {
   const router = express.Router();
@@ -593,8 +625,10 @@ export default function myordersRoutes(prisma) {
         prisma.sale.count({ where }),
       ]);
 
+      const orderedRows = applyBoostQueueOrder(rows);
+
       return res.json({
-        items: rows.map((row, index) => ({
+        items: orderedRows.map((row, index) => ({
           ...formatSale(row),
           queuePosition: index + 1,
         })),
