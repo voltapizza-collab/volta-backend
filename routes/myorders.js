@@ -138,6 +138,13 @@ const formatSale = (sale) => {
       address_1: customerData.address_1 || sale.address_1 || sale.customer?.address_1 || "",
       portal: customerData.portal || sale.customer?.portal || "",
       observations: customerData.observations || sale.customer?.observations || "",
+      code: sale.customer?.code || "",
+      segment: sale.customer?.segment || "",
+      activity: sale.customer?.activity || "",
+      daysOff: sale.customer?.daysOff ?? null,
+      zipCode: sale.customer?.zipCode || "",
+      isRestricted: Boolean(sale.customer?.isRestricted),
+      orderCount: Number(sale.customer?._count?.sales || 0),
     },
     products: asArray(sale.products),
     extras: asArray(sale.extras),
@@ -241,6 +248,13 @@ const findRepeatSales = async (
           address_1: true,
           portal: true,
           observations: true,
+          code: true,
+          segment: true,
+          activity: true,
+          daysOff: true,
+          zipCode: true,
+          isRestricted: true,
+          _count: { select: { sales: true } },
         },
       },
     },
@@ -263,6 +277,19 @@ const pendingOrderWhere = ({ partnerId, storeId, activeStoresOnly = true }) => (
 
 const queueOrderBy = [{ date: "asc" }, { createdAt: "asc" }];
 
+const compareQueueAge = (left, right) => {
+  const leftDate = new Date(left.date || left.createdAt || 0).getTime();
+  const rightDate = new Date(right.date || right.createdAt || 0).getTime();
+  return leftDate - rightDate;
+};
+
+const isVipSale = (row) => {
+  const customerData = asObject(row.customerData);
+  return String(row.customer?.segment || customerData.segment || "")
+    .trim()
+    .toUpperCase() === "S5";
+};
+
 const compareBoosts = (left, right) => {
   const leftTarget = parsePositiveInt(left.boostTargetPosition) || 1;
   const rightTarget = parsePositiveInt(right.boostTargetPosition) || 1;
@@ -276,27 +303,19 @@ const compareBoosts = (left, right) => {
   const rightPaid = right.boostPaidAt ? new Date(right.boostPaidAt).getTime() : 0;
   if (leftPaid !== rightPaid) return leftPaid - rightPaid;
 
-  const leftDate = new Date(left.date || left.createdAt || 0).getTime();
-  const rightDate = new Date(right.date || right.createdAt || 0).getTime();
-  return leftDate - rightDate;
+  return compareQueueAge(left, right);
 };
 
-const applyBoostQueueOrder = (rows) => {
-  const regular = rows.filter((row) => !row.boostActive);
+const applyPriorityQueueOrder = (rows) => {
   const boosted = rows.filter((row) => row.boostActive).sort(compareBoosts);
-  const insertedByTarget = new Map();
-  const queue = [...regular];
+  const vip = rows
+    .filter((row) => !row.boostActive && isVipSale(row))
+    .sort(compareQueueAge);
+  const regular = rows
+    .filter((row) => !row.boostActive && !isVipSale(row))
+    .sort(compareQueueAge);
 
-  boosted.forEach((row) => {
-    const target = parsePositiveInt(row.boostTargetPosition) || 1;
-    const previousAtTarget = insertedByTarget.get(target) || 0;
-    const insertAt = Math.min(Math.max(target - 1 + previousAtTarget, 0), queue.length);
-
-    queue.splice(insertAt, 0, row);
-    insertedByTarget.set(target, previousAtTarget + 1);
-  });
-
-  return queue;
+  return [...boosted, ...vip, ...regular];
 };
 
 const clampTargetPosition = (value, currentPosition) => {
@@ -360,6 +379,13 @@ const findBoostableSale = async (prisma, { orderId, orderCode }) => {
           address_1: true,
           portal: true,
           observations: true,
+          code: true,
+          segment: true,
+          activity: true,
+          daysOff: true,
+          zipCode: true,
+          isRestricted: true,
+          _count: { select: { sales: true } },
         },
       },
     },
@@ -382,11 +408,13 @@ const loadStoreQueue = async (prisma, sale) => {
       boostTargetPosition: true,
       boostQueueCredit: true,
       boostPaidAt: true,
+      customerData: true,
+      customer: { select: { segment: true } },
     },
     orderBy: queueOrderBy,
   });
 
-  return applyBoostQueueOrder(rows);
+  return applyPriorityQueueOrder(rows);
 };
 
 export default function myordersRoutes(prisma) {
@@ -566,6 +594,13 @@ export default function myordersRoutes(prisma) {
               address_1: true,
               portal: true,
               observations: true,
+              code: true,
+              segment: true,
+              activity: true,
+              daysOff: true,
+              zipCode: true,
+              isRestricted: true,
+              _count: { select: { sales: true } },
             },
           },
         },
@@ -616,16 +651,23 @@ export default function myordersRoutes(prisma) {
                 address_1: true,
                 portal: true,
                 observations: true,
+                code: true,
+                segment: true,
+                activity: true,
+                daysOff: true,
+                zipCode: true,
+                isRestricted: true,
+                _count: { select: { sales: true } },
               },
             },
           },
           orderBy: queueOrderBy,
-          take,
+          take: 200,
         }),
         prisma.sale.count({ where }),
       ]);
 
-      const orderedRows = applyBoostQueueOrder(rows);
+      const orderedRows = applyPriorityQueueOrder(rows).slice(0, take);
 
       return res.json({
         items: orderedRows.map((row, index) => ({
@@ -836,6 +878,13 @@ export default function myordersRoutes(prisma) {
               address_1: true,
               portal: true,
               observations: true,
+              code: true,
+              segment: true,
+              activity: true,
+              daysOff: true,
+              zipCode: true,
+              isRestricted: true,
+              _count: { select: { sales: true } },
             },
           },
         },

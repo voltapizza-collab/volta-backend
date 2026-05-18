@@ -69,6 +69,26 @@ if (!telnyxEnvStatus.enabled) {
 telnyxEnvStatus.warnings.forEach((warning) => console.warn("[telnyx]", warning));
 
 const prisma = new PrismaClient();
+
+const isPrismaConnectionClosed = (error) =>
+  error?.code === "P1017" ||
+  String(error?.message || "").includes("Server has closed the connection");
+
+prisma.$use(async (params, next) => {
+  try {
+    return await next(params);
+  } catch (error) {
+    if (!isPrismaConnectionClosed(error)) {
+      throw error;
+    }
+
+    console.warn("[prisma] connection closed; reconnecting and retrying once");
+    await prisma.$disconnect().catch(() => {});
+    await prisma.$connect();
+    return next(params);
+  }
+});
+
 const storesRouter = storesRoutes(prisma);
 const stockRouter = stockRoutes(prisma);
 const storeHoursRouter = storeHoursRoutes(prisma);

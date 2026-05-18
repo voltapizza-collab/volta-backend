@@ -8,8 +8,35 @@ const prisma = new PrismaClient();
 const router = express.Router();
 const upload = multer({ storage: multer.memoryStorage() });
 
+const isPrismaConnectionClosed = (error) =>
+  error?.code === "P1017" ||
+  String(error?.message || "").includes("Server has closed the connection");
+
+prisma.$use(async (params, next) => {
+  try {
+    return await next(params);
+  } catch (error) {
+    if (!isPrismaConnectionClosed(error)) {
+      throw error;
+    }
+
+    console.warn("[partners.prisma] connection closed; reconnecting and retrying once");
+    await prisma.$disconnect().catch(() => {});
+    await prisma.$connect();
+    return next(params);
+  }
+});
+
 const GOOGLE_GEOCODING_URL =
   "https://maps.googleapis.com/maps/api/geocode/json";
+const GOOGLE_ROUTE_MATRIX_URL =
+  "https://routes.googleapis.com/distanceMatrix/v2:computeRouteMatrix";
+
+const getGoogleGeocodingKey = () =>
+  process.env.GOOGLE_GEOCODING_KEY ||
+  process.env.GOOGLE_MAPS_API_KEY ||
+  process.env.REACT_APP_GOOGLE_KEY ||
+  "";
 
 cloudinary.config({
   cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
@@ -18,32 +45,55 @@ cloudinary.config({
 });
 
 async function ensurePartnerSettingsColumns() {
-  const statements = [
-    "ALTER TABLE `Partner` ADD COLUMN `deliveryRadiusKm` DOUBLE NULL",
-    "ALTER TABLE `Partner` ADD COLUMN `deliveryPricingMode` ENUM('FIXED','VARIABLE') NOT NULL DEFAULT 'FIXED'",
-    "ALTER TABLE `Partner` ADD COLUMN `deliveryFeeBlockSize` INT NULL DEFAULT 5",
-    "ALTER TABLE `Partner` ADD COLUMN `deliveryMaxPizzasPerOrder` INT NULL",
-    "ALTER TABLE `Partner` ADD COLUMN `deliveryFeeFixed` DOUBLE NULL",
-    "ALTER TABLE `Partner` ADD COLUMN `deliveryFeeBase` DOUBLE NULL",
-    "ALTER TABLE `Partner` ADD COLUMN `deliveryBaseKm` DOUBLE NULL",
-    "ALTER TABLE `Partner` ADD COLUMN `deliveryExtraPerKm` DOUBLE NULL",
-    "ALTER TABLE `Partner` ADD COLUMN `brandPrimary` VARCHAR(32) NULL",
-    "ALTER TABLE `Partner` ADD COLUMN `brandSecondary` VARCHAR(32) NULL",
-    "ALTER TABLE `Partner` ADD COLUMN `brandAccent` VARCHAR(32) NULL",
-    "ALTER TABLE `Partner` ADD COLUMN `brandSurface` VARCHAR(32) NULL",
-    "ALTER TABLE `Partner` ADD COLUMN `brandTextColor` VARCHAR(32) NULL",
-    "ALTER TABLE `Partner` ADD COLUMN `brandFontFamily` VARCHAR(64) NULL",
-    "ALTER TABLE `Partner` ADD COLUMN `brandOfferButtonStyle` VARCHAR(64) NULL",
-    "ALTER TABLE `Partner` ADD COLUMN `brandLogoUrl` TEXT NULL",
-    "ALTER TABLE `Partner` ADD COLUMN `brandLogoPublicId` VARCHAR(255) NULL",
+  const columns = [
+    ["deliveryRadiusKm", "DOUBLE NULL"],
+    ["deliveryPricingMode", "ENUM('FIXED','VARIABLE') NOT NULL DEFAULT 'FIXED'"],
+    ["deliveryFeeBlockSize", "INT NULL DEFAULT 5"],
+    ["deliveryMaxPizzasPerOrder", "INT NULL"],
+    ["deliveryFeeFixed", "DOUBLE NULL"],
+    ["deliveryFeeBase", "DOUBLE NULL"],
+    ["deliveryBaseKm", "DOUBLE NULL"],
+    ["deliveryExtraPerKm", "DOUBLE NULL"],
+    ["brandPrimary", "VARCHAR(32) NULL"],
+    ["brandSecondary", "VARCHAR(32) NULL"],
+    ["brandAccent", "VARCHAR(32) NULL"],
+    ["brandSurface", "VARCHAR(32) NULL"],
+    ["brandTextColor", "VARCHAR(32) NULL"],
+    ["brandFontFamily", "VARCHAR(64) NULL"],
+    ["brandOfferButtonStyle", "VARCHAR(64) NULL"],
+    ["brandLogoUrl", "TEXT NULL"],
+    ["brandLogoPublicId", "VARCHAR(255) NULL"],
   ];
 
-  for (const statement of statements) {
+  let existingColumns = new Set();
+
+  try {
+    const rows = await prisma.$queryRawUnsafe("SHOW COLUMNS FROM `Partner`");
+    existingColumns = new Set(
+      (rows || []).map((row) => String(row.Field || row.field || "").trim())
+    );
+  } catch (error) {
+    if (isPrismaConnectionClosed(error)) {
+      throw error;
+    }
+
+    console.warn(
+      "PARTNER COLUMN INTROSPECTION ERROR:",
+      error?.message || error
+    );
+  }
+
+  for (const [columnName, definition] of columns) {
+    if (existingColumns.has(columnName)) continue;
+
     try {
-      await prisma.$executeRawUnsafe(statement);
+      await prisma.$executeRawUnsafe(
+        `ALTER TABLE \`Partner\` ADD COLUMN \`${columnName}\` ${definition}`
+      );
     } catch (error) {
       const message = String(error?.message || error);
-      if (!message.includes("Duplicate column name")) {
+      const metaMessage = String(error?.meta?.message || "");
+      if (!message.includes("Duplicate column name") && !metaMessage.includes("Duplicate column name")) {
         throw error;
       }
     }
@@ -118,6 +168,127 @@ async function geocodeCustomerAddress(address, partner, stores, key) {
   }
 
   return null;
+}
+
+async function computeDrivingDistances(origin, stores, key) {
+  if (!key || !origin?.lat || !origin?.lng || !stores.length) return null;
+
+  try {
+    const response = await axios.post(
+      GOOGLE_ROUTE_MATRIX_URL,
+      {
+        origins: [
+          {
+            waypoint: {
+              location: {
+                latLng: {
+                  latitude: origin.lat,
+                  longitude: origin.lng,
+                },
+              },
+            },
+          },
+        ],
+        destinations: stores.map((store) => ({
+          waypoint: {
+            location: {
+              latLng: {
+                latitude: store.latitude,
+                longitude: store.longitude,
+              },
+            },
+          },
+        })),
+        travelMode: "DRIVE",
+        routingPreference: "TRAFFIC_UNAWARE",
+      },
+      {
+        headers: {
+          "Content-Type": "application/json",
+          "X-Goog-Api-Key": key,
+          "X-Goog-FieldMask":
+            "originIndex,destinationIndex,duration,distanceMeters,status,condition",
+        },
+      }
+    );
+
+    const rows = Array.isArray(response.data) ? response.data : [];
+    const distancesByIndex = new Map();
+
+    rows.forEach((row) => {
+      const destinationIndex = Number(row?.destinationIndex);
+      const distanceMeters = Number(row?.distanceMeters);
+      const isRoutable =
+        row?.condition === "ROUTE_EXISTS" ||
+        row?.status?.code === 0 ||
+        !row?.status;
+
+      if (
+        Number.isInteger(destinationIndex) &&
+        Number.isFinite(distanceMeters) &&
+        distanceMeters >= 0 &&
+        isRoutable
+      ) {
+        distancesByIndex.set(destinationIndex, {
+          distanceKm: distanceMeters / 1000,
+          duration: row?.duration || null,
+        });
+      }
+    });
+
+    if (!distancesByIndex.size) return null;
+
+    return stores
+      .map((store, index) => {
+        const match = distancesByIndex.get(index);
+        if (!match) return null;
+        return {
+          ...store,
+          distanciaKm: match.distanceKm,
+          routeDuration: match.duration,
+          distanceSource: "DRIVING_ROUTE",
+        };
+      })
+      .filter(Boolean);
+  } catch (error) {
+    console.warn(
+      "GOOGLE ROUTE MATRIX ERROR:",
+      error?.response?.data || error?.message || error
+    );
+    return null;
+  }
+}
+
+function buildManualDeliveryResolution({ address, partner, stores, reason }) {
+  const fallbackStore = stores[0] || null;
+
+  return {
+    formattedAddress: address,
+    coords: null,
+    withinRange: Boolean(fallbackStore),
+    deliveryRadiusKm:
+      partner.deliveryRadiusKm == null ? null : Number(partner.deliveryRadiusKm),
+    deliveryFee:
+      fallbackStore && partner.deliveryPricingMode === "FIXED"
+        ? computeDeliveryFee(partner, 0)
+        : null,
+    deliveryFeeBlockSize: Number(partner.deliveryFeeBlockSize || 5),
+    deliveryMaxPizzasPerOrder: toPositiveIntegerOrNull(
+      partner.deliveryMaxPizzasPerOrder
+    ),
+    pricingMode: partner.deliveryPricingMode,
+    geocodingStatus: "MANUAL_FALLBACK",
+    geocodingReason: reason,
+    nearestStore: fallbackStore
+      ? {
+          id: fallbackStore.id,
+          slug: fallbackStore.slug,
+          storeName: fallbackStore.storeName,
+          city: fallbackStore.city,
+          distanceKm: null,
+        }
+      : null,
+  };
 }
 
 function haversineKm(lat1, lon1, lat2, lon2) {
@@ -213,11 +384,7 @@ router.post("/:slug/delivery/resolve", async (req, res) => {
       return res.status(400).json({ error: "Address required" });
     }
 
-    const googleKey = process.env.GOOGLE_GEOCODING_KEY;
-
-    if (!googleKey) {
-      return res.status(500).json({ error: "GOOGLE_GEOCODING_KEY not configured" });
-    }
+    const googleKey = getGoogleGeocodingKey();
 
     const partner = await getPartnerPolicyBySlug(req.params.slug);
 
@@ -234,6 +401,17 @@ router.post("/:slug/delivery/resolve", async (req, res) => {
       orderBy: { storeName: "asc" },
     });
 
+    if (!googleKey) {
+      return res.json(
+        buildManualDeliveryResolution({
+          address,
+          partner,
+          stores,
+          reason: "GOOGLE_GEOCODING_KEY not configured",
+        })
+      );
+    }
+
     const customerGeocode = await geocodeCustomerAddress(
       address,
       partner,
@@ -242,10 +420,14 @@ router.post("/:slug/delivery/resolve", async (req, res) => {
     );
 
     if (!customerGeocode) {
-      return res.status(422).json({
-        error: "ADDRESS_NOT_FOUND",
-        message: "No pudimos ubicar esta direccion.",
-      });
+      return res.json(
+        buildManualDeliveryResolution({
+          address,
+          partner,
+          stores,
+          reason: "ADDRESS_NOT_FOUND",
+        })
+      );
     }
 
     const lat = customerGeocode.lat;
@@ -309,12 +491,25 @@ router.post("/:slug/delivery/resolve", async (req, res) => {
       });
     }
 
-    const nearestStore = eligibleStores
+    const fallbackDistances = eligibleStores
       .map((store) => ({
         ...store,
         distanciaKm: haversineKm(lat, lng, store.latitude, store.longitude),
+        routeDuration: null,
+        distanceSource: "HAVERSINE",
       }))
-      .sort((a, b) => a.distanciaKm - b.distanciaKm)[0];
+      .sort((a, b) => a.distanciaKm - b.distanciaKm);
+
+    const drivingDistances = await computeDrivingDistances(
+      { lat, lng },
+      eligibleStores,
+      googleKey
+    );
+
+    const distanceRows = (drivingDistances?.length ? drivingDistances : fallbackDistances)
+      .slice()
+      .sort((a, b) => a.distanciaKm - b.distanciaKm);
+    const nearestStore = distanceRows[0];
 
     const radiusKm =
       partner.deliveryRadiusKm == null
@@ -337,16 +532,48 @@ router.post("/:slug/delivery/resolve", async (req, res) => {
         partner.deliveryMaxPizzasPerOrder
       ),
       pricingMode: partner.deliveryPricingMode,
+      geocodingStatus: "GEOCODED",
       nearestStore: {
         id: nearestStore.id,
         slug: nearestStore.slug,
         storeName: nearestStore.storeName,
         city: nearestStore.city,
         distanceKm: Number(nearestStore.distanciaKm.toFixed(2)),
+        distanceSource: nearestStore.distanceSource,
+        routeDuration: nearestStore.routeDuration,
       },
     });
   } catch (e) {
     console.error("DELIVERY RESOLVE ERROR:", e?.response?.data || e);
+    try {
+      await ensurePartnerSettingsColumns();
+      const address = String(req.body?.address || "").trim();
+      const partner = await getPartnerPolicyBySlug(req.params.slug);
+      const stores = partner
+        ? await prisma.store.findMany({
+            where: {
+              partnerId: Number(partner.id),
+              active: true,
+              acceptingOrders: true,
+            },
+            orderBy: { storeName: "asc" },
+          })
+        : [];
+
+      if (partner && address) {
+        return res.json(
+          buildManualDeliveryResolution({
+            address,
+            partner,
+            stores,
+            reason: "DELIVERY_RESOLVE_FAILED",
+          })
+        );
+      }
+    } catch (fallbackError) {
+      console.error("DELIVERY FALLBACK ERROR:", fallbackError?.message || fallbackError);
+    }
+
     res.status(500).json({
       error: "DELIVERY_RESOLVE_FAILED",
       message: "No pudimos resolver esta direccion ahora mismo.",

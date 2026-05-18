@@ -14,6 +14,20 @@ const roundMoney = (value) => Math.round(Number(value || 0) * 100) / 100;
 const toCents = (value) => Math.round(roundMoney(value) * 100);
 
 const asArray = (value) => (Array.isArray(value) ? value : []);
+const normalizeDigits = (value) => String(value || "").replace(/\D/g, "");
+
+const esBase9 = (phone) => {
+  const digits = normalizeDigits(phone);
+  if (digits.length === 9) return digits;
+  if (digits.length === 11 && digits.startsWith("34")) return digits.slice(2);
+  if (digits.length > 9) return digits.slice(-9);
+  return null;
+};
+
+const toE164ES = (phone) => {
+  const base9 = esBase9(phone);
+  return base9 ? `+34${base9}` : null;
+};
 
 const getLineQty = (line) => {
   const qty = Number(line?.qty ?? line?.quantity ?? 1);
@@ -108,10 +122,99 @@ const genSaleCode = async (prisma) => {
   return code;
 };
 
+const genCustomerCode = async (prisma) => {
+  let code;
+  do {
+    code = `CUS-${Math.floor(10000 + Math.random() * 90000)}`;
+  } while (await prisma.customer.findUnique({ where: { code } }));
+  return code;
+};
+
 const resolveDeliveryMethod = (value) => {
   const method = String(value || "").trim().toUpperCase();
   if (["PICKUP", "COURIER", "MARKETPLACE", "OTHER"].includes(method)) return method;
   return "PICKUP";
+};
+
+const extractZipCode = (value) => {
+  const match = String(value || "").match(/\b(\d{5})\b/);
+  return match ? match[1] : null;
+};
+
+const resolveCheckoutCustomer = async (tx, { partnerId, customer, delivery }) => {
+  const customerId = parsePositiveInt(customer?.id || customer?.customerId);
+  const rawName = String(customer?.name || "").trim();
+  const normalizedPhone = toE164ES(customer?.phone);
+  const base9 = esBase9(customer?.phone);
+  const address = String(
+    customer?.address_1 ||
+      customer?.address ||
+      delivery?.address ||
+      (delivery?.method === "PICKUP" && normalizedPhone ? `(PICKUP) ${normalizedPhone}` : "")
+  ).trim();
+
+  if (customerId) {
+    const existing = await tx.customer.findFirst({
+      where: { id: customerId, partnerId },
+    });
+
+    if (!existing) return null;
+
+    const updateData = {
+      ...(rawName && !existing.name ? { name: rawName } : {}),
+      ...(normalizedPhone && !existing.phone ? { phone: normalizedPhone } : {}),
+      ...(address && (!existing.address_1 || /^\(PICKUP\)/i.test(existing.address_1))
+        ? { address_1: address, zipCode: extractZipCode(address) }
+        : {}),
+      ...(Number.isFinite(Number(delivery?.lat)) ? { lat: Number(delivery.lat) } : {}),
+      ...(Number.isFinite(Number(delivery?.lng)) ? { lng: Number(delivery.lng) } : {}),
+    };
+
+    return Object.keys(updateData).length
+      ? tx.customer.update({ where: { id: existing.id }, data: updateData })
+      : existing;
+  }
+
+  if (!rawName || !normalizedPhone || !base9) return null;
+
+  const existing = await tx.customer.findFirst({
+    where: {
+      partnerId,
+      phone: { contains: base9 },
+    },
+  });
+
+  const zipCode = extractZipCode(address);
+  const geo = {
+    ...(Number.isFinite(Number(delivery?.lat)) ? { lat: Number(delivery.lat) } : {}),
+    ...(Number.isFinite(Number(delivery?.lng)) ? { lng: Number(delivery.lng) } : {}),
+  };
+
+  if (existing) {
+    return tx.customer.update({
+      where: { id: existing.id },
+      data: {
+        name: rawName || existing.name,
+        phone: normalizedPhone,
+        ...(address ? { address_1: address } : {}),
+        ...(zipCode ? { zipCode } : {}),
+        ...geo,
+      },
+    });
+  }
+
+  return tx.customer.create({
+    data: {
+      partnerId,
+      code: await genCustomerCode(tx),
+      origin: "PHONE",
+      name: rawName,
+      phone: normalizedPhone,
+      address_1: address || `(PICKUP) ${normalizedPhone}`,
+      zipCode,
+      ...geo,
+    },
+  });
 };
 
 const createCouponRedemptionsForSale = async (tx, sale) => {
@@ -262,44 +365,73 @@ export default function checkoutRoutes(prisma) {
       const sanitizedDelivery = {
         method: resolveDeliveryMethod(delivery.method),
         address: delivery.address ? String(delivery.address).trim() : "",
+        addressLine2: delivery.addressLine2 ? String(delivery.addressLine2).trim() : "",
         lat: Number.isFinite(Number(delivery.lat)) ? Number(delivery.lat) : null,
         lng: Number.isFinite(Number(delivery.lng)) ? Number(delivery.lng) : null,
       };
+      const fullDeliveryAddress = [sanitizedDelivery.address, sanitizedDelivery.addressLine2]
+        .filter(Boolean)
+        .join(", ");
       const scheduledFor = req.body.scheduledFor ? new Date(req.body.scheduledFor) : null;
-      const sale = await prisma.sale.create({
-        data: {
-          code: await genSaleCode(prisma),
+      const customerInput = req.body.customer && typeof req.body.customer === "object" ? req.body.customer : {};
+      const sale = await prisma.$transaction(async (tx) => {
+        const customer = await resolveCheckoutCustomer(tx, {
           partnerId,
-          storeId,
-          type: "WEB_ORDER",
-          delivery: sanitizedDelivery.method,
-          customerData: {
-            source: "storefront",
-            delivery: sanitizedDelivery,
-            scheduledFor: scheduledFor && !Number.isNaN(scheduledFor.getTime()) ? scheduledFor.toISOString() : null,
+          customer: customerInput,
+          delivery: {
+            ...sanitizedDelivery,
+            address: fullDeliveryAddress || sanitizedDelivery.address,
           },
-          products: lines,
-          extras: [],
-          totalProducts,
-          discounts,
-          total,
-          status: "AWAITING_PAYMENT",
-          channel: "WEB",
-          currency,
-          address_1: sanitizedDelivery.address || null,
-          lat: sanitizedDelivery.lat,
-          lng: sanitizedDelivery.lng,
-          incentiveId: lines.find((line) => line.incentiveId)?.incentiveId || null,
-          incentiveAmount: Math.abs(lines.find(isIncentiveRewardLine)?.subtotal || 0) || 0,
-          boostActive: lines.some((line) => line.source === "queue_boost"),
-          boostTargetPosition: lines.find((line) => line.source === "queue_boost")?.boost?.targetPosition || null,
-          boostOriginalPosition: lines.find((line) => line.source === "queue_boost")?.boost?.currentPosition || null,
-          boostQueueCredit: lines.find((line) => line.source === "queue_boost")?.boost?.positionsToJump || 0,
-          boostAmount: lines.find((line) => line.source === "queue_boost")?.subtotal
-            ? String(Math.abs(Number(lines.find((line) => line.source === "queue_boost").subtotal)).toFixed(2))
-            : null,
-          boostMeta: lines.find((line) => line.source === "queue_boost")?.boost || null,
-        },
+        });
+
+        if (!customer) {
+          const error = new Error("customer_profile_required");
+          error.status = 400;
+          throw error;
+        }
+
+        return tx.sale.create({
+          data: {
+            code: await genSaleCode(tx),
+            partnerId,
+            storeId,
+            customerId: customer.id,
+            type: "WEB_ORDER",
+            delivery: sanitizedDelivery.method,
+            customerData: {
+              source: "storefront",
+              name: customer.name || String(customerInput.name || "").trim(),
+              phone: customer.phone || toE164ES(customerInput.phone),
+              address_1: fullDeliveryAddress || sanitizedDelivery.address || customer.address_1 || "",
+              zipCode: customer.zipCode || extractZipCode(sanitizedDelivery.address),
+              customerId: customer.id,
+              customerCode: customer.code,
+              delivery: sanitizedDelivery,
+              scheduledFor: scheduledFor && !Number.isNaN(scheduledFor.getTime()) ? scheduledFor.toISOString() : null,
+            },
+            products: lines,
+            extras: [],
+            totalProducts,
+            discounts,
+            total,
+            status: "AWAITING_PAYMENT",
+            channel: "WEB",
+            currency,
+            address_1: fullDeliveryAddress || sanitizedDelivery.address || customer.address_1 || null,
+            lat: sanitizedDelivery.lat,
+            lng: sanitizedDelivery.lng,
+            incentiveId: lines.find((line) => line.incentiveId)?.incentiveId || null,
+            incentiveAmount: Math.abs(lines.find(isIncentiveRewardLine)?.subtotal || 0) || 0,
+            boostActive: lines.some((line) => line.source === "queue_boost"),
+            boostTargetPosition: lines.find((line) => line.source === "queue_boost")?.boost?.targetPosition || null,
+            boostOriginalPosition: lines.find((line) => line.source === "queue_boost")?.boost?.currentPosition || null,
+            boostQueueCredit: lines.find((line) => line.source === "queue_boost")?.boost?.positionsToJump || 0,
+            boostAmount: lines.find((line) => line.source === "queue_boost")?.subtotal
+              ? String(Math.abs(Number(lines.find((line) => line.source === "queue_boost").subtotal)).toFixed(2))
+              : null,
+            boostMeta: lines.find((line) => line.source === "queue_boost")?.boost || null,
+          },
+        });
       });
 
       const session = await createOrderCheckoutSession({
@@ -327,6 +459,7 @@ export default function checkoutRoutes(prisma) {
       return res.json({
         ok: true,
         saleId: sale.id,
+        customerId: sale.customerId,
         orderCode: sale.code,
         sessionId: session.id,
         url: session.url,
@@ -335,6 +468,9 @@ export default function checkoutRoutes(prisma) {
       });
     } catch (error) {
       console.error("[checkout.session] error:", error);
+      if (error?.status === 400 && error?.message === "customer_profile_required") {
+        return res.status(400).json({ ok: false, error: "customer_profile_required" });
+      }
       return res.status(500).json({ ok: false, error: "checkout_failed" });
     }
   });
@@ -383,6 +519,7 @@ export default function checkoutRoutes(prisma) {
             status: "PAID",
             stripeCheckoutSessionId: session.id || sale.stripeCheckoutSessionId,
             stripePaymentIntentId: session.payment_intent || sale.stripePaymentIntentId,
+            ...(sale.boostActive && !sale.boostPaidAt ? { boostPaidAt: new Date() } : {}),
           },
         });
 
