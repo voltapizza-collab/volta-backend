@@ -17,15 +17,14 @@ const appendParam = (params, key, value) => {
 
 const appendPaymentMethodTypes = (params) => {
   const methods = ["card"];
-  if (process.env.STRIPE_ENABLE_LINK === "1") methods.push("link");
-  if (process.env.STRIPE_ENABLE_KLARNA === "1") methods.push("klarna");
+  if (process.env.STRIPE_ENABLE_KLARNA !== "0") methods.push("klarna");
 
   methods.forEach((method, index) => {
     appendParam(params, `payment_method_types[${index}]`, method);
   });
 };
 
-const stripeRequest = async (path, params, idempotencyKey) => {
+const stripeApiRequest = async ({ method = "POST", path, params, idempotencyKey }) => {
   if (!globalThis.fetch) {
     throw new Error("fetch_not_available");
   }
@@ -36,13 +35,13 @@ const stripeRequest = async (path, params, idempotencyKey) => {
   }
 
   const response = await fetch(`${STRIPE_API_BASE}${path}`, {
-    method: "POST",
+    method,
     headers: {
       Authorization: `Bearer ${secretKey}`,
-      "Content-Type": "application/x-www-form-urlencoded",
+      ...(method === "POST" ? { "Content-Type": "application/x-www-form-urlencoded" } : {}),
       ...(idempotencyKey ? { "Idempotency-Key": idempotencyKey } : {}),
     },
-    body: params,
+    ...(method === "POST" ? { body: params } : {}),
   });
 
   const text = await response.text();
@@ -57,6 +56,21 @@ const stripeRequest = async (path, params, idempotencyKey) => {
   }
 
   return data;
+};
+
+const stripeRequest = (path, params, idempotencyKey) =>
+  stripeApiRequest({ method: "POST", path, params, idempotencyKey });
+
+export const retrieveCheckoutSession = async (sessionId) => {
+  const cleanSessionId = String(sessionId || "").trim();
+  if (!cleanSessionId) {
+    throw new Error("stripe_session_id_required");
+  }
+
+  return stripeApiRequest({
+    method: "GET",
+    path: `/checkout/sessions/${encodeURIComponent(cleanSessionId)}`,
+  });
 };
 
 export const createSmsCreditsCheckoutSession = async ({
@@ -111,6 +125,7 @@ export const createOrderCheckoutSession = async ({
   const saleId = String(sale.id);
   const orderCode = String(sale.code);
   const cleanCurrency = String(currency || "eur").trim().toLowerCase();
+  const customerData = sale.customerData && typeof sale.customerData === "object" ? sale.customerData : {};
 
   appendParam(params, "mode", "payment");
   appendParam(params, "branding_settings[display_name]", CHECKOUT_DISPLAY_NAME);
@@ -119,7 +134,8 @@ export const createOrderCheckoutSession = async ({
   appendParam(params, "cancel_url", cancelUrl);
   appendParam(params, "locale", "es");
   appendParam(params, "client_reference_id", `order:${saleId}`);
-  appendParam(params, "phone_number_collection[enabled]", "true");
+  appendParam(params, "customer_email", customerData.email);
+  appendParam(params, "customer_creation", "if_required");
   appendParam(params, "billing_address_collection", "auto");
   appendParam(params, "line_items[0][quantity]", 1);
   appendParam(params, "line_items[0][price_data][currency]", cleanCurrency);

@@ -3,7 +3,9 @@ import {
   constructStripeWebhookEvent,
   createOrderCheckoutSession,
   isStripeCheckoutConfigured,
+  retrieveCheckoutSession,
 } from "../services/stripe.js";
+import { sendOrderPaidTrackingSms } from "../services/orderNotifications.js";
 
 const parsePositiveInt = (value) => {
   const parsed = Number(value);
@@ -15,6 +17,10 @@ const toCents = (value) => Math.round(roundMoney(value) * 100);
 
 const asArray = (value) => (Array.isArray(value) ? value : []);
 const normalizeDigits = (value) => String(value || "").replace(/\D/g, "");
+const normalizeEmail = (value) => {
+  const email = String(value || "").trim().toLowerCase();
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) ? email : "";
+};
 
 const esBase9 = (phone) => {
   const digits = normalizeDigits(phone);
@@ -107,11 +113,17 @@ const calculateCouponDiscount = (coupon, eligibleSubtotal) => {
   return 0;
 };
 
-const buildReturnUrl = (req, status, fallbackPath = "/") => {
+const buildReturnUrl = (req, status, fallbackPath = "/", extraParams = {}) => {
   const origin = String(req.body.frontendOrigin || process.env.FRONT_BASE_URL || process.env.PUBLIC_FRONTEND_URL || "").replace(/\/$/, "");
   const path = String(req.body.returnPath || fallbackPath || "/");
   const separator = path.includes("?") ? "&" : "?";
-  return `${origin}${path}${separator}payment=${status}&session_id={CHECKOUT_SESSION_ID}`;
+  const params = new URLSearchParams({ payment: status });
+  Object.entries(extraParams).forEach(([key, value]) => {
+    if (value !== undefined && value !== null && value !== "") {
+      params.set(key, String(value));
+    }
+  });
+  return `${origin}${path}${separator}${params.toString()}&session_id={CHECKOUT_SESSION_ID}`;
 };
 
 const genSaleCode = async (prisma) => {
@@ -141,9 +153,26 @@ const extractZipCode = (value) => {
   return match ? match[1] : null;
 };
 
+const buildStripeCheckoutEmail = ({ customer, phone, saleId }) => {
+  const providedEmail = normalizeEmail(customer?.email);
+  if (providedEmail) return providedEmail;
+
+  const digits = normalizeDigits(phone || customer?.phone);
+  const fallbackDomain = String(
+    process.env.STRIPE_CHECKOUT_FALLBACK_EMAIL_DOMAIN || "mycrushpizza.test"
+  )
+    .trim()
+    .toLowerCase()
+    .replace(/^@/, "");
+  const fallbackLocal = digits || `order-${saleId || Date.now()}`;
+
+  return `${fallbackLocal}@${fallbackDomain}`;
+};
+
 const resolveCheckoutCustomer = async (tx, { partnerId, customer, delivery }) => {
   const customerId = parsePositiveInt(customer?.id || customer?.customerId);
   const rawName = String(customer?.name || "").trim();
+  const email = normalizeEmail(customer?.email);
   const normalizedPhone = toE164ES(customer?.phone);
   const base9 = esBase9(customer?.phone);
   const address = String(
@@ -163,6 +192,7 @@ const resolveCheckoutCustomer = async (tx, { partnerId, customer, delivery }) =>
     const updateData = {
       ...(rawName && !existing.name ? { name: rawName } : {}),
       ...(normalizedPhone && !existing.phone ? { phone: normalizedPhone } : {}),
+      ...(email && !existing.email ? { email } : {}),
       ...(address && (!existing.address_1 || /^\(PICKUP\)/i.test(existing.address_1))
         ? { address_1: address, zipCode: extractZipCode(address) }
         : {}),
@@ -196,6 +226,7 @@ const resolveCheckoutCustomer = async (tx, { partnerId, customer, delivery }) =>
       data: {
         name: rawName || existing.name,
         phone: normalizedPhone,
+        ...(email ? { email } : {}),
         ...(address ? { address_1: address } : {}),
         ...(zipCode ? { zipCode } : {}),
         ...geo,
@@ -210,6 +241,7 @@ const resolveCheckoutCustomer = async (tx, { partnerId, customer, delivery }) =>
       origin: "PHONE",
       name: rawName,
       phone: normalizedPhone,
+      email: email || null,
       address_1: address || `(PICKUP) ${normalizedPhone}`,
       zipCode,
       ...geo,
@@ -390,6 +422,15 @@ export default function checkoutRoutes(prisma) {
           throw error;
         }
 
+        const checkoutEmail = buildStripeCheckoutEmail({
+          customer: {
+            ...customerInput,
+            email: customer.email || customerInput.email,
+          },
+          phone: customer.phone || customerInput.phone,
+          saleId: customer.id,
+        });
+
         return tx.sale.create({
           data: {
             code: await genSaleCode(tx),
@@ -402,6 +443,7 @@ export default function checkoutRoutes(prisma) {
               source: "storefront",
               name: customer.name || String(customerInput.name || "").trim(),
               phone: customer.phone || toE164ES(customerInput.phone),
+              email: checkoutEmail,
               address_1: fullDeliveryAddress || sanitizedDelivery.address || customer.address_1 || "",
               zipCode: customer.zipCode || extractZipCode(sanitizedDelivery.address),
               customerId: customer.id,
@@ -440,7 +482,9 @@ export default function checkoutRoutes(prisma) {
         store,
         amountCents,
         currency,
-        successUrl: buildReturnUrl(req, "success", `/${partner.slug}/${store.slug}`),
+        successUrl: buildReturnUrl(req, "success", `/${partner.slug}/${store.slug}`, {
+          order_code: sale.code,
+        }),
         cancelUrl: buildReturnUrl(req, "cancel", `/${partner.slug}/${store.slug}`),
       });
 
@@ -475,6 +519,92 @@ export default function checkoutRoutes(prisma) {
     }
   });
 
+  const markPaidFromStripeSession = async (session) => {
+    const metadata = session.metadata || {};
+
+    if (metadata.purpose !== "order_checkout") {
+      const error = new Error("not_order_checkout");
+      error.status = 400;
+      throw error;
+    }
+
+    if (session.payment_status && session.payment_status !== "paid") {
+      const error = new Error("payment_not_paid");
+      error.status = 409;
+      throw error;
+    }
+
+    const saleId = parsePositiveInt(metadata.saleId);
+    if (!saleId) {
+      const error = new Error("bad_order_metadata");
+      error.status = 400;
+      throw error;
+    }
+
+    const result = await prisma.$transaction(async (tx) => {
+      const sale = await tx.sale.findUnique({ where: { id: saleId } });
+      if (!sale) {
+        const error = new Error("sale_not_found");
+        error.status = 404;
+        throw error;
+      }
+
+      if (sale.status === "PAID") {
+        return { sale, shouldNotify: false };
+      }
+
+      const paidSale = await tx.sale.update({
+        where: { id: sale.id },
+        data: {
+          status: "PAID",
+          stripeCheckoutSessionId: session.id || sale.stripeCheckoutSessionId,
+          stripePaymentIntentId: session.payment_intent || sale.stripePaymentIntentId,
+          ...(sale.boostActive && !sale.boostPaidAt ? { boostPaidAt: new Date() } : {}),
+        },
+      });
+
+      await createCouponRedemptionsForSale(tx, paidSale);
+      return { sale: paidSale, shouldNotify: true };
+    });
+
+    if (result.shouldNotify) {
+      sendOrderPaidTrackingSms(prisma, result.sale)
+        .then((sms) => {
+          if (!sms.ok) console.warn("[checkout.order-paid-sms]", sms);
+        })
+        .catch((error) => console.error("[checkout.order-paid-sms] error:", error));
+    }
+
+    return result;
+  };
+
+  router.post("/session/confirm", async (req, res) => {
+    const sessionId = String(req.body?.sessionId || req.body?.session_id || "").trim();
+
+    if (!sessionId) {
+      return res.status(400).json({ ok: false, error: "stripe_session_id_required" });
+    }
+
+    try {
+      const session = await retrieveCheckoutSession(sessionId);
+      const result = await markPaidFromStripeSession(session);
+
+      return res.json({
+        ok: true,
+        status: result.sale.status,
+        saleId: result.sale.id,
+        orderCode: result.sale.code,
+        notified: result.shouldNotify,
+      });
+    } catch (error) {
+      console.error("[checkout.session.confirm] error:", error);
+      return res.status(error.status || 500).json({
+        ok: false,
+        error: error.message || "confirm_failed",
+      });
+    }
+  });
+
   router.post("/stripe/webhook", async (req, res) => {
     let event;
 
@@ -491,44 +621,20 @@ export default function checkoutRoutes(prisma) {
     }
 
     const session = event.data?.object || {};
-    const metadata = session.metadata || {};
-
-    if (metadata.purpose !== "order_checkout") {
-      return res.json({ ok: true, ignored: true });
-    }
-
-    if (session.payment_status && session.payment_status !== "paid") {
-      return res.json({ ok: true, ignored: true, status: session.payment_status });
-    }
-
-    const saleId = parsePositiveInt(metadata.saleId);
-    if (!saleId) {
-      return res.status(400).json({ ok: false, error: "bad_order_metadata" });
-    }
 
     try {
-      const updated = await prisma.$transaction(async (tx) => {
-        const sale = await tx.sale.findUnique({ where: { id: saleId } });
-        if (!sale) throw new Error("sale_not_found");
+      const result = await markPaidFromStripeSession(session);
 
-        if (sale.status === "PAID") return sale;
-
-        const paidSale = await tx.sale.update({
-          where: { id: sale.id },
-          data: {
-            status: "PAID",
-            stripeCheckoutSessionId: session.id || sale.stripeCheckoutSessionId,
-            stripePaymentIntentId: session.payment_intent || sale.stripePaymentIntentId,
-            ...(sale.boostActive && !sale.boostPaidAt ? { boostPaidAt: new Date() } : {}),
-          },
-        });
-
-        await createCouponRedemptionsForSale(tx, paidSale);
-        return paidSale;
+      return res.json({
+        ok: true,
+        status: "order_paid",
+        saleId: result.sale.id,
+        orderCode: result.sale.code,
       });
-
-      return res.json({ ok: true, status: "order_paid", saleId: updated.id, orderCode: updated.code });
     } catch (error) {
+      if (["not_order_checkout", "payment_not_paid"].includes(error.message)) {
+        return res.json({ ok: true, ignored: true, status: error.message });
+      }
       console.error("[checkout.stripe-webhook] error:", error);
       return res.status(500).json({ ok: false, error: "server" });
     }

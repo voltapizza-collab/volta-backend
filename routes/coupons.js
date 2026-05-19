@@ -2317,16 +2317,36 @@ export default function couponsRoutes(prisma) {
       }
 
       const expiresAt = coupon.expiresAt || new Date(now.getTime() + 48 * 3600 * 1000);
+      const existingMeta = readCouponMeta(coupon);
 
-      const updated = await prisma.coupon.update({
-        where: { id: coupon.id },
-        data: {
-          assignedToId: customer.id,
-          visibility: "RESERVED",
-          acquisition: "CLAIM",
-          channel: "WEB",
-          expiresAt,
-        },
+      const [updated, partner] = await Promise.all([
+        prisma.coupon.update({
+          where: { id: coupon.id },
+          data: {
+            assignedToId: customer.id,
+            visibility: "RESERVED",
+            acquisition: "CLAIM",
+            channel: "WEB",
+            expiresAt,
+            meta: {
+              ...existingMeta,
+              claimedAt: new Date().toISOString(),
+              claimedByCustomerId: customer.id,
+              claimedFromZipCode: zipCode,
+              messageStatus: "pending",
+            },
+          },
+        }),
+        prisma.partner.findUnique({
+          where: { id: partnerId },
+          select: { name: true },
+        }),
+      ]);
+
+      const deliveryResult = await sendCouponSms(prisma, {
+        coupon: updated,
+        recipient: customer,
+        partnerName: partner?.name,
       });
 
       return res.json({
@@ -2340,6 +2360,13 @@ export default function couponsRoutes(prisma) {
           id: customer.id,
           name: customer.name,
           phone: customer.phone,
+        },
+        delivery: {
+          status: deliveryResult.status,
+          channel: "SMS",
+          provider: "telnyx",
+          sent: deliveryResult.ok,
+          error: deliveryResult.error,
         },
       });
     } catch (error) {

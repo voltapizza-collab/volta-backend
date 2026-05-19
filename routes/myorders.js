@@ -1,5 +1,6 @@
 import express from "express";
 import { getBoostSettings } from "../services/boostSettings.js";
+import { sendOrderReadySms } from "../services/orderNotifications.js";
 
 const TZ = process.env.TIMEZONE || "Europe/Madrid";
 
@@ -835,6 +836,7 @@ export default function myordersRoutes(prisma) {
           return left.storeName.localeCompare(right.storeName);
         }),
         topProducts,
+        orders: safeSales.map(formatSale),
         updatedAt: new Date().toISOString(),
       });
     } catch (error) {
@@ -856,7 +858,7 @@ export default function myordersRoutes(prisma) {
           id,
           status: { not: "CANCELED" },
         },
-        select: { id: true },
+        select: { id: true, processed: true },
       });
 
       if (!sale) {
@@ -889,6 +891,14 @@ export default function myordersRoutes(prisma) {
           },
         },
       });
+
+      if (!sale.processed) {
+        sendOrderReadySms(prisma, updated)
+          .then((sms) => {
+            if (!sms.ok) console.warn("[myorders.ready-sms]", sms);
+          })
+          .catch((error) => console.error("[myorders.ready-sms] error:", error));
+      }
 
       return res.json({ ok: true, order: formatSale(updated) });
     } catch (error) {
