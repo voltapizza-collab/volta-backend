@@ -14,6 +14,19 @@ const parsePositiveInt = (value) => {
 
 const roundMoney = (value) => Math.round(Number(value || 0) * 100) / 100;
 const toCents = (value) => Math.round(roundMoney(value) * 100);
+const PRISMA_CONNECTIVITY_CODES = new Set(["P1001", "P1002", "P1017"]);
+
+const isPrismaConnectivityError = (error) => {
+  const code = error?.code || error?.errorCode;
+  const message = String(error?.message || error?.meta?.error || "");
+
+  return (
+    PRISMA_CONNECTIVITY_CODES.has(code) ||
+    (code === "P2028" && message.includes("Transaction not found")) ||
+    message.includes("Can't reach database server") ||
+    message.includes("Server has closed the connection")
+  );
+};
 
 const asArray = (value) => (Array.isArray(value) ? value : []);
 const normalizeDigits = (value) => String(value || "").replace(/\D/g, "");
@@ -514,6 +527,9 @@ export default function checkoutRoutes(prisma) {
       console.error("[checkout.session] error:", error);
       if (error?.status === 400 && error?.message === "customer_profile_required") {
         return res.status(400).json({ ok: false, error: "customer_profile_required" });
+      }
+      if (isPrismaConnectivityError(error)) {
+        return res.status(503).json({ ok: false, error: "database_unavailable" });
       }
       return res.status(500).json({ ok: false, error: "checkout_failed" });
     }

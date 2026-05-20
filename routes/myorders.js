@@ -77,6 +77,15 @@ const asObject = (value) => {
   return parsed && typeof parsed === "object" && !Array.isArray(parsed) ? parsed : {};
 };
 
+const getScheduledFor = (sale) => {
+  const customerData = asObject(sale.customerData);
+  const scheduledFor = parseOptionalDate(
+    customerData.scheduledFor || customerData.delivery?.scheduledFor
+  );
+
+  return scheduledFor ? scheduledFor.toISOString() : null;
+};
+
 const roundMoney = (value) => Math.round(Number(value || 0) * 100) / 100;
 
 const normalizePhone = (value) =>
@@ -102,6 +111,7 @@ const formatSale = (sale) => {
   const customerData = asObject(sale.customerData);
   const boostAmount =
     sale.boostAmount == null ? 0 : Number(sale.boostAmount || 0);
+  const scheduledFor = getScheduledFor(sale);
 
   return {
     id: sale.id,
@@ -114,6 +124,8 @@ const formatSale = (sale) => {
     channel: sale.channel,
     currency: sale.currency,
     processed: sale.processed,
+    scheduledFor,
+    isScheduled: Boolean(scheduledFor),
     total: Number(sale.total || 0),
     discounts: Number(sale.discounts || 0),
     boost: {
@@ -146,6 +158,7 @@ const formatSale = (sale) => {
       zipCode: sale.customer?.zipCode || "",
       isRestricted: Boolean(sale.customer?.isRestricted),
       orderCount: Number(sale.customer?._count?.sales || 0),
+      scheduledFor,
     },
     products: asArray(sale.products),
     extras: asArray(sale.extras),
@@ -858,11 +871,21 @@ export default function myordersRoutes(prisma) {
           id,
           status: { not: "CANCELED" },
         },
-        select: { id: true, processed: true },
+        select: { id: true, processed: true, customerData: true },
       });
 
       if (!sale) {
         return res.status(404).json({ error: "Order not found" });
+      }
+
+      const scheduledFor = getScheduledFor(sale);
+      if (scheduledFor && new Date(scheduledFor).getTime() > Date.now()) {
+        return res.status(409).json({
+          error: "espera el momento 🧘‍♂️",
+          code: "SCHEDULED_ORDER_LOCKED",
+          scheduledFor,
+          serverTime: new Date().toISOString(),
+        });
       }
 
       const updated = await prisma.sale.update({
@@ -892,15 +915,16 @@ export default function myordersRoutes(prisma) {
         },
       });
 
-      if (!sale.processed) {
-        sendOrderReadySms(prisma, updated)
-          .then((sms) => {
-            if (!sms.ok) console.warn("[myorders.ready-sms]", sms);
-          })
-          .catch((error) => console.error("[myorders.ready-sms] error:", error));
-      }
+      const notification = sale.processed
+        ? { ok: false, skipped: true, reason: "already_processed" }
+        : await sendOrderReadySms(prisma, updated).catch((error) => {
+            console.error("[myorders.ready-sms] error:", error);
+            return { ok: false, skipped: true, reason: "ready_sms_error" };
+          });
 
-      return res.json({ ok: true, order: formatSale(updated) });
+      if (!notification.ok) console.warn("[myorders.ready-sms]", notification);
+
+      return res.json({ ok: true, order: formatSale(updated), notification });
     } catch (error) {
       console.error("[myorders.ready] error:", error);
       return res.status(500).json({ error: "Error marking order ready" });

@@ -884,14 +884,63 @@ const formatCouponExpiry = (value) => {
 
 const cleanSmsPart = (value) => String(value || "").replace(/\s+/g, " ").trim();
 
-const buildPrivateCouponSms = ({ partnerName, coupon }) => {
+const frontendBaseUrl = () =>
+  String(process.env.FRONT_BASE_URL || "http://localhost:3000").replace(/\/+$/, "");
+
+const buildCouponRedeemUrl = async (prisma, { coupon, zipCode }) => {
+  const partner = await prisma.partner.findUnique({
+    where: { id: coupon.partnerId },
+    select: { slug: true },
+  });
+
+  if (!partner?.slug) return null;
+
+  const stores = await prisma.store.findMany({
+    where: {
+      partnerId: coupon.partnerId,
+      active: true,
+      acceptingOrders: true,
+    },
+    select: {
+      id: true,
+      slug: true,
+      zipCode: true,
+    },
+    orderBy: { id: "asc" },
+  });
+
+  if (!stores.length) return null;
+
+  const targeting = readCouponTargeting(coupon);
+  const normalizedZip = normalizeZipCode(zipCode || readCouponMeta(coupon).claimedFromZipCode);
+  const areaKey = postalAreaKey(normalizedZip);
+  const selectedStore =
+    stores.find((store) => targeting.storeIds.includes(store.id)) ||
+    stores.find((store) => normalizeZipCode(store.zipCode) === normalizedZip) ||
+    stores.find((store) => areaKey && postalAreaKey(store.zipCode) === areaKey) ||
+    stores.find((store) => matchesCouponStoreScope(coupon, store)) ||
+    stores[0];
+
+  if (!selectedStore?.slug) return null;
+
+  const params = new URLSearchParams({
+    coupon: coupon.code,
+    couponSource: "direct",
+    openCoupon: "1",
+  });
+
+  return `${frontendBaseUrl()}/${partner.slug}/${selectedStore.slug}?${params.toString()}`;
+};
+
+const buildPrivateCouponSms = ({ partnerName, coupon, redeemUrl }) => {
   const brand = cleanSmsPart(process.env.TELNYX_SMS_BRAND || process.env.TELNYX_SENDER_ID || partnerName || "PizzaOnline");
   const title = cleanSmsPart(buildCouponTitle(coupon));
   const expiry = formatCouponExpiry(coupon.expiresAt);
   const details = `${title}${expiry ? ` valid until ${expiry}` : ""}`;
+  const link = redeemUrl ? ` Redeem: ${redeemUrl}.` : "";
 
   return cleanSmsPart(
-    `${brand}: Your private pizza offer is ready: ${details}. Use code ${coupon.code}. Reply STOP to opt out.`
+    `${brand}: Your pizza offer is ready: ${details}. Code ${coupon.code}.${link} Reply STOP to opt out.`
   );
 };
 
@@ -1013,7 +1062,11 @@ async function sendCouponSms(prisma, { coupon, recipient, partnerName }) {
   }
 
   try {
-    const text = buildPrivateCouponSms({ partnerName, coupon });
+    const redeemUrl = await buildCouponRedeemUrl(prisma, {
+      coupon,
+      zipCode: readCouponMeta(coupon).claimedFromZipCode,
+    });
+    const text = buildPrivateCouponSms({ partnerName, coupon, redeemUrl });
     const result = await sendTelnyxSms({
       to: normalizedTo,
       text,
@@ -1042,6 +1095,7 @@ async function sendCouponSms(prisma, { coupon, recipient, partnerName }) {
         meta: {
           ...meta,
           messageStatus: result.status,
+          redeemUrl,
           message,
         },
       },
@@ -1054,6 +1108,7 @@ async function sendCouponSms(prisma, { coupon, recipient, partnerName }) {
       status: result.status,
       skipped: Boolean(result.skipped),
       error: result.error || null,
+      redeemUrl,
       smsCredit: {
         reserved: true,
         charged: Boolean(result.ok),
@@ -1934,6 +1989,7 @@ export default function couponsRoutes(prisma) {
           provider: "telnyx",
           sent: deliveryResult.ok,
           error: deliveryResult.error,
+          redeemUrl: deliveryResult.redeemUrl || null,
         },
       });
     } catch (error) {
@@ -2367,6 +2423,7 @@ export default function couponsRoutes(prisma) {
           provider: "telnyx",
           sent: deliveryResult.ok,
           error: deliveryResult.error,
+          redeemUrl: deliveryResult.redeemUrl || null,
         },
       });
     } catch (error) {
