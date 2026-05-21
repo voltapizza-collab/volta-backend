@@ -28,7 +28,32 @@ const isPrismaConnectivityError = (error) => {
   );
 };
 
-const asArray = (value) => (Array.isArray(value) ? value : []);
+const ensurePartnerMinimumPaymentColumn = async (prisma) => {
+  try {
+    await prisma.$executeRawUnsafe(
+      "ALTER TABLE `Partner` ADD COLUMN `minimumPaymentAmount` DOUBLE NULL DEFAULT 0"
+    );
+  } catch (error) {
+    const message = String(error?.message || "");
+    const metaMessage = String(error?.meta?.message || "");
+    if (!message.includes("Duplicate column name") && !metaMessage.includes("Duplicate column name")) {
+      throw error;
+    }
+  }
+};
+
+const asArray = (value) => {
+  if (Array.isArray(value)) return value;
+  if (typeof value === "string") {
+    try {
+      const parsed = JSON.parse(value);
+      return Array.isArray(parsed) ? parsed : [];
+    } catch {
+      return [];
+    }
+  }
+  return [];
+};
 const normalizeDigits = (value) => String(value || "").replace(/\D/g, "");
 const normalizeEmail = (value) => {
   const email = String(value || "").trim().toLowerCase();
@@ -75,6 +100,10 @@ const sanitizeLine = (line, index) => ({
   cartLineId: String(line?.cartLineId || `line-${index}`),
   pizzaId: parsePositiveInt(line?.pizzaId),
   name: String(line?.name || line?.title || "Producto").trim().slice(0, 160),
+  leftPizzaId: parsePositiveInt(line?.leftPizzaId),
+  rightPizzaId: parsePositiveInt(line?.rightPizzaId),
+  leftName: line?.leftName ? String(line.leftName).trim().slice(0, 160) : null,
+  rightName: line?.rightName ? String(line.rightName).trim().slice(0, 160) : null,
   category: String(line?.category || "").trim().slice(0, 120),
   size: String(line?.size || "").trim().slice(0, 80),
   qty: getLineQty(line),
@@ -85,6 +114,8 @@ const sanitizeLine = (line, index) => ({
   extras: asArray(line?.extras),
   ingredients: asArray(line?.ingredients),
   allergens: asArray(line?.allergens),
+  customMeta: line?.customMeta && typeof line.customMeta === "object" ? line.customMeta : null,
+  halfMeta: line?.halfMeta && typeof line.halfMeta === "object" ? line.halfMeta : null,
   promoId: parsePositiveInt(line?.promoId),
   promoItems: asArray(line?.promoItems),
   couponId: parsePositiveInt(line?.couponId),
@@ -182,7 +213,13 @@ const buildStripeCheckoutEmail = ({ customer, phone, saleId }) => {
   return `${fallbackLocal}@${fallbackDomain}`;
 };
 
-const resolveCheckoutCustomer = async (tx, { partnerId, customer, delivery }) => {
+const isUsableCoordinatePair = (lat, lng) => {
+  const safeLat = Number(lat);
+  const safeLng = Number(lng);
+  return Number.isFinite(safeLat) && Number.isFinite(safeLng) && !(safeLat === 0 && safeLng === 0);
+};
+
+const resolveCheckoutCustomer = async (tx, { partnerId, customer, delivery, store }) => {
   const customerId = parsePositiveInt(customer?.id || customer?.customerId);
   const rawName = String(customer?.name || "").trim();
   const email = normalizeEmail(customer?.email);
@@ -207,10 +244,16 @@ const resolveCheckoutCustomer = async (tx, { partnerId, customer, delivery }) =>
       ...(normalizedPhone && !existing.phone ? { phone: normalizedPhone } : {}),
       ...(email && !existing.email ? { email } : {}),
       ...(address && (!existing.address_1 || /^\(PICKUP\)/i.test(existing.address_1))
-        ? { address_1: address, zipCode: extractZipCode(address) }
+        ? {
+            address_1: address,
+            zipCode: extractZipCode(address) || (delivery?.method === "PICKUP" ? String(store?.zipCode || "").trim() || null : null),
+          }
         : {}),
-      ...(Number.isFinite(Number(delivery?.lat)) ? { lat: Number(delivery.lat) } : {}),
-      ...(Number.isFinite(Number(delivery?.lng)) ? { lng: Number(delivery.lng) } : {}),
+      ...(isUsableCoordinatePair(delivery?.lat, delivery?.lng)
+        ? { lat: Number(delivery.lat), lng: Number(delivery.lng) }
+        : delivery?.method === "PICKUP" && isUsableCoordinatePair(store?.latitude, store?.longitude)
+          ? { lat: Number(store.latitude), lng: Number(store.longitude) }
+          : {}),
     };
 
     return Object.keys(updateData).length
@@ -227,10 +270,14 @@ const resolveCheckoutCustomer = async (tx, { partnerId, customer, delivery }) =>
     },
   });
 
-  const zipCode = extractZipCode(address);
+  const storeZipCode = String(store?.zipCode || "").trim();
+  const zipCode = extractZipCode(address) || (delivery?.method === "PICKUP" ? storeZipCode : null);
   const geo = {
-    ...(Number.isFinite(Number(delivery?.lat)) ? { lat: Number(delivery.lat) } : {}),
-    ...(Number.isFinite(Number(delivery?.lng)) ? { lng: Number(delivery.lng) } : {}),
+    ...(isUsableCoordinatePair(delivery?.lat, delivery?.lng)
+      ? { lat: Number(delivery.lat), lng: Number(delivery.lng) }
+      : delivery?.method === "PICKUP" && isUsableCoordinatePair(store?.latitude, store?.longitude)
+        ? { lat: Number(store.latitude), lng: Number(store.longitude) }
+        : {}),
   };
 
   if (existing) {
@@ -337,14 +384,25 @@ export default function checkoutRoutes(prisma) {
     }
 
     try {
+      await ensurePartnerMinimumPaymentColumn(prisma);
+
       const [partner, store] = await Promise.all([
         prisma.partner.findUnique({
           where: { id: partnerId },
-          select: { id: true, name: true, slug: true, currency: true },
+          select: { id: true, name: true, slug: true, currency: true, minimumPaymentAmount: true },
         }),
         prisma.store.findFirst({
           where: { id: storeId, partnerId, active: true },
-          select: { id: true, storeName: true, slug: true, address: true, city: true },
+          select: {
+            id: true,
+            storeName: true,
+            slug: true,
+            address: true,
+            city: true,
+            zipCode: true,
+            latitude: true,
+            longitude: true,
+          },
         }),
       ]);
 
@@ -401,6 +459,16 @@ export default function checkoutRoutes(prisma) {
       );
       const total = roundMoney(Math.max(0, totalProducts - discounts));
       const amountCents = toCents(total);
+      const minimumPaymentAmount = Math.max(0, Number(partner.minimumPaymentAmount || 0));
+
+      if (minimumPaymentAmount > 0 && total < minimumPaymentAmount) {
+        return res.status(400).json({
+          ok: false,
+          error: "minimum_payment_not_met",
+          minimumPaymentAmount,
+          total,
+        });
+      }
 
       if (amountCents < 50) {
         return res.status(400).json({ ok: false, error: "amount_too_low" });
@@ -427,6 +495,7 @@ export default function checkoutRoutes(prisma) {
             ...sanitizedDelivery,
             address: fullDeliveryAddress || sanitizedDelivery.address,
           },
+          store,
         });
 
         if (!customer) {
@@ -594,6 +663,80 @@ export default function checkoutRoutes(prisma) {
     return result;
   };
 
+  const markBoostPaidFromStripeSession = async (session) => {
+    const metadata = session.metadata || {};
+
+    if (metadata.purpose !== "boost_checkout") {
+      const error = new Error("not_boost_checkout");
+      error.status = 400;
+      throw error;
+    }
+
+    if (session.payment_status && session.payment_status !== "paid") {
+      const error = new Error("payment_not_paid");
+      error.status = 409;
+      throw error;
+    }
+
+    const saleId = parsePositiveInt(metadata.saleId);
+    if (!saleId) {
+      const error = new Error("bad_boost_metadata");
+      error.status = 400;
+      throw error;
+    }
+
+    return prisma.$transaction(async (tx) => {
+      const sale = await tx.sale.findUnique({ where: { id: saleId } });
+      if (!sale) {
+        const error = new Error("sale_not_found");
+        error.status = 404;
+        throw error;
+      }
+
+      if (sale.processed) {
+        const error = new Error("order_already_ready");
+        error.status = 409;
+        throw error;
+      }
+
+      if (sale.boostActive && sale.boostPaidAt) {
+        return { sale, alreadyApplied: true };
+      }
+
+      const targetPosition = parsePositiveInt(metadata.targetPosition) || 1;
+      const currentPosition = parsePositiveInt(metadata.currentPosition) || null;
+      const positionsToJump = parsePositiveInt(metadata.positionsToJump) || 0;
+      const amountCents = parsePositiveInt(metadata.amountCents) || 0;
+      const amount = roundMoney(amountCents / 100);
+
+      const updated = await tx.sale.update({
+        where: { id: sale.id },
+        data: {
+          boostActive: true,
+          boostTargetPosition: targetPosition,
+          boostOriginalPosition: sale.boostOriginalPosition || currentPosition,
+          boostQueueCredit: positionsToJump,
+          boostAmount: amount ? String(amount.toFixed(2)) : sale.boostAmount,
+          boostPaidAt: new Date(),
+          boostMeta: {
+            ...(sale.boostMeta && typeof sale.boostMeta === "object" ? sale.boostMeta : {}),
+            source: "tracking",
+            paymentMode: "stripe_boost_checkout",
+            stripeCheckoutSessionId: session.id || null,
+            stripePaymentIntentId: session.payment_intent || null,
+            quotedAt: new Date().toISOString(),
+            unitPrice: Number(metadata.unitPrice || 0),
+            voltaSharePercent: Number(metadata.voltaSharePercent || 0),
+            partnerSharePercent: Number(metadata.partnerSharePercent || 0),
+            previousTargetPosition: sale.boostTargetPosition || null,
+          },
+        },
+      });
+
+      return { sale: updated, alreadyApplied: false };
+    });
+  };
+
   router.post("/session/confirm", async (req, res) => {
     const sessionId = String(req.body?.sessionId || req.body?.session_id || "").trim();
 
@@ -603,6 +746,18 @@ export default function checkoutRoutes(prisma) {
 
     try {
       const session = await retrieveCheckoutSession(sessionId);
+      if (session.metadata?.purpose === "boost_checkout") {
+        const result = await markBoostPaidFromStripeSession(session);
+
+        return res.json({
+          ok: true,
+          status: "BOOST_PAID",
+          saleId: result.sale.id,
+          orderCode: result.sale.code,
+          alreadyApplied: result.alreadyApplied,
+        });
+      }
+
       const result = await markPaidFromStripeSession(session);
 
       return res.json({
@@ -639,6 +794,17 @@ export default function checkoutRoutes(prisma) {
     const session = event.data?.object || {};
 
     try {
+      if (session.metadata?.purpose === "boost_checkout") {
+        const result = await markBoostPaidFromStripeSession(session);
+
+        return res.json({
+          ok: true,
+          status: "boost_paid",
+          saleId: result.sale.id,
+          orderCode: result.sale.code,
+        });
+      }
+
       const result = await markPaidFromStripeSession(session);
 
       return res.json({
@@ -648,7 +814,7 @@ export default function checkoutRoutes(prisma) {
         orderCode: result.sale.code,
       });
     } catch (error) {
-      if (["not_order_checkout", "payment_not_paid"].includes(error.message)) {
+      if (["not_order_checkout", "not_boost_checkout", "payment_not_paid"].includes(error.message)) {
         return res.json({ ok: true, ignored: true, status: error.message });
       }
       console.error("[checkout.stripe-webhook] error:", error);

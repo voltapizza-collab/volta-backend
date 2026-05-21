@@ -153,10 +153,12 @@ model Partner {
   brandSurface        String?
   brandTextColor      String?
   brandFontFamily     String?
-  brandOfferButtonStyle String?
-  brandLogoUrl        String? @db.Text
-  brandLogoPublicId   String?
-  smsCredits          Int      @default(0)
+    brandOfferButtonStyle String?
+    brandLogoUrl        String? @db.Text
+    brandLogoPublicId   String?
+    minimumPaymentAmount Float?   @default(0)
+    storefrontButtonConfig Json?
+    smsCredits          Int      @default(0)
   smsRecharged        Int      @default(0)
   smsConsumed         Int      @default(0)
   smsLowBalanceThreshold Int   @default(50)

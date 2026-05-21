@@ -1,5 +1,5 @@
 import express from "express";
-import { getBoostSettings, normalizeBoostSettings } from "../services/boostSettings.js";
+import { getBoostSettings, MIN_BOOST_UNIT_PRICE, normalizeBoostSettings } from "../services/boostSettings.js";
 
 const parseNumber = (value) => {
   if (value === "" || value == null) return null;
@@ -28,8 +28,8 @@ export default function boostSettingsRoutes(prisma) {
       const active =
         typeof req.body?.active === "boolean" ? req.body.active : undefined;
 
-      if (unitPrice == null || unitPrice <= 0) {
-        return res.status(400).json({ error: "unitPrice must be greater than 0" });
+      if (unitPrice == null || unitPrice < MIN_BOOST_UNIT_PRICE) {
+        return res.status(400).json({ error: `unitPrice must be at least ${MIN_BOOST_UNIT_PRICE}` });
       }
 
       if (!Number.isInteger(maxOptions) || maxOptions <= 0) {

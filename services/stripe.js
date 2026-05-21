@@ -160,6 +160,56 @@ export const createOrderCheckoutSession = async ({
   );
 };
 
+export const createBoostCheckoutSession = async ({
+  sale,
+  quote,
+  amountCents,
+  currency = "eur",
+  successUrl,
+  cancelUrl,
+}) => {
+  const params = new URLSearchParams();
+  const cleanCurrency = String(currency || "eur").trim().toLowerCase();
+  const saleId = String(sale.id);
+  const orderCode = String(sale.code);
+
+  appendParam(params, "mode", "payment");
+  appendParam(params, "branding_settings[display_name]", CHECKOUT_DISPLAY_NAME);
+  appendPaymentMethodTypes(params);
+  appendParam(params, "success_url", successUrl);
+  appendParam(params, "cancel_url", cancelUrl);
+  appendParam(params, "locale", "es");
+  appendParam(params, "client_reference_id", `boost:${saleId}`);
+  appendParam(params, "line_items[0][quantity]", 1);
+  appendParam(params, "line_items[0][price_data][currency]", cleanCurrency);
+  appendParam(params, "line_items[0][price_data][unit_amount]", amountCents);
+  appendParam(params, "line_items[0][price_data][product_data][name]", `Boost pedido ${orderCode}`);
+  appendParam(
+    params,
+    "line_items[0][price_data][product_data][description]",
+    `Subir de #${quote.currentPosition} a #${quote.targetPosition}`
+  );
+  appendParam(params, "metadata[purpose]", "boost_checkout");
+  appendParam(params, "metadata[saleId]", saleId);
+  appendParam(params, "metadata[orderCode]", orderCode);
+  appendParam(params, "metadata[targetPosition]", quote.targetPosition);
+  appendParam(params, "metadata[currentPosition]", quote.currentPosition);
+  appendParam(params, "metadata[positionsToJump]", quote.positionsToJump);
+  appendParam(params, "metadata[amountCents]", amountCents);
+  appendParam(params, "metadata[unitPrice]", quote.unitPrice);
+  appendParam(params, "metadata[voltaSharePercent]", quote.voltaSharePercent);
+  appendParam(params, "metadata[partnerSharePercent]", quote.partnerSharePercent);
+  appendParam(params, "payment_intent_data[metadata][purpose]", "boost_checkout");
+  appendParam(params, "payment_intent_data[metadata][saleId]", saleId);
+  appendParam(params, "payment_intent_data[metadata][orderCode]", orderCode);
+
+  return stripeRequest(
+    "/checkout/sessions",
+    params,
+    `boost-${saleId}-${amountCents}-${quote.targetPosition}-${Date.now()}`
+  );
+};
+
 const parseStripeSignature = (header = "") =>
   String(header)
     .split(",")

@@ -1,8 +1,10 @@
 import express from "express";
 import axios from "axios";
 
-const GOOGLE = process.env.GOOGLE_GEOCODING_KEY;
 const COLD_DAYS_THRESHOLD = 15;
+const postalGeocodeCache = new Map();
+
+const getGoogleGeocodingKey = () => process.env.GOOGLE_GEOCODING_KEY;
 
 const parsePositiveInt = (value) => {
   const parsed = Number(value);
@@ -40,6 +42,194 @@ const resolveCustomerZipCode = (address, explicitZip) => {
   return extractZipCode(address);
 };
 
+const toCoordinate = (value) => {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : null;
+};
+
+const hasUsableCoordinates = (lat, lng) => {
+  const safeLat = toCoordinate(lat);
+  const safeLng = toCoordinate(lng);
+  return safeLat != null && safeLng != null && !(safeLat === 0 && safeLng === 0);
+};
+
+const getCoordinates = (source) => {
+  const lat = toCoordinate(source?.lat ?? source?.latitude);
+  const lng = toCoordinate(source?.lng ?? source?.longitude);
+  return hasUsableCoordinates(lat, lng) ? { lat, lng } : {};
+};
+
+const normalizeCountryCode = (value) => {
+  const normalized = String(value || "ES").trim().toUpperCase();
+  if (!normalized || normalized === "ESPAÑA" || normalized === "ESPANA" || normalized === "SPAIN") {
+    return "ES";
+  }
+  return normalized.length === 2 ? normalized : "ES";
+};
+
+const geocodePostalCode = async (zipCode, country = "ES") => {
+  const normalizedZip = String(zipCode || "").trim();
+  const googleKey = getGoogleGeocodingKey();
+  if (!googleKey || !normalizedZip) return {};
+
+  const countryCode = normalizeCountryCode(country);
+  const cacheKey = `${countryCode}:${normalizedZip}`;
+  if (postalGeocodeCache.has(cacheKey)) return postalGeocodeCache.get(cacheKey);
+
+  try {
+    const response = await axios.get("https://maps.googleapis.com/maps/api/geocode/json", {
+      params: {
+        address: `${normalizedZip}, ${countryCode}`,
+        components: `postal_code:${normalizedZip}|country:${countryCode}`,
+        key: googleKey,
+      },
+    });
+
+    const location = response.data?.results?.[0]?.geometry?.location;
+    const coords = hasUsableCoordinates(location?.lat, location?.lng)
+      ? { lat: Number(location.lat), lng: Number(location.lng) }
+      : {};
+
+    postalGeocodeCache.set(cacheKey, coords);
+    return coords;
+  } catch (error) {
+    console.warn("[customers.territory] postal geocode failed:", normalizedZip, error?.message || error);
+    postalGeocodeCache.set(cacheKey, {});
+    return {};
+  }
+};
+
+const readObject = (value) =>
+  value && typeof value === "object" && !Array.isArray(value) ? value : {};
+
+const resolveCouponMetaZipCode = (coupon) => {
+  const meta = readObject(coupon?.meta);
+  return resolveCustomerZipCode(
+    "",
+    meta.claimedFromZipCode || meta.targetCustomerZipCode || meta.zipCode
+  );
+};
+
+const findTerritoryStore = (stores = [], zipCode) => {
+  const normalizedZip = String(zipCode || "").trim();
+  const area = postalAreaKey(normalizedZip);
+
+  if (!normalizedZip && !area) return null;
+
+  return (
+    stores.find((store) => String(store?.zipCode || "").trim() === normalizedZip) ||
+    stores.find((store) => area && postalAreaKey(store?.zipCode) === area) ||
+    null
+  );
+};
+
+const buildTerritory = ({ zipCode, source, storeId = null, coordinateSource = null }) => ({
+  zipCode,
+  source,
+  storeId,
+  ...getCoordinates(coordinateSource),
+});
+
+const resolveCustomerTerritory = (customer, stores = []) => {
+  const explicitZip = String(customer?.zipCode || "").trim();
+  if (explicitZip) {
+    return buildTerritory({
+      zipCode: explicitZip,
+      source: "customer",
+      coordinateSource: hasUsableCoordinates(customer?.lat, customer?.lng)
+        ? customer
+        : findTerritoryStore(stores, explicitZip),
+    });
+  }
+
+  const addressZip = extractZipCode(customer?.address_1);
+  if (addressZip) {
+    return buildTerritory({
+      zipCode: addressZip,
+      source: "address",
+      coordinateSource: hasUsableCoordinates(customer?.lat, customer?.lng)
+        ? customer
+        : findTerritoryStore(stores, addressZip),
+    });
+  }
+
+  const latestSale = customer?.sales?.[0] || null;
+  if (latestSale) {
+    const saleAddressZip = extractZipCode(latestSale.address_1);
+    if (saleAddressZip) {
+      return buildTerritory({
+        zipCode: saleAddressZip,
+        source: "last_sale_address",
+        storeId: latestSale.storeId || null,
+        coordinateSource: hasUsableCoordinates(latestSale.lat, latestSale.lng)
+          ? latestSale
+          : latestSale.store || findTerritoryStore(stores, saleAddressZip),
+      });
+    }
+
+    const saleStoreZip = String(latestSale.store?.zipCode || "").trim();
+    if (saleStoreZip) {
+      return buildTerritory({
+        zipCode: saleStoreZip,
+        source: "last_sale_store",
+        storeId: latestSale.storeId || latestSale.store?.id || null,
+        coordinateSource: latestSale.store || findTerritoryStore(stores, saleStoreZip),
+      });
+    }
+  }
+
+  const latestRedemption = customer?.redemptions?.[0] || null;
+  if (latestRedemption) {
+    const redemptionStoreZip = String(latestRedemption.store?.zipCode || "").trim();
+    if (redemptionStoreZip) {
+      return buildTerritory({
+        zipCode: redemptionStoreZip,
+        source: "last_coupon_store",
+        storeId: latestRedemption.storeId || latestRedemption.store?.id || null,
+        coordinateSource: latestRedemption.store || findTerritoryStore(stores, redemptionStoreZip),
+      });
+    }
+
+    const redemptionCouponZip = resolveCouponMetaZipCode(latestRedemption.coupon);
+    if (redemptionCouponZip) {
+      return buildTerritory({
+        zipCode: redemptionCouponZip,
+        source: "last_coupon",
+        storeId: latestRedemption.storeId || null,
+        coordinateSource: findTerritoryStore(stores, redemptionCouponZip),
+      });
+    }
+  }
+
+  const assignedCouponZip = resolveCouponMetaZipCode(customer?.assignedCoupons?.[0]);
+  if (assignedCouponZip) {
+    return buildTerritory({
+      zipCode: assignedCouponZip,
+      source: "assigned_coupon",
+      coordinateSource: findTerritoryStore(stores, assignedCouponZip),
+    });
+  }
+
+  return { zipCode: null, source: null };
+};
+
+const serializeCustomerWithTerritory = (customer, stores = []) => {
+  const territory = resolveCustomerTerritory(customer, stores);
+  const { sales, redemptions, assignedCoupons, ...rest } = customer;
+
+  return {
+    ...rest,
+    zipCode: rest.zipCode || territory.zipCode,
+    lat: hasUsableCoordinates(rest.lat, rest.lng) ? rest.lat : territory.lat ?? rest.lat,
+    lng: hasUsableCoordinates(rest.lat, rest.lng) ? rest.lng : territory.lng ?? rest.lng,
+    territoryZipCode: territory.zipCode,
+    territorySource: territory.source,
+    territoryStoreId: territory.storeId || null,
+    territoryLat: territory.lat ?? null,
+    territoryLng: territory.lng ?? null,
+  };
+};
+
 const normalizeComparableText = (value = "") =>
   String(value || "")
     .trim()
@@ -56,6 +246,56 @@ const CUSTOMER_SEGMENTS = ["S1", "S2", "S3", "S4", "S5"];
 
 const getCustomerActivity = (daysOff) =>
   Number(daysOff || 0) > COLD_DAYS_THRESHOLD ? "COLD" : "HOT";
+
+const daysBetween = (left, right = new Date()) => {
+  if (!left) return null;
+  const leftDate = new Date(left);
+  const rightDate = new Date(right);
+  if (Number.isNaN(leftDate.getTime()) || Number.isNaN(rightDate.getTime())) return null;
+  return Math.max(0, Math.floor((rightDate.getTime() - leftDate.getTime()) / 86400000));
+};
+
+const getCustomerTrend = ({ orders, avgTicket, lastTicket }) => {
+  if (!orders) return "Sin compras";
+  if (orders === 1) return "Inicial";
+  if (lastTicket >= avgTicket * 1.15) return "En alza";
+  if (lastTicket < avgTicket * 0.85) return "Bajando";
+  return "Estable";
+};
+
+const getCustomerSegment = ({ orders, daysOff, avgTicket, lastTicket }) => {
+  if (orders === 0) return "S1";
+  if (orders === 1) return "S2";
+  if (orders >= 10) return "S5";
+  if (Number(daysOff || 0) > 30) return "S3";
+  if (lastTicket >= avgTicket * 1.15) return "S5";
+  return "S4";
+};
+
+const summarizeCustomerSales = (sales = [], now = new Date()) => {
+  const rows = sales
+    .map((row) => ({
+      total: Number(row.total || 0),
+      createdAt: row.createdAt,
+    }))
+    .filter((row) => Number.isFinite(row.total) && row.total > 0)
+    .sort((left, right) => new Date(right.createdAt).getTime() - new Date(left.createdAt).getTime());
+
+  const orders = rows.length;
+  const sum = rows.reduce((acc, row) => acc + row.total, 0);
+  const avgTicket = orders ? sum / orders : 0;
+  const lastTicket = rows[0]?.total || 0;
+  const daysOff = orders ? daysBetween(rows[0]?.createdAt, now) ?? 0 : null;
+
+  return {
+    orderCount: orders,
+    averageTicket: avgTicket,
+    lastTicket,
+    daysOff,
+    trend: getCustomerTrend({ orders, avgTicket, lastTicket }),
+    segment: getCustomerSegment({ orders, daysOff, avgTicket, lastTicket }),
+  };
+};
 
 const buildStoreScopeFilters = (storeId, selectedStore) => {
   const storeZip = String(selectedStore?.zipCode || "").trim();
@@ -213,24 +453,114 @@ export default function customersRoutes(prisma) {
 
       const where = partnerId ? { partnerId } : undefined;
 
-      const list = await prisma.customer.findMany({
-        where,
-        select: {
-          id: true,
-          partnerId: true,
-          name: true,
-          phone: true,
-          address_1: true,
-          zipCode: true,
-          lat: true,
-          lng: true,
-          daysOff: true,
-          segment: true,
-        },
-        orderBy: { updatedAt: "desc" },
-      });
+      const [list, territoryStores, partnerTerritory] = await Promise.all([
+        prisma.customer.findMany({
+          where,
+          select: {
+            id: true,
+            partnerId: true,
+            name: true,
+            phone: true,
+            address_1: true,
+            zipCode: true,
+            lat: true,
+            lng: true,
+            daysOff: true,
+            segment: true,
+            sales: {
+              orderBy: { date: "desc" },
+              take: 1,
+              select: {
+                storeId: true,
+                address_1: true,
+                lat: true,
+                lng: true,
+                date: true,
+                store: {
+                  select: {
+                    id: true,
+                    storeName: true,
+                    zipCode: true,
+                    latitude: true,
+                    longitude: true,
+                  },
+                },
+              },
+            },
+            redemptions: {
+              orderBy: { redeemedAt: "desc" },
+              take: 1,
+              select: {
+                storeId: true,
+                redeemedAt: true,
+                store: {
+                  select: {
+                    id: true,
+                    storeName: true,
+                    zipCode: true,
+                    latitude: true,
+                    longitude: true,
+                  },
+                },
+                coupon: {
+                  select: {
+                    meta: true,
+                  },
+                },
+              },
+            },
+            assignedCoupons: {
+              orderBy: { createdAt: "desc" },
+              take: 1,
+              select: {
+                meta: true,
+                createdAt: true,
+              },
+            },
+          },
+          orderBy: { updatedAt: "desc" },
+        }),
+        partnerId
+          ? prisma.store.findMany({
+              where: { partnerId },
+              select: {
+                id: true,
+                storeName: true,
+                city: true,
+                zipCode: true,
+                latitude: true,
+                longitude: true,
+              },
+            })
+          : Promise.resolve([]),
+        partnerId
+          ? prisma.partner.findUnique({
+              where: { id: partnerId },
+              select: { country: true },
+            })
+          : Promise.resolve(null),
+      ]);
 
-      return res.json(list);
+      const serialized = await Promise.all(
+        list.map(async (customer) => {
+          const row = serializeCustomerWithTerritory(customer, territoryStores);
+          if (hasUsableCoordinates(row.lat, row.lng) || !row.territoryZipCode) return row;
+
+          const coords = await geocodePostalCode(row.territoryZipCode, partnerTerritory?.country || "ES");
+          if (!hasUsableCoordinates(coords.lat, coords.lng)) return row;
+
+          return {
+            ...row,
+            lat: coords.lat,
+            lng: coords.lng,
+            territoryLat: coords.lat,
+            territoryLng: coords.lng,
+            territorySource: row.territorySource ? `${row.territorySource}_postal_geocode` : "postal_geocode",
+          };
+        })
+      );
+
+      return res.json(serialized);
     } catch (error) {
       console.error("[CUSTOMERS /] error:", error);
       return res.status(500).json({ error: "internal" });
@@ -257,9 +587,29 @@ export default function customersRoutes(prisma) {
     const extraWhere = {};
     const andFilters = [];
 
-    // filtro por phone
-    if (digits) {
-      extraWhere.phone = { contains: digits };
+    if (query) {
+      const queryFilters = [
+        { code: { contains: query } },
+        { name: { contains: query } },
+        { phone: { contains: query } },
+        { email: { contains: query } },
+        { address_1: { contains: query } },
+        { zipCode: { contains: query } },
+        { portal: { contains: query } },
+        { observations: { contains: query } },
+      ];
+
+      if (digits) {
+        queryFilters.push(
+          { phone: { contains: digits } },
+          { zipCode: { contains: digits } },
+          { address_1: { contains: digits } }
+        );
+      }
+
+      andFilters.push({
+        OR: queryFilters,
+      });
     }
 
     if (zip) {
@@ -343,7 +693,14 @@ export default function customersRoutes(prisma) {
             restrictionReason: true,
             segment: true,
             segmentUpdatedAt: true,
-            daysOff: true, 
+            daysOff: true,
+            activity: true,
+            sales: {
+              select: {
+                total: true,
+                createdAt: true,
+              },
+            },
             createdAt: true,
             updatedAt: true,
           },
@@ -353,7 +710,18 @@ export default function customersRoutes(prisma) {
         prisma.customer.count({ where }),
       ]);
 
-      return res.json({ items, total, skip, take });
+      return res.json({
+        items: items.map((customer) => {
+          const { sales, ...rest } = customer;
+          return {
+            ...rest,
+            ...summarizeCustomerSales(sales),
+          };
+        }),
+        total,
+        skip,
+        take,
+      });
     } catch (error) {
       console.error("[CUSTOMERS /admin] error:", error);
       return res.status(500).json({ error: "internal" });
@@ -401,7 +769,7 @@ export default function customersRoutes(prisma) {
     }
 
     try {
-      const [bySeg, total, restricted, cold, zipRows] = await Promise.all([
+      const [bySeg, total, restricted, cold, zipRows, territoryStores] = await Promise.all([
         prisma.customer.groupBy({
           by: ["segment"],
           where: { partnerId },
@@ -425,6 +793,60 @@ export default function customersRoutes(prisma) {
           select: {
             zipCode: true,
             address_1: true,
+            sales: {
+              orderBy: { date: "desc" },
+              take: 1,
+              select: {
+                storeId: true,
+                address_1: true,
+                lat: true,
+                lng: true,
+                store: {
+                  select: {
+                    id: true,
+                    zipCode: true,
+                    latitude: true,
+                    longitude: true,
+                  },
+                },
+              },
+            },
+            redemptions: {
+              orderBy: { redeemedAt: "desc" },
+              take: 1,
+              select: {
+                storeId: true,
+                store: {
+                  select: {
+                    id: true,
+                    zipCode: true,
+                    latitude: true,
+                    longitude: true,
+                  },
+                },
+                coupon: {
+                  select: {
+                    meta: true,
+                  },
+                },
+              },
+            },
+            assignedCoupons: {
+              orderBy: { createdAt: "desc" },
+              take: 1,
+              select: {
+                meta: true,
+              },
+            },
+          },
+        }),
+        prisma.store.findMany({
+          where: { partnerId },
+          select: {
+            id: true,
+            zipCode: true,
+            latitude: true,
+            longitude: true,
           },
         }),
       ]);
@@ -432,7 +854,7 @@ export default function customersRoutes(prisma) {
       const counts = { S1: 0, S2: 0, S3: 0, S4: 0, S5: 0 };
       const zipCodes = [...new Set(
         zipRows
-          .map((row) => row.zipCode || extractZipCode(row.address_1))
+          .map((row) => resolveCustomerTerritory(row, territoryStores).zipCode)
           .filter(Boolean)
       )].sort((left, right) => String(left).localeCompare(String(right)));
 
@@ -518,21 +940,13 @@ export default function customersRoutes(prisma) {
     }
 
     try {
-      const sales = await prisma.sale.findMany({
-        where: { partnerId },
-        select: {
-          total: true,
-          createdAt: true,
-          customerId: true,
-        },
-      });
-
       const customers = await prisma.customer.findMany({
         where: { partnerId },
         select: {
           id: true,
           segment: true,
           daysOff: true,
+          activity: true,
           sales: {
             select: {
               total: true,
@@ -545,39 +959,17 @@ export default function customersRoutes(prisma) {
       const updates = [];
       const counts = { S1: 0, S2: 0, S3: 0, S4: 0, S5: 0 };
       let changed = 0;
+      const now = new Date();
 
       customers.forEach((customer) => {
-        const rows = (customer.sales || [])
-          .map((row) => ({
-            total: Number(row.total || 0),
-            createdAt: row.createdAt,
-          }))
-          .filter((row) => Number.isFinite(row.total) && row.total > 0)
-          .sort((left, right) => new Date(right.createdAt).getTime() - new Date(left.createdAt).getTime());
-
-        const orders = rows.length;
-        const sum = rows.reduce((acc, row) => acc + row.total, 0);
-        const avg = orders ? sum / orders : 0;
-        const lastTicket = rows[0]?.total || 0;
-        const targetTicket = avg * 1.15;
-
-        let segment = "S1";
-        if (orders === 0) {
-          segment = "S1";
-        } else if (orders === 1) {
-          segment = "S2";
-        } else if (lastTicket >= targetTicket) {
-          segment = "S5";
-        } else if (lastTicket < avg) {
-          segment = "S3";
-        } else {
-          segment = "S4";
-        }
+        const summary = summarizeCustomerSales(customer.sales, now);
+        const segment = summary.segment;
+        const daysOff = summary.daysOff ?? customer.daysOff ?? null;
 
         counts[segment] += 1;
-        const activity = getCustomerActivity(customer.daysOff);
+        const activity = getCustomerActivity(daysOff);
 
-        if (segment !== customer.segment) {
+        if (segment !== customer.segment || activity !== customer.activity || daysOff !== customer.daysOff) {
           changed += 1;
         }
 
@@ -587,6 +979,7 @@ export default function customersRoutes(prisma) {
             data: {
               segment,
               activity,
+              daysOff,
               segmentUpdatedAt: new Date(),
             },
           })
@@ -682,7 +1075,8 @@ export default function customersRoutes(prisma) {
 
       const isPickup = /^\(PICKUP\)/i.test(address);
 
-      if (!isPickup && (!geo.lat || !geo.lng) && GOOGLE) {
+      const googleKey = getGoogleGeocodingKey();
+      if (!isPickup && (!geo.lat || !geo.lng) && googleKey) {
         try {
           const response = await axios.get(
             "https://maps.googleapis.com/maps/api/geocode/json",
@@ -690,7 +1084,7 @@ export default function customersRoutes(prisma) {
               params: {
                 address,
                 components: "country:ES",
-                key: GOOGLE,
+                key: googleKey,
               },
             }
           );

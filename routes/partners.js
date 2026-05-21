@@ -8,6 +8,20 @@ const prisma = new PrismaClient();
 const router = express.Router();
 const upload = multer({ storage: multer.memoryStorage() });
 
+const STOREFRONT_BUTTON_IDS = [
+  "selectProducts",
+  "coupons",
+  "halfAndHalf",
+  "customPizza",
+  "scheduleOrder",
+  "repeatOrder",
+  "call",
+  "reservations",
+  "payNow",
+  "couponCode",
+  "boost",
+];
+
 const isPrismaConnectionClosed = (error) =>
   error?.code === "P1017" ||
   String(error?.message || "").includes("Server has closed the connection");
@@ -63,6 +77,8 @@ async function ensurePartnerSettingsColumns() {
     ["brandOfferButtonStyle", "VARCHAR(64) NULL"],
     ["brandLogoUrl", "TEXT NULL"],
     ["brandLogoPublicId", "VARCHAR(255) NULL"],
+    ["minimumPaymentAmount", "DOUBLE NULL DEFAULT 0"],
+    ["storefrontButtonConfig", "JSON NULL"],
   ];
 
   let existingColumns = new Set();
@@ -107,7 +123,7 @@ async function getPartnerPolicyById(partnerId) {
             deliveryMaxPizzasPerOrder, deliveryFeeFixed, deliveryFeeBase,
             deliveryBaseKm, deliveryExtraPerKm, brandPrimary, brandSecondary,
             brandAccent, brandSurface, brandTextColor, brandFontFamily, brandOfferButtonStyle,
-            brandLogoUrl, brandLogoPublicId
+            brandLogoUrl, brandLogoPublicId, minimumPaymentAmount, storefrontButtonConfig
        FROM Partner
       WHERE id = ?`,
     partnerId
@@ -123,7 +139,7 @@ async function getPartnerPolicyBySlug(slug) {
             deliveryMaxPizzasPerOrder, deliveryFeeFixed, deliveryFeeBase,
             deliveryBaseKm, deliveryExtraPerKm, brandPrimary, brandSecondary,
             brandAccent, brandSurface, brandTextColor, brandFontFamily, brandOfferButtonStyle,
-            brandLogoUrl, brandLogoPublicId
+            brandLogoUrl, brandLogoPublicId, minimumPaymentAmount, storefrontButtonConfig
        FROM Partner
       WHERE slug = ?`,
     slug
@@ -322,6 +338,22 @@ const toNumberOrNull = (value) => {
   if (value === "" || value == null) return null;
   const numericValue = Number(value);
   return Number.isFinite(numericValue) ? numericValue : null;
+};
+
+const toNonNegativeNumber = (value, fallback = 0) => {
+  if (value === "" || value == null) return fallback;
+  const numericValue = Number(value);
+  return Number.isFinite(numericValue) && numericValue >= 0 ? numericValue : fallback;
+};
+
+const normalizeStorefrontButtonConfig = (value) => {
+  const source =
+    value && typeof value === "object" && !Array.isArray(value) ? value : {};
+
+  return STOREFRONT_BUTTON_IDS.reduce((config, buttonId) => {
+    config[buttonId] = source[buttonId] == null ? true : Boolean(source[buttonId]);
+    return config;
+  }, {});
 };
 
 const toPositiveIntegerOrNull = (value) => {
@@ -715,6 +747,62 @@ router.patch("/by-id/:partnerId", async (req, res) => {
     res.json(partner);
   } catch (e) {
     console.error("UPDATE PARTNER DELIVERY POLICY ERROR:", e);
+    res.status(500).json({ error: e.message });
+  }
+});
+
+router.patch("/by-id/:partnerId/policies", async (req, res) => {
+  try {
+    await ensurePartnerSettingsColumns();
+
+    const partnerId = Number(req.params.partnerId);
+
+    if (!Number.isInteger(partnerId)) {
+      return res.status(400).json({ error: "Valid partnerId required" });
+    }
+
+    await prisma.$executeRawUnsafe(
+      `UPDATE Partner
+          SET minimumPaymentAmount = ?
+        WHERE id = ?`,
+      toNonNegativeNumber(req.body?.minimumPaymentAmount, 0),
+      partnerId
+    );
+
+    const partner = await getPartnerPolicyById(partnerId);
+    res.json(partner);
+  } catch (e) {
+    console.error("UPDATE PARTNER POLICIES ERROR:", e);
+    res.status(500).json({ error: e.message });
+  }
+});
+
+router.patch("/by-id/:partnerId/storefront-buttons", async (req, res) => {
+  try {
+    await ensurePartnerSettingsColumns();
+
+    const partnerId = Number(req.params.partnerId);
+
+    if (!Number.isInteger(partnerId)) {
+      return res.status(400).json({ error: "Valid partnerId required" });
+    }
+
+    const buttonConfig = normalizeStorefrontButtonConfig(
+      req.body?.storefrontButtonConfig || req.body
+    );
+
+    await prisma.$executeRawUnsafe(
+      `UPDATE Partner
+          SET storefrontButtonConfig = CAST(? AS JSON)
+        WHERE id = ?`,
+      JSON.stringify(buttonConfig),
+      partnerId
+    );
+
+    const partner = await getPartnerPolicyById(partnerId);
+    res.json(partner);
+  } catch (e) {
+    console.error("UPDATE PARTNER STOREFRONT BUTTONS ERROR:", e);
     res.status(500).json({ error: e.message });
   }
 });

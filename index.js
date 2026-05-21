@@ -99,6 +99,9 @@ const envOrigins = (process.env.CORS_ORIGINS || "")
 
 const allowedOrigins = [
   "http://localhost:3000",
+  "http://127.0.0.1:3000",
+  "http://localhost:3010",
+  "http://127.0.0.1:3010",
   "https://volta-storefront-production.up.railway.app",
   process.env.FRONTEND_URL,
   process.env.PUBLIC_FRONTEND_URL,
@@ -113,6 +116,20 @@ const allowedOrigins = [
   .filter(Boolean)
   .filter((origin, index, arr) => arr.indexOf(origin) === index);
 
+const isAllowedDevOrigin = (origin = "") => {
+  if (process.env.NODE_ENV === "production") return false;
+
+  try {
+    const url = new URL(origin);
+    return (
+      ["localhost", "127.0.0.1", "::1"].includes(url.hostname) &&
+      ["3000", "3010", "5173"].includes(url.port)
+    );
+  } catch {
+    return false;
+  }
+};
+
 // middlewares
 app.use(express.json({
   verify: (req, _res, buf) => {
@@ -123,7 +140,7 @@ app.use(express.json({
 app.use(
   cors({
     origin(origin, callback) {
-      if (!origin || allowedOrigins.includes(origin)) {
+      if (!origin || allowedOrigins.includes(origin) || isAllowedDevOrigin(origin)) {
         return callback(null, true);
       }
 

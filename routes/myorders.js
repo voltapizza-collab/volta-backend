@@ -1,6 +1,7 @@
 import express from "express";
 import { getBoostSettings } from "../services/boostSettings.js";
 import { sendOrderReadySms } from "../services/orderNotifications.js";
+import { createBoostCheckoutSession, isStripeCheckoutConfigured } from "../services/stripe.js";
 
 const TZ = process.env.TIMEZONE || "Europe/Madrid";
 
@@ -87,6 +88,22 @@ const getScheduledFor = (sale) => {
 };
 
 const roundMoney = (value) => Math.round(Number(value || 0) * 100) / 100;
+const toCents = (value) => Math.round(roundMoney(value) * 100);
+
+const buildBoostReturnUrl = (req, sale, status) => {
+  const origin = String(
+    req.body?.frontendOrigin || process.env.FRONT_BASE_URL || process.env.PUBLIC_FRONTEND_URL || ""
+  ).replace(/\/$/, "");
+  const fallbackPath = `/seguimiento/${sale.code}`;
+  const path = String(req.body?.returnPath || fallbackPath);
+  const separator = path.includes("?") ? "&" : "?";
+  const params = new URLSearchParams({
+    payment: status,
+    boost_payment: status,
+    order_code: sale.code,
+  });
+  return `${origin}${path}${separator}${params.toString()}&session_id={CHECKOUT_SESSION_ID}`;
+};
 
 const normalizePhone = (value) =>
   String(value || "")
@@ -112,6 +129,22 @@ const formatSale = (sale) => {
   const boostAmount =
     sale.boostAmount == null ? 0 : Number(sale.boostAmount || 0);
   const scheduledFor = getScheduledFor(sale);
+  const customerSales = Array.isArray(sale.customer?.sales) ? sale.customer.sales : [];
+  const orderCount = Number(sale.customer?._count?.sales || customerSales.length || 0);
+  const averageTicket = orderCount
+    ? customerSales.reduce((sum, row) => sum + Number(row.total || 0), 0) / orderCount
+    : 0;
+  const lastTicket = Number(customerSales[0]?.total || 0);
+  const trend =
+    !orderCount
+      ? "Sin compras"
+      : orderCount === 1
+      ? "Inicial"
+      : lastTicket >= averageTicket * 1.15
+      ? "En alza"
+      : lastTicket < averageTicket * 0.85
+      ? "Bajando"
+      : "Estable";
 
   return {
     id: sale.id,
@@ -157,7 +190,9 @@ const formatSale = (sale) => {
       daysOff: sale.customer?.daysOff ?? null,
       zipCode: sale.customer?.zipCode || "",
       isRestricted: Boolean(sale.customer?.isRestricted),
-      orderCount: Number(sale.customer?._count?.sales || 0),
+      orderCount,
+      averageTicket,
+      trend,
       scheduledFor,
     },
     products: asArray(sale.products),
@@ -269,6 +304,10 @@ const findRepeatSales = async (
           zipCode: true,
           isRestricted: true,
           _count: { select: { sales: true } },
+          sales: {
+            select: { total: true, createdAt: true },
+            orderBy: { createdAt: "desc" },
+          },
         },
       },
     },
@@ -286,7 +325,7 @@ const orderScopeWhere = ({ partnerId, storeId, activeStoresOnly = true }) => ({
 const pendingOrderWhere = ({ partnerId, storeId, activeStoresOnly = true }) => ({
   ...orderScopeWhere({ partnerId, storeId, activeStoresOnly }),
   processed: false,
-  status: { in: ["PENDING", "PAID"] },
+  status: "PAID",
 });
 
 const queueOrderBy = [{ date: "asc" }, { createdAt: "asc" }];
@@ -379,7 +418,7 @@ const findBoostableSale = async (prisma, { orderId, orderCode }) => {
     where: {
       ...(id ? { id } : { code }),
       processed: false,
-      status: { in: ["PENDING", "PAID"] },
+      status: "PAID",
     },
     include: {
       partner: { select: { id: true, name: true, currency: true } },
@@ -400,6 +439,10 @@ const findBoostableSale = async (prisma, { orderId, orderCode }) => {
           zipCode: true,
           isRestricted: true,
           _count: { select: { sales: true } },
+          sales: {
+            select: { total: true, createdAt: true },
+            orderBy: { createdAt: "desc" },
+          },
         },
       },
     },
@@ -574,56 +617,33 @@ export default function myordersRoutes(prisma) {
         });
       }
 
-      const updated = await prisma.sale.update({
-        where: { id: sale.id },
-        data: {
-          boostActive: true,
-          boostTargetPosition: quote.targetPosition,
-          boostOriginalPosition: sale.boostOriginalPosition || quote.currentPosition,
-          boostQueueCredit: quote.positionsToJump,
-          boostAmount: quote.amount,
-          boostPaidAt: new Date(),
-          boostMeta: {
-            source: "storefront_footer",
-            paymentMode: req.body?.paymentMode || "manual_mvp",
-            paymentReference: req.body?.paymentReference || null,
-            quotedAt: new Date().toISOString(),
-            unitPrice: quote.unitPrice,
-            voltaSharePercent: quote.voltaSharePercent,
-            partnerSharePercent: quote.partnerSharePercent,
-            voltaAmount: quote.voltaAmount,
-            partnerAmount: quote.partnerAmount,
-            previousTargetPosition: sale.boostTargetPosition || null,
-          },
-        },
-        include: {
-          partner: { select: { id: true, name: true, currency: true } },
-          store: { select: { id: true, storeName: true, slug: true, active: true } },
-          customer: {
-            select: {
-              id: true,
-              name: true,
-              phone: true,
-              email: true,
-              address_1: true,
-              portal: true,
-              observations: true,
-              code: true,
-              segment: true,
-              activity: true,
-              daysOff: true,
-              zipCode: true,
-              isRestricted: true,
-              _count: { select: { sales: true } },
-            },
-          },
-        },
+      if (!isStripeCheckoutConfigured()) {
+        return res.status(503).json({ error: "stripe_not_configured", quote });
+      }
+
+      const amountCents = toCents(quote.amount);
+      if (amountCents < 50) {
+        return res.status(400).json({ error: "boost_amount_too_low", quote });
+      }
+
+      const session = await createBoostCheckoutSession({
+        sale,
+        quote,
+        amountCents,
+        currency: quote.currency,
+        successUrl: buildBoostReturnUrl(req, sale, "success"),
+        cancelUrl: buildBoostReturnUrl(req, sale, "cancel"),
       });
+
+      if (!session?.url) {
+        return res.status(502).json({ error: "stripe_session_url_missing", quote });
+      }
 
       return res.json({
         ok: true,
         quote,
-        order: formatSale(updated),
+        sessionId: session.id,
+        url: session.url,
       });
     } catch (error) {
       console.error("[myorders.boosts.activate] error:", error);
@@ -634,21 +654,10 @@ export default function myordersRoutes(prisma) {
   router.get("/pending", async (req, res) => {
     const partnerId = parsePositiveInt(req.query.partnerId);
     const storeId = parsePositiveInt(req.query.storeId);
-    const since = parseOptionalDate(req.query.since);
     const take = Math.min(parsePositiveInt(req.query.take) || 80, 200);
 
     try {
-      const where = {
-        ...pendingOrderWhere({ partnerId, storeId }),
-        ...(since
-          ? {
-              OR: [
-                { date: { gt: since } },
-                { createdAt: { gt: since } },
-              ],
-            }
-          : {}),
-      };
+      const where = pendingOrderWhere({ partnerId, storeId, activeStoresOnly: false });
 
       const [rows, queueSize] = await Promise.all([
         prisma.sale.findMany({
@@ -672,6 +681,10 @@ export default function myordersRoutes(prisma) {
                 zipCode: true,
                 isRestricted: true,
                 _count: { select: { sales: true } },
+                sales: {
+                  select: { total: true, createdAt: true },
+                  orderBy: { createdAt: "desc" },
+                },
               },
             },
           },
@@ -726,7 +739,7 @@ export default function myordersRoutes(prisma) {
           orderBy: { date: "desc" },
         }),
         prisma.sale.count({
-          where: pendingOrderWhere({ partnerId, storeId }),
+          where: pendingOrderWhere({ partnerId, storeId, activeStoresOnly: false }),
         }),
         prisma.customer.count({
           where: {
@@ -801,7 +814,7 @@ export default function myordersRoutes(prisma) {
 
       const pendingRows = await prisma.sale.groupBy({
         by: ["storeId"],
-        where: pendingOrderWhere({ partnerId, storeId }),
+        where: pendingOrderWhere({ partnerId, storeId, activeStoresOnly: false }),
         _count: { _all: true },
       });
 
@@ -910,6 +923,10 @@ export default function myordersRoutes(prisma) {
               zipCode: true,
               isRestricted: true,
               _count: { select: { sales: true } },
+              sales: {
+                select: { total: true, createdAt: true },
+                orderBy: { createdAt: "desc" },
+              },
             },
           },
         },

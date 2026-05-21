@@ -776,9 +776,10 @@ async function genCustomerCode(prisma) {
   return code;
 }
 
-async function findOrCreateCustomer(prisma, { partnerId, phone, name }) {
+async function findOrCreateCustomer(prisma, { partnerId, phone, name, zipCode }) {
   const normalizedPhone = toE164ES(phone);
   const base9 = base9Phone(phone);
+  const normalizedZip = normalizeZipCode(zipCode);
   if (!normalizedPhone || !base9) {
     throw new Error("invalid_phone");
   }
@@ -790,7 +791,16 @@ async function findOrCreateCustomer(prisma, { partnerId, phone, name }) {
     },
   });
 
-  if (existing) return existing;
+  if (existing) {
+    if (normalizedZip && !existing.zipCode) {
+      return prisma.customer.update({
+        where: { id: existing.id },
+        data: { zipCode: normalizedZip },
+      });
+    }
+
+    return existing;
+  }
 
   const code = await genCustomerCode(prisma);
 
@@ -801,6 +811,7 @@ async function findOrCreateCustomer(prisma, { partnerId, phone, name }) {
       name: name || `Cliente ${base9}`,
       phone: normalizedPhone,
       address_1: `(GALLERY) ${normalizedPhone}`,
+      zipCode: normalizedZip || null,
       portal: "COUPON_GALLERY",
       origin: "QR",
     },
@@ -2337,7 +2348,7 @@ export default function couponsRoutes(prisma) {
     }
 
     try {
-      const customer = await findOrCreateCustomer(prisma, { partnerId, phone, name });
+      const customer = await findOrCreateCustomer(prisma, { partnerId, phone, name, zipCode });
       const now = nowInTZ();
       const candidates = await prisma.coupon.findMany({
         where: {

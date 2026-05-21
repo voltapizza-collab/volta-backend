@@ -1,6 +1,7 @@
 const DEFAULT_UNIT_PRICE = Number(process.env.BOOST_PRICE_PER_POSITION || 0.2);
 const DEFAULT_MAX_OPTIONS = Number(process.env.BOOST_MAX_OPTIONS || 3);
 const DEFAULT_VOLTA_SHARE_PERCENT = Number(process.env.BOOST_VOLTA_SHARE_PERCENT || 25);
+export const MIN_BOOST_UNIT_PRICE = 0.5;
 
 const toPositiveNumber = (value, fallback) => {
   const parsed = Number(value);
@@ -20,7 +21,10 @@ const toPositiveInt = (value, fallback) => {
 };
 
 export const normalizeBoostSettings = (settings = {}) => {
-  const unitPrice = toPositiveNumber(settings.unitPrice, DEFAULT_UNIT_PRICE || 0.2);
+  const unitPrice = Math.max(
+    MIN_BOOST_UNIT_PRICE,
+    toPositiveNumber(settings.unitPrice, DEFAULT_UNIT_PRICE || MIN_BOOST_UNIT_PRICE)
+  );
   const maxOptions = toPositiveInt(settings.maxOptions, DEFAULT_MAX_OPTIONS || 3);
   const voltaSharePercent = toPercent(
     settings.voltaSharePercent,
