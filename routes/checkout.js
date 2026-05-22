@@ -90,6 +90,41 @@ const isIncentiveRewardLine = (line) => {
   return type === "INCENTIVE_REWARD" || source === "incentive_reward";
 };
 
+const isCustomBuildLine = (line) => {
+  const type = String(line?.type || "").toUpperCase();
+  const cartLineId = String(line?.cartLineId || "");
+  return type === "CUSTOM_BUILD" || cartLineId.startsWith("custom-");
+};
+
+const sanitizeCustomIngredient = (ingredient) => ({
+  ingredientId: parsePositiveInt(ingredient?.ingredientId ?? ingredient?.id),
+  name: String(ingredient?.name || ingredient?.label || "Ingrediente").trim().slice(0, 120),
+  category: String(ingredient?.category || "OTROS").trim().slice(0, 80),
+  placement: String(ingredient?.placement || "").trim().slice(0, 40),
+  quantity: String(ingredient?.quantity || "SIMPLE").trim().slice(0, 40),
+  placementLabel: String(ingredient?.placementLabel || "").trim().slice(0, 80),
+  quantityLabel: String(ingredient?.quantityLabel || "").trim().slice(0, 80),
+  label: String(ingredient?.label || "").trim().slice(0, 180),
+});
+
+const sanitizeCustomDetails = (details, fallbackIngredients = []) => {
+  const sourceIngredients = asArray(details?.ingredients).length
+    ? asArray(details.ingredients)
+    : fallbackIngredients;
+  const ingredients = sourceIngredients.map(sanitizeCustomIngredient);
+
+  if (!ingredients.length && (!details || typeof details !== "object")) {
+    return null;
+  }
+
+  return {
+    categoryName: String(details?.categoryName || "").trim().slice(0, 120),
+    baseProductName: String(details?.baseProductName || "").trim().slice(0, 160),
+    summary: String(details?.summary || "").trim().slice(0, 1000),
+    ingredients,
+  };
+};
+
 const getLineTotal = (line) => {
   if (isIncentiveRewardLine(line)) return 0;
   if (Number.isFinite(Number(line?.subtotal))) return roundMoney(line.subtotal);
@@ -114,6 +149,7 @@ const sanitizeLine = (line, index) => ({
   extras: asArray(line?.extras),
   ingredients: asArray(line?.ingredients),
   allergens: asArray(line?.allergens),
+  customDetails: sanitizeCustomDetails(line?.customDetails, asArray(line?.ingredients)),
   customMeta: line?.customMeta && typeof line.customMeta === "object" ? line.customMeta : null,
   halfMeta: line?.halfMeta && typeof line.halfMeta === "object" ? line.halfMeta : null,
   promoId: parsePositiveInt(line?.promoId),
@@ -411,6 +447,21 @@ export default function checkoutRoutes(prisma) {
       }
 
       let lines = rawLines.map(sanitizeLine);
+      const incompleteCustomLine = lines.find(
+        (line) =>
+          isCustomBuildLine(line) &&
+          !asArray(line.ingredients).length &&
+          !asArray(line.customDetails?.ingredients).length
+      );
+
+      if (incompleteCustomLine) {
+        return res.status(400).json({
+          ok: false,
+          error: "custom_build_missing_ingredients",
+          line: incompleteCustomLine.name || "Personalizada",
+        });
+      }
+
       const couponLine = lines.find(isCouponLine);
       const eligibleSubtotal = getEligibleCouponSubtotal(lines);
 

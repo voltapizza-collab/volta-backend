@@ -121,3 +121,54 @@ export async function sendOrderReadySms(prisma, sale) {
     ledgerId: reservation.ledgerId,
   };
 }
+
+export async function sendOrderCustomerMessageSms(prisma, sale, message) {
+  const data = readCustomerData(sale);
+  const to = normalizeE164Phone(data.phone || sale?.customer?.phone);
+  if (!to) {
+    return { ok: false, skipped: true, reason: "missing_phone" };
+  }
+
+  const cleanMessage = String(message || "").trim().replace(/\s+/g, " ").slice(0, 240);
+  if (!cleanMessage) {
+    return { ok: false, skipped: true, reason: "missing_message" };
+  }
+
+  const trackingUrl = `${buildOrderTrackingUrl(sale)}?chat=1#chat`;
+  const storeName = sale?.store?.storeName || "Volta Pizza";
+  const text = `${storeName}: ${cleanMessage} Abre y responde aqui: ${trackingUrl}`;
+
+  const reservation = await reserveSmsCreditForMessage(prisma, {
+    partnerId: sale.partnerId,
+    couponCode: sale.code,
+    customerId: sale.customerId,
+    to,
+  });
+
+  if (!reservation.ok) {
+    return { ok: false, skipped: true, reason: reservation.error, trackingUrl };
+  }
+
+  const result = await sendTelnyxSms({
+    to,
+    text,
+    tags: [`order:${sale.id}`, `order-chat:${sale.code}`, `partner:${sale.partnerId}`],
+  });
+
+  if (!result.ok) {
+    await refundSmsCreditForMessage(prisma, {
+      partnerId: sale.partnerId,
+      couponCode: sale.code,
+      customerId: sale.customerId,
+      reason: result.error?.title || "order_chat_sms_failed",
+    }).catch((error) => {
+      console.error("[order-notifications.chat-sms] refund error:", error);
+    });
+  }
+
+  return {
+    ...result,
+    trackingUrl,
+    ledgerId: reservation.ledgerId,
+  };
+}

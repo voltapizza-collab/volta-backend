@@ -16,6 +16,34 @@ const asObject = (value) => {
   return parsed && typeof parsed === "object" && !Array.isArray(parsed) ? parsed : {};
 };
 
+const cleanChatText = (value) => String(value || "").trim().replace(/\s+/g, " ");
+
+const getChatMessages = (customerData) => {
+  const data = asObject(customerData);
+  const messages = Array.isArray(data.chatMessages) ? data.chatMessages : [];
+
+  return messages
+    .map((message) => ({
+      id: String(message?.id || ""),
+      sender: String(message?.sender || "").toUpperCase() === "CUSTOMER" ? "CUSTOMER" : "OPERATOR",
+      text: cleanChatText(message?.text).slice(0, 600),
+      createdAt: message?.createdAt || null,
+      readAt: message?.readAt || null,
+    }))
+    .filter((message) => message.id && message.text);
+};
+
+const appendChatMessage = (customerData, message) => {
+  const data = asObject(customerData);
+  const messages = getChatMessages(data);
+
+  return {
+    ...data,
+    chatMessages: [...messages, message].slice(-50),
+    chatUpdatedAt: message.createdAt,
+  };
+};
+
 const compareQueue = (left, right) => {
   if (left.boostActive !== right.boostActive) return left.boostActive ? -1 : 1;
 
@@ -110,6 +138,7 @@ export default function salesRoutes(prisma) {
         partnerSlug: sale.partner?.slug || "",
         storeSlug: sale.store?.slug || "",
         customerName: customerData.name || sale.customer?.name || "",
+        chatMessages: getChatMessages(customerData),
         total: Number(sale.total || 0),
         currency: sale.currency || sale.partner?.currency || "EUR",
         delivery: sale.delivery,
@@ -126,6 +155,53 @@ export default function salesRoutes(prisma) {
     } catch (error) {
       console.error("[sales.tracking] error:", error);
       return res.status(500).json({ ok: false, message: "No se pudo obtener el estado del pedido" });
+    }
+  });
+
+  router.post("/seguimiento/:code/messages", async (req, res) => {
+    const code = String(req.params.code || "").trim().toUpperCase();
+    const text = cleanChatText(req.body?.text).slice(0, 600);
+
+    if (!code) {
+      return res.status(400).json({ ok: false, message: "Codigo de pedido requerido" });
+    }
+
+    if (text.length < 2) {
+      return res.status(400).json({ ok: false, message: "Escribe una respuesta." });
+    }
+
+    try {
+      const sale = await prisma.sale.findUnique({
+        where: { code },
+        select: { id: true, code: true, status: true, customerData: true },
+      });
+
+      if (!sale || sale.status === "CANCELED") {
+        return res.status(404).json({ ok: false, message: "No encontramos ese pedido" });
+      }
+
+      const message = {
+        id: `cu-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+        sender: "CUSTOMER",
+        text,
+        createdAt: new Date().toISOString(),
+        readAt: null,
+      };
+      const customerData = appendChatMessage(sale.customerData, message);
+
+      await prisma.sale.update({
+        where: { id: sale.id },
+        data: { customerData },
+      });
+
+      return res.json({
+        ok: true,
+        message,
+        messages: getChatMessages(customerData),
+      });
+    } catch (error) {
+      console.error("[sales.tracking.messages] error:", error);
+      return res.status(500).json({ ok: false, message: "No se pudo enviar la respuesta" });
     }
   });
 

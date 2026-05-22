@@ -1,6 +1,6 @@
 import express from "express";
 import { getBoostSettings } from "../services/boostSettings.js";
-import { sendOrderReadySms } from "../services/orderNotifications.js";
+import { sendOrderCustomerMessageSms, sendOrderReadySms } from "../services/orderNotifications.js";
 import { createBoostCheckoutSession, isStripeCheckoutConfigured } from "../services/stripe.js";
 
 const TZ = process.env.TIMEZONE || "Europe/Madrid";
@@ -76,6 +76,50 @@ const asArray = (value) => {
 const asObject = (value) => {
   const parsed = parseMaybeJson(value, {});
   return parsed && typeof parsed === "object" && !Array.isArray(parsed) ? parsed : {};
+};
+
+const cleanChatText = (value) => String(value || "").trim().replace(/\s+/g, " ");
+
+const getChatMessages = (customerData) => {
+  const data = asObject(customerData);
+  const messages = Array.isArray(data.chatMessages) ? data.chatMessages : [];
+
+  return messages
+    .map((message) => ({
+      id: String(message?.id || ""),
+      sender: String(message?.sender || "").toUpperCase() === "CUSTOMER" ? "CUSTOMER" : "OPERATOR",
+      text: cleanChatText(message?.text).slice(0, 600),
+      createdAt: message?.createdAt || null,
+      readAt: message?.readAt || null,
+    }))
+    .filter((message) => message.id && message.text);
+};
+
+const appendChatMessage = (customerData, message) => {
+  const data = asObject(customerData);
+  const messages = getChatMessages(data);
+
+  return {
+    ...data,
+    chatMessages: [...messages, message].slice(-50),
+    chatUpdatedAt: message.createdAt,
+  };
+};
+
+const markCustomerChatMessagesRead = (customerData) => {
+  const readAt = new Date().toISOString();
+  const data = asObject(customerData);
+  const messages = getChatMessages(data).map((message) =>
+    message.sender === "CUSTOMER" && !message.readAt
+      ? { ...message, readAt }
+      : message
+  );
+
+  return {
+    ...data,
+    chatMessages: messages,
+    chatReadAt: readAt,
+  };
 };
 
 const getScheduledFor = (sale) => {
@@ -194,6 +238,7 @@ const formatSale = (sale) => {
       averageTicket,
       trend,
       scheduledFor,
+      chatMessages: getChatMessages(customerData),
     },
     products: asArray(sale.products),
     extras: asArray(sale.extras),
@@ -945,6 +990,129 @@ export default function myordersRoutes(prisma) {
     } catch (error) {
       console.error("[myorders.ready] error:", error);
       return res.status(500).json({ error: "Error marking order ready" });
+    }
+  });
+
+  router.get("/:id/messages", async (req, res) => {
+    const id = parsePositiveInt(req.params.id);
+
+    if (!id) {
+      return res.status(400).json({ ok: false, error: "valid_order_id_required" });
+    }
+
+    try {
+      const sale = await prisma.sale.findFirst({
+        where: { id, status: { not: "CANCELED" } },
+        select: { id: true, code: true, customerData: true },
+      });
+
+      if (!sale) {
+        return res.status(404).json({ ok: false, error: "order_not_found" });
+      }
+
+      return res.json({
+        ok: true,
+        orderId: sale.id,
+        orderCode: sale.code,
+        messages: getChatMessages(sale.customerData),
+      });
+    } catch (error) {
+      console.error("[myorders.messages] error:", error);
+      return res.status(500).json({ ok: false, error: "messages_failed" });
+    }
+  });
+
+  router.patch("/:id/messages/read", async (req, res) => {
+    const id = parsePositiveInt(req.params.id);
+
+    if (!id) {
+      return res.status(400).json({ ok: false, error: "valid_order_id_required" });
+    }
+
+    try {
+      const sale = await prisma.sale.findFirst({
+        where: { id, status: { not: "CANCELED" } },
+        select: { id: true, code: true, customerData: true },
+      });
+
+      if (!sale) {
+        return res.status(404).json({ ok: false, error: "order_not_found" });
+      }
+
+      const customerData = markCustomerChatMessagesRead(sale.customerData);
+      await prisma.sale.update({
+        where: { id: sale.id },
+        data: { customerData },
+      });
+
+      return res.json({
+        ok: true,
+        orderId: sale.id,
+        orderCode: sale.code,
+        messages: getChatMessages(customerData),
+      });
+    } catch (error) {
+      console.error("[myorders.messages.read] error:", error);
+      return res.status(500).json({ ok: false, error: "messages_read_failed" });
+    }
+  });
+
+  router.post("/:id/messages", async (req, res) => {
+    const id = parsePositiveInt(req.params.id);
+    const text = cleanChatText(req.body?.text).slice(0, 600);
+
+    if (!id) {
+      return res.status(400).json({ ok: false, error: "valid_order_id_required" });
+    }
+
+    if (text.length < 2) {
+      return res.status(400).json({ ok: false, error: "bad_message" });
+    }
+
+    try {
+      const sale = await prisma.sale.findFirst({
+        where: { id, status: { not: "CANCELED" } },
+        include: {
+          store: { select: { id: true, storeName: true, slug: true } },
+          customer: { select: { id: true, name: true, phone: true } },
+        },
+      });
+
+      if (!sale) {
+        return res.status(404).json({ ok: false, error: "order_not_found" });
+      }
+
+      const message = {
+        id: `op-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+        sender: "OPERATOR",
+        text,
+        createdAt: new Date().toISOString(),
+        readAt: null,
+      };
+
+      const customerData = appendChatMessage(sale.customerData, message);
+      await prisma.sale.update({
+        where: { id: sale.id },
+        data: { customerData },
+      });
+
+      const notification = await sendOrderCustomerMessageSms(prisma, {
+        ...sale,
+        customerData,
+      }, text).catch((error) => {
+        console.error("[myorders.chat-sms] error:", error);
+        return { ok: false, skipped: true, reason: "chat_sms_error" };
+      });
+
+      return res.json({
+        ok: true,
+        message,
+        messages: getChatMessages(customerData),
+        notification,
+      });
+    } catch (error) {
+      console.error("[myorders.messages.send] error:", error);
+      return res.status(500).json({ ok: false, error: "message_send_failed" });
     }
   });
 
