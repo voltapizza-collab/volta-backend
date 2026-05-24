@@ -2,6 +2,9 @@ import express from "express";
 import { getBoostSettings } from "../services/boostSettings.js";
 
 const TZ = process.env.TIMEZONE || "Europe/Madrid";
+const TRENDING_PRICE_BAND = 0.5;
+
+const roundMoney = (value) => Math.round(Number(value || 0) * 100) / 100;
 
 const parsePositiveInt = (value) => {
   const parsed = Number(value);
@@ -158,6 +161,36 @@ const formatLastOrderedLabel = (date, reference) => {
   }).format(date);
 };
 
+const buildTrendingPricing = (priceBySize = {}) => {
+  const basePriceBySize = {};
+  const floorPriceBySize = {};
+  const ceilingPriceBySize = {};
+
+  Object.entries(priceBySize || {}).forEach(([size, price]) => {
+    const parsed = Number(price);
+    if (!Number.isFinite(parsed) || parsed <= 0) return;
+
+    basePriceBySize[size] = roundMoney(parsed);
+    floorPriceBySize[size] = roundMoney(Math.max(0, parsed - TRENDING_PRICE_BAND));
+    ceilingPriceBySize[size] = roundMoney(parsed + TRENDING_PRICE_BAND);
+  });
+
+  return {
+    mode: "FLOATING_BAND",
+    band: TRENDING_PRICE_BAND,
+    basePriceBySize,
+    floorPriceBySize,
+    ceilingPriceBySize,
+  };
+};
+
+const attachTrendingPricing = (pizza) => ({
+  ...pizza,
+  sourceCategoryId: pizza.categoryId ?? null,
+  sourceCategory: pizza.category ?? null,
+  trendingPricing: buildTrendingPricing(pizza.priceBySize),
+});
+
 const buildTrendingMenu = async (prisma, { storeId, menu, now }) => {
   const menuById = new Map(menu.map((pizza) => [pizza.pizzaId, pizza]));
   const pizzaIdByName = new Map(
@@ -282,7 +315,7 @@ const buildTrendingMenu = async (prisma, { storeId, menu, now }) => {
       },
     }));
 
-  return [...ranked, ...fillers].slice(0, 3);
+  return [...ranked, ...fillers].slice(0, 3).map(attachTrendingPricing);
 };
 
 const isPromoWithinWindow = (promo, reference) => {
@@ -583,6 +616,24 @@ const attachStorePublicMenu = (router, prisma) => {
         menu,
         now,
       });
+      const trendingByPizzaId = new Map(
+        trending
+          .map((pizza) => [Number(pizza.pizzaId), pizza])
+          .filter(([pizzaId]) => Number.isInteger(pizzaId) && pizzaId > 0)
+      );
+      const baseMenu = menu.map((pizza) =>
+        trendingByPizzaId.has(Number(pizza.pizzaId))
+          ? {
+              ...pizza,
+              ...trendingByPizzaId.get(Number(pizza.pizzaId)),
+              categoryId: pizza.categoryId,
+              category: pizza.category,
+              categoryPosition: pizza.categoryPosition,
+              categoryCustomizable: pizza.categoryCustomizable,
+              categoryHalfAndHalf: pizza.categoryHalfAndHalf,
+            }
+          : pizza
+      );
       const boostSettings = await getBoostSettings(prisma);
       const promos = await prisma.promo.findMany({
         where: {
@@ -628,7 +679,7 @@ const attachStorePublicMenu = (router, prisma) => {
           tlf: store.tlf,
           acceptsReservations: store.acceptsReservations,
         },
-        menu,
+        menu: baseMenu,
         trending,
         upcoming,
         boostSettings,

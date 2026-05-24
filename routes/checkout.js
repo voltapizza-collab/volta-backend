@@ -125,6 +125,38 @@ const sanitizeCustomDetails = (details, fallbackIngredients = []) => {
   };
 };
 
+const sanitizeTrendingPricing = (value) => {
+  if (!value || typeof value !== "object") return null;
+
+  const basePrice = roundMoney(value.basePrice);
+  const chargedPrice = roundMoney(value.chargedPrice);
+  const rawBand = Number(value.band);
+  const band = Number.isFinite(rawBand) && rawBand > 0 ? roundMoney(rawBand) : 0.5;
+  const adjustment = roundMoney(value.adjustment);
+  const adjustmentTotal = roundMoney(value.adjustmentTotal);
+  const safeAdjustment =
+    Math.abs(adjustment) <= band + 0.001
+      ? adjustment
+      : Math.max(-band, Math.min(band, adjustment));
+
+  return {
+    mode: String(value.mode || "FLOATING_BAND").trim().slice(0, 60),
+    rank: parsePositiveInt(value.rank),
+    sourceCategoryId: parsePositiveInt(value.sourceCategoryId),
+    sourceCategory: String(value.sourceCategory || "").trim().slice(0, 120),
+    band,
+    size: String(value.size || "").trim().slice(0, 80),
+    basePrice,
+    chargedPrice,
+    adjustment: roundMoney(safeAdjustment),
+    adjustmentTotal,
+    floorPrice: roundMoney(value.floorPrice),
+    ceilingPrice: roundMoney(value.ceilingPrice),
+    label: String(value.label || "").trim().slice(0, 60),
+    lockedAt: value.lockedAt ? String(value.lockedAt).trim().slice(0, 80) : null,
+  };
+};
+
 const getLineTotal = (line) => {
   if (isIncentiveRewardLine(line)) return 0;
   if (Number.isFinite(Number(line?.subtotal))) return roundMoney(line.subtotal);
@@ -158,6 +190,7 @@ const sanitizeLine = (line, index) => ({
   couponCode: line?.couponCode ? String(line.couponCode).trim().toUpperCase() : null,
   coupon: line?.coupon && typeof line.coupon === "object" ? line.coupon : null,
   directDiscount: line?.directDiscount || null,
+  trendingPricing: sanitizeTrendingPricing(line?.trendingPricing),
   incentiveId: parsePositiveInt(line?.incentiveId),
   rewardPizzaId: parsePositiveInt(line?.rewardPizzaId),
   boost: line?.boost && typeof line.boost === "object" ? line.boost : null,
