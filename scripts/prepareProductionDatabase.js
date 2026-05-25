@@ -74,6 +74,7 @@ function resolveFailedMigration(name) {
     {
       cwd: backendRoot,
       stdio: "inherit",
+      shell: process.platform === "win32",
     }
   );
 
