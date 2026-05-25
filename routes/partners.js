@@ -79,6 +79,7 @@ async function ensurePartnerSettingsColumns() {
     ["brandLogoPublicId", "VARCHAR(255) NULL"],
     ["minimumPaymentAmount", "DOUBLE NULL DEFAULT 0"],
     ["storefrontButtonConfig", "JSON NULL"],
+    ["storefrontMode", "VARCHAR(64) NULL"],
   ];
 
   let existingColumns = new Set();
@@ -123,7 +124,8 @@ async function getPartnerPolicyById(partnerId) {
             deliveryMaxPizzasPerOrder, deliveryFeeFixed, deliveryFeeBase,
             deliveryBaseKm, deliveryExtraPerKm, brandPrimary, brandSecondary,
             brandAccent, brandSurface, brandTextColor, brandFontFamily, brandOfferButtonStyle,
-            brandLogoUrl, brandLogoPublicId, minimumPaymentAmount, storefrontButtonConfig
+            brandLogoUrl, brandLogoPublicId, minimumPaymentAmount, storefrontButtonConfig,
+            storefrontMode
        FROM Partner
       WHERE id = ?`,
     partnerId
@@ -139,7 +141,8 @@ async function getPartnerPolicyBySlug(slug) {
             deliveryMaxPizzasPerOrder, deliveryFeeFixed, deliveryFeeBase,
             deliveryBaseKm, deliveryExtraPerKm, brandPrimary, brandSecondary,
             brandAccent, brandSurface, brandTextColor, brandFontFamily, brandOfferButtonStyle,
-            brandLogoUrl, brandLogoPublicId, minimumPaymentAmount, storefrontButtonConfig
+            brandLogoUrl, brandLogoPublicId, minimumPaymentAmount, storefrontButtonConfig,
+            storefrontMode
        FROM Partner
       WHERE slug = ?`,
     slug
@@ -690,6 +693,7 @@ router.patch("/by-id/:partnerId", async (req, res) => {
       brandTextColor,
       brandFontFamily,
       brandOfferButtonStyle,
+      storefrontMode,
     } = req.body;
 
     const normalizedPricingMode =
@@ -711,7 +715,8 @@ router.patch("/by-id/:partnerId", async (req, res) => {
               brandSurface = COALESCE(?, brandSurface),
               brandTextColor = COALESCE(?, brandTextColor),
               brandFontFamily = COALESCE(?, brandFontFamily),
-              brandOfferButtonStyle = COALESCE(?, brandOfferButtonStyle)
+              brandOfferButtonStyle = COALESCE(?, brandOfferButtonStyle),
+              storefrontMode = COALESCE(?, storefrontMode)
         WHERE id = ?`,
       toNumberOrNull(deliveryRadiusKm),
       normalizedPricingMode,
@@ -739,6 +744,7 @@ router.patch("/by-id/:partnerId", async (req, res) => {
       normalizeHexColor(brandTextColor),
       String(brandFontFamily || "").trim() || null,
       String(brandOfferButtonStyle || "").trim() || null,
+      String(storefrontMode || "").trim() || null,
       partnerId
     );
 
@@ -825,7 +831,8 @@ router.patch("/by-id/:partnerId/branding", async (req, res) => {
               brandSurface = ?,
               brandTextColor = ?,
               brandFontFamily = ?,
-              brandOfferButtonStyle = ?
+              brandOfferButtonStyle = ?,
+              storefrontMode = ?
         WHERE id = ?`,
       normalizeHexColor(req.body?.brandPrimary, "#3513A4"),
       normalizeHexColor(req.body?.brandSecondary, "#FFBF2D"),
@@ -834,6 +841,7 @@ router.patch("/by-id/:partnerId/branding", async (req, res) => {
       normalizeHexColor(req.body?.brandTextColor, "#171717"),
       String(req.body?.brandFontFamily || "").trim() || "moderno",
       String(req.body?.brandOfferButtonStyle || "").trim() || "sunset-pill",
+      String(req.body?.storefrontMode || "").trim() || "commercial-light",
       partnerId
     );
 

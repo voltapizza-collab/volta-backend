@@ -158,6 +158,7 @@ model Partner {
     brandLogoPublicId   String?
     minimumPaymentAmount Float?   @default(0)
     storefrontButtonConfig Json?
+    storefrontMode       String?
     smsCredits          Int      @default(0)
   smsRecharged        Int      @default(0)
   smsConsumed         Int      @default(0)
