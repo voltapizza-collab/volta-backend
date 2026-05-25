@@ -5,7 +5,7 @@
   "main": "index.js",
   "type": "module",
   "scripts": {
-    "start": "npx prisma migrate deploy && node index.js",
+    "start": "node scripts/prepareProductionDatabase.js && npx prisma migrate deploy && node index.js",
     "test": "node tests/telnyx.test.js"
   },
   "keywords": [],
