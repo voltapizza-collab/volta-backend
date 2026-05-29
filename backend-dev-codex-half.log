@@ -1,0 +1,8 @@
+
+> volta-backend@1.0.0 start
+> node scripts/prepareProductionDatabase.js && npx prisma migrate deploy && node index.js
+
+Environment variables loaded from .env
+Prisma schema loaded from prisma\schema.prisma
+Datasource "db": MySQL database "railway" at "crossover.proxy.rlwy.net:41063"
+

@@ -50,12 +50,32 @@ router.post("/", async (req, res) => {
       });
     }
 
-    const ingredient = await prisma.ingredient.create({
-      data: {
-        name,
-        category,
-        allergens: allergens || [],
-      },
+    const ingredient = await prisma.$transaction(async (tx) => {
+      const created = await tx.ingredient.create({
+        data: {
+          name,
+          category,
+          allergens: allergens || [],
+        },
+      });
+
+      const stores = await tx.store.findMany({
+        select: { id: true },
+      });
+
+      if (stores.length) {
+        await tx.storeIngredientStock.createMany({
+          data: stores.map((store) => ({
+            storeId: store.id,
+            ingredientId: created.id,
+            stock: 0,
+            active: true,
+          })),
+          skipDuplicates: true,
+        });
+      }
+
+      return created;
     });
 
     res.json(ingredient);
@@ -206,16 +226,54 @@ router.patch("/suggestions/:id/approve", async (req, res) => {
     }
 
     // 🔥 crear ingrediente real
-    const updatedSuggestion = await prisma.ingredientSuggestion.update({
-      where: { id: Number(id) },
-      data: {
-        status: "APPROVED",
-        reviewedAt: new Date(),
-      },
+    const result = await prisma.$transaction(async (tx) => {
+      const updatedSuggestion = await tx.ingredientSuggestion.update({
+        where: { id: Number(id) },
+        data: {
+          status: "APPROVED",
+          reviewedAt: new Date(),
+        },
+      });
+
+      const existingIngredient = await tx.ingredient.findFirst({
+        where: { name: suggestion.name },
+        select: { id: true },
+      });
+
+      const ingredient = existingIngredient
+        ? await tx.ingredient.update({
+            where: { id: existingIngredient.id },
+            data: { status: "ACTIVE" },
+          })
+        : await tx.ingredient.create({
+            data: {
+              name: suggestion.name,
+              category: suggestion.category,
+              allergens: [],
+            },
+          });
+
+      const stores = await tx.store.findMany({
+        select: { id: true },
+      });
+
+      if (stores.length) {
+        await tx.storeIngredientStock.createMany({
+          data: stores.map((store) => ({
+            storeId: store.id,
+            ingredientId: ingredient.id,
+            stock: 0,
+            active: true,
+          })),
+          skipDuplicates: true,
+        });
+      }
+
+      return { suggestion: updatedSuggestion, ingredient };
     });
 
     // 🔥 marcar como aprobado
-    res.json(updatedSuggestion);
+    res.json(result);
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: "Error approving suggestion" });

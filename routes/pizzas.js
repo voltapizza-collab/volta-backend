@@ -184,16 +184,6 @@ const syncIngredientCategoryUsesForCategory = async (
   });
   const ingredientIds = [...ingredientsById.keys()];
 
-  await prismaClient.ingredientCategoryUse.deleteMany({
-    where: {
-      partnerId: parsedPartnerId,
-      categoryId: parsedCategoryId,
-      ...(ingredientIds.length
-        ? { ingredientId: { notIn: ingredientIds } }
-        : {}),
-    },
-  });
-
   if (!ingredientIds.length) return;
 
   await prismaClient.ingredientCategoryUse.createMany({

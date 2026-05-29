@@ -115,18 +115,6 @@ export default function ingredientCategoryUsesRoutes(prisma) {
           partnerId,
           categoryId,
           active: true,
-          ingredient: {
-            menuPizzas: {
-              some: {
-                menuPizza: {
-                  partnerId,
-                  categoryId,
-                  status: "ACTIVE",
-                  type: "SELLABLE",
-                },
-              },
-            },
-          },
         },
         include: {
           ingredient: {
@@ -153,31 +141,100 @@ export default function ingredientCategoryUsesRoutes(prisma) {
         },
       });
 
-      const availableRows = rows.filter((row) => {
-        const ingredient = row.ingredient;
+      const isIngredientAvailable = (ingredient) => {
         if (ingredient?.status !== "ACTIVE") return false;
         if (!storeId) return true;
 
         return ingredient?.storeStocks?.[0]?.active === true;
+      };
+
+      const availableRows = rows.filter((row) =>
+        isIngredientAvailable(row.ingredient)
+      );
+
+      const usesByIngredientId = new Map(
+        availableRows.map((row) => [
+          row.ingredientId,
+          {
+            id: row.ingredientId,
+            ingredientId: row.ingredientId,
+            name: row.ingredient?.name || `Ingrediente ${row.ingredientId}`,
+            category: row.ingredient?.category || "OTROS",
+            allergens: Array.isArray(row.ingredient?.allergens)
+              ? row.ingredient.allergens
+              : [],
+            price: Number(row.price || 0),
+            priceBySize: normalizePriceBySize(row.priceBySize, row.price),
+            costPrice: row.ingredient?.costPrice ?? row.costPrice ?? null,
+            costBySize:
+              row.costBySize && typeof row.costBySize === "object"
+                ? row.costBySize
+                : {},
+          },
+        ])
+      );
+
+      const recipeRows = await prisma.menuPizzaIngredient.findMany({
+        where: {
+          menuPizza: {
+            partnerId,
+            categoryId,
+            status: "ACTIVE",
+            type: "SELLABLE",
+          },
+          ingredient: {
+            status: "ACTIVE",
+          },
+        },
+        include: {
+          ingredient: {
+            select: {
+              id: true,
+              name: true,
+              category: true,
+              allergens: true,
+              costPrice: true,
+              status: true,
+              ...(storeId
+                ? {
+                    storeStocks: {
+                      where: { storeId },
+                      select: { active: true },
+                    },
+                  }
+                : {}),
+            },
+          },
+        },
+        orderBy: {
+          ingredient: { name: "asc" },
+        },
+      });
+
+      recipeRows.forEach((row) => {
+        const ingredient = row.ingredient;
+        if (!isIngredientAvailable(ingredient)) return;
+        if (usesByIngredientId.has(row.ingredientId)) return;
+
+        usesByIngredientId.set(row.ingredientId, {
+          id: row.ingredientId,
+          ingredientId: row.ingredientId,
+          name: ingredient?.name || `Ingrediente ${row.ingredientId}`,
+          category: ingredient?.category || "OTROS",
+          allergens: Array.isArray(ingredient?.allergens)
+            ? ingredient.allergens
+            : [],
+          price: 0,
+          priceBySize: {},
+          costPrice: ingredient?.costPrice ?? null,
+          costBySize: {},
+        });
       });
 
       res.json(
-        availableRows.map((row) => ({
-          id: row.ingredientId,
-          ingredientId: row.ingredientId,
-          name: row.ingredient?.name || `Ingrediente ${row.ingredientId}`,
-          category: row.ingredient?.category || "OTROS",
-          allergens: Array.isArray(row.ingredient?.allergens)
-            ? row.ingredient.allergens
-            : [],
-          price: Number(row.price || 0),
-          priceBySize: normalizePriceBySize(row.priceBySize, row.price),
-          costPrice: row.ingredient?.costPrice ?? row.costPrice ?? null,
-          costBySize:
-            row.costBySize && typeof row.costBySize === "object"
-              ? row.costBySize
-              : {},
-        }))
+        [...usesByIngredientId.values()].sort((a, b) =>
+          a.name.localeCompare(b.name, "es", { sensitivity: "base" })
+        )
       );
     } catch (err) {
       console.error("ingredientCategoryUses GET error:", err);

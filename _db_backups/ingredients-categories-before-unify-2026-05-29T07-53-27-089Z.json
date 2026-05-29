@@ -1,0 +1,367 @@
+[
+  {
+    "id": 3,
+    "name": "Mozzarella",
+    "category": "QUESOS"
+  },
+  {
+    "id": 4,
+    "name": "Jamón cocido (York)",
+    "category": "FIAMBRES"
+  },
+  {
+    "id": 5,
+    "name": "Champiñones",
+    "category": "SETAS"
+  },
+  {
+    "id": 6,
+    "name": "Parmesano",
+    "category": "QUESOS"
+  },
+  {
+    "id": 7,
+    "name": "Queso azul",
+    "category": "QUESOS"
+  },
+  {
+    "id": 9,
+    "name": "Trufa",
+    "category": "SETAS"
+  },
+  {
+    "id": 10,
+    "name": "Pulpo",
+    "category": "MARISCOS"
+  },
+  {
+    "id": 11,
+    "name": "Queso de cabra",
+    "category": "QUESOS"
+  },
+  {
+    "id": 12,
+    "name": "Gorgonzola",
+    "category": "QUESOS"
+  },
+  {
+    "id": 14,
+    "name": "Higos",
+    "category": "FRUTAS"
+  },
+  {
+    "id": 15,
+    "name": "Manzana",
+    "category": "FRUTAS"
+  },
+  {
+    "id": 16,
+    "name": "Pera",
+    "category": "FRUTAS"
+  },
+  {
+    "id": 17,
+    "name": "Piña",
+    "category": "FRUTAS"
+  },
+  {
+    "id": 20,
+    "name": "Salsa de ajo",
+    "category": "SALSAS"
+  },
+  {
+    "id": 21,
+    "name": "Salsa miel-mostaza",
+    "category": "SALSAS"
+  },
+  {
+    "id": 22,
+    "name": "Salsa picante",
+    "category": "SALSAS"
+  },
+  {
+    "id": 23,
+    "name": "Jamón serrano",
+    "category": "FIAMBRES"
+  },
+  {
+    "id": 24,
+    "name": "Mortadela",
+    "category": "FIAMBRES"
+  },
+  {
+    "id": 25,
+    "name": "Pavo",
+    "category": "FIAMBRES"
+  },
+  {
+    "id": 26,
+    "name": "Prosciutto",
+    "category": "FIAMBRES"
+  },
+  {
+    "id": 27,
+    "name": "Salami",
+    "category": "FIAMBRES"
+  },
+  {
+    "id": 28,
+    "name": "Bacon",
+    "category": "CARNES"
+  },
+  {
+    "id": 29,
+    "name": "Carne molida",
+    "category": "CARNES"
+  },
+  {
+    "id": 30,
+    "name": "Chorizo",
+    "category": "CARNES"
+  },
+  {
+    "id": 31,
+    "name": "Pepperoni",
+    "category": "CARNES"
+  },
+  {
+    "id": 32,
+    "name": "Pollo",
+    "category": "CARNES"
+  },
+  {
+    "id": 33,
+    "name": "Salchicha italiana",
+    "category": "CARNES"
+  },
+  {
+    "id": 34,
+    "name": "Cheddar",
+    "category": "QUESOS"
+  },
+  {
+    "id": 35,
+    "name": "Cheddar",
+    "category": "QUESOS"
+  },
+  {
+    "id": 36,
+    "name": "Burrata",
+    "category": "QUESOS"
+  },
+  {
+    "id": 37,
+    "name": "Emmental",
+    "category": "QUESOS"
+  },
+  {
+    "id": 38,
+    "name": "Provolone",
+    "category": "QUESOS"
+  },
+  {
+    "id": 39,
+    "name": "Ricotta",
+    "category": "QUESOS"
+  },
+  {
+    "id": 40,
+    "name": "Aceite de oliva",
+    "category": "ACEITES"
+  },
+  {
+    "id": 41,
+    "name": "Aceite picante",
+    "category": "ACEITES"
+  },
+  {
+    "id": 42,
+    "name": "Aceitunas negras",
+    "category": "VERDURAS"
+  },
+  {
+    "id": 43,
+    "name": "Aceitunas verdes",
+    "category": "VERDURAS"
+  },
+  {
+    "id": 44,
+    "name": "Alcachofa",
+    "category": "VERDURAS"
+  },
+  {
+    "id": 45,
+    "name": "Calabacín",
+    "category": "VERDURAS"
+  },
+  {
+    "id": 46,
+    "name": "Cebolla",
+    "category": "VERDURAS"
+  },
+  {
+    "id": 47,
+    "name": "Maíz",
+    "category": "VERDURAS"
+  },
+  {
+    "id": 48,
+    "name": "Pimiento rojo",
+    "category": "VERDURAS"
+  },
+  {
+    "id": 49,
+    "name": "Pimiento verde",
+    "category": "VERDURAS"
+  },
+  {
+    "id": 50,
+    "name": "Salsa BBQ",
+    "category": "SALSAS"
+  },
+  {
+    "id": 51,
+    "name": "Salsa esparragos",
+    "category": "SALSAS"
+  },
+  {
+    "id": 52,
+    "name": "Salsa Pesto",
+    "category": "SALSAS"
+  },
+  {
+    "id": 53,
+    "name": "Salsa Tomate",
+    "category": "SALSAS"
+  },
+  {
+    "id": 54,
+    "name": "Relleno de Mozzarela",
+    "category": "QUESOS"
+  },
+  {
+    "id": 55,
+    "name": "Miel",
+    "category": "ENDULZANTES"
+  },
+  {
+    "id": 56,
+    "name": "Salsa de arándanos",
+    "category": "SALSAS"
+  },
+  {
+    "id": 57,
+    "name": "Avellana blanca",
+    "category": "CREMAS_DULCES"
+  },
+  {
+    "id": 58,
+    "name": "Avellana tradicional",
+    "category": "CREMAS_DULCES"
+  },
+  {
+    "id": 59,
+    "name": "Chocolate con leche",
+    "category": "CREMAS_DULCES"
+  },
+  {
+    "id": 60,
+    "name": "Lotus Biscoff",
+    "category": "CREMAS_DULCES"
+  },
+  {
+    "id": 61,
+    "name": "Pistacho",
+    "category": "CREMAS_DULCES"
+  },
+  {
+    "id": 62,
+    "name": "Crema de coco",
+    "category": "CREMAS_DULCES"
+  },
+  {
+    "id": 63,
+    "name": "Brie",
+    "category": "QUESOS"
+  },
+  {
+    "id": 64,
+    "name": "Bocconcini",
+    "category": "QUESOS"
+  },
+  {
+    "id": 65,
+    "name": "Cheddar fundido",
+    "category": "QUESOS"
+  },
+  {
+    "id": 66,
+    "name": "Edam",
+    "category": "QUESOS"
+  },
+  {
+    "id": 67,
+    "name": "Queso de cabra curado",
+    "category": "QUESOS"
+  },
+  {
+    "id": 68,
+    "name": "Provolone ahumado",
+    "category": "QUESOS"
+  },
+  {
+    "id": 69,
+    "name": "Roquefort",
+    "category": "QUESOS"
+  },
+  {
+    "id": 70,
+    "name": "Aceite de ajo",
+    "category": "ACEITES_GRASAS_VINAGRES"
+  },
+  {
+    "id": 71,
+    "name": "Aceite de chile",
+    "category": "ACEITES_GRASAS_VINAGRES"
+  },
+  {
+    "id": 72,
+    "name": "Aceite de maiz",
+    "category": "ACEITES_GRASAS_VINAGRES"
+  },
+  {
+    "id": 73,
+    "name": "Vinagre balsamico",
+    "category": "ACEITES_GRASAS_VINAGRES"
+  },
+  {
+    "id": 74,
+    "name": "Vinagre de jerez",
+    "category": "ACEITES_GRASAS_VINAGRES"
+  },
+  {
+    "id": 75,
+    "name": "Extracto de paprika",
+    "category": "AROMAS_Y_EXTRACTOS"
+  },
+  {
+    "id": 76,
+    "name": "Extracto de oregano",
+    "category": "AROMAS_Y_EXTRACTOS"
+  },
+  {
+    "id": 77,
+    "name": "Extracto de pimenton",
+    "category": "AROMAS_Y_EXTRACTOS"
+  },
+  {
+    "id": 78,
+    "name": "Extracto de pimienta blanca",
+    "category": "AROMAS_Y_EXTRACTOS"
+  },
+  {
+    "id": 79,
+    "name": "Alitas de pollo",
+    "category": "CARNES"
+  }
+]

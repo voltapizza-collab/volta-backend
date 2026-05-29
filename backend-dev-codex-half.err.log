@@ -1,0 +1,2 @@
+Error: Schema engine exited. Error: Command failed with EPERM: C:\Users\Luigi\Desktop\volta-core\volta-backend\node_modules\@prisma\engines\schema-engine-windows.exe cli --datasource <REDACTED> can-connect-to-database
+spawn EPERM

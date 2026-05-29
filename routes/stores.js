@@ -575,7 +575,7 @@ const attachStorePublicMenu = (router, prisma) => {
       const activeDirectDiscounts = directDiscountRows.filter((discount) =>
         isPromoWithinWindow(discount, directDiscountWindowNow)
       );
-      const mapPublicPizza = (pizza, available) => {
+      const mapPublicPizza = (pizza, available, { applyDiscount = true } = {}) => {
         const publicPizza = {
           pizzaId: pizza.id,
           name: pizza.name,
@@ -602,18 +602,23 @@ const attachStorePublicMenu = (router, prisma) => {
           extras: [],
           available,
         };
+        if (!applyDiscount) return publicPizza;
+
         const bestDiscount = chooseBestDiscountForPizza(pizza, activeDirectDiscounts, store.id);
         return applyDirectDiscountToPizza(publicPizza, bestDiscount);
       };
       const menu = availablePizzas
         .filter((pizza) => !pizza.launchAt || pizza.launchAt <= now)
         .map((pizza) => mapPublicPizza(pizza, true));
+      const trendingSourceMenu = availablePizzas
+        .filter((pizza) => !pizza.launchAt || pizza.launchAt <= now)
+        .map((pizza) => mapPublicPizza(pizza, true, { applyDiscount: false }));
       const upcoming = availablePizzas
         .filter((pizza) => pizza.launchAt && pizza.launchAt > now)
         .map((pizza) => mapPublicPizza(pizza, false));
       const trending = await buildTrendingMenu(prisma, {
         storeId: store.id,
-        menu,
+        menu: trendingSourceMenu,
         now,
       });
       const trendingByPizzaId = new Map(
@@ -626,6 +631,8 @@ const attachStorePublicMenu = (router, prisma) => {
           ? {
               ...pizza,
               ...trendingByPizzaId.get(Number(pizza.pizzaId)),
+              directDiscount: null,
+              originalPriceBySize: null,
               categoryId: pizza.categoryId,
               category: pizza.category,
               categoryPosition: pizza.categoryPosition,

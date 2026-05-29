@@ -5,6 +5,61 @@ const parsePositiveInt = (value) => {
   return Number.isInteger(parsed) && parsed > 0 ? parsed : null;
 };
 
+const getPizzaAvailability = (pizza, stockRow) => {
+  const blockers = [];
+
+  if (!stockRow) {
+    blockers.push({
+      type: "pizza_missing_in_store",
+      label: "Producto sin estado de tienda",
+    });
+  } else if (stockRow.active === false) {
+    blockers.push({
+      type: "pizza_inactive_in_store",
+      label: "Producto oculto en esta tienda",
+    });
+  }
+
+  (pizza.ingredients || []).forEach((rel) => {
+    const ingredient = rel.ingredient;
+    const storeStock = ingredient?.storeStocks?.[0];
+
+    if (!ingredient || ingredient.status !== "ACTIVE") {
+      blockers.push({
+        type: "ingredient_inactive",
+        ingredientId: ingredient?.id ?? rel.ingredientId,
+        ingredientName: ingredient?.name || "Ingrediente eliminado",
+        label: `${ingredient?.name || "Ingrediente"} no esta activo`,
+      });
+      return;
+    }
+
+    if (!storeStock) {
+      blockers.push({
+        type: "ingredient_missing_in_store",
+        ingredientId: ingredient.id,
+        ingredientName: ingredient.name,
+        label: `${ingredient.name} no esta en el inventario de esta tienda`,
+      });
+      return;
+    }
+
+    if (storeStock.active !== true) {
+      blockers.push({
+        type: "ingredient_inactive_in_store",
+        ingredientId: ingredient.id,
+        ingredientName: ingredient.name,
+        label: `${ingredient.name} esta inactivo en esta tienda`,
+      });
+    }
+  });
+
+  return {
+    available: blockers.length === 0,
+    blockers,
+  };
+};
+
 export default function stockRoutes(prisma) {
   const router = express.Router();
 
@@ -59,6 +114,7 @@ export default function stockRoutes(prisma) {
 
       const result = pizzas.map((pizza) => {
         const row = stockMap.get(pizza.id);
+        const availability = getPizzaAvailability(pizza, row);
 
         return {
           pizzaId: pizza.id,
@@ -77,7 +133,9 @@ export default function stockRoutes(prisma) {
             })),
           },
           stock: row?.stock ?? 0,
-          active: row?.active ?? true,
+          active: row?.active ?? false,
+          available: availability.available,
+          blockers: availability.blockers,
         };
       });
 

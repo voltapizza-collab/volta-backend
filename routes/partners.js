@@ -45,6 +45,9 @@ const GOOGLE_GEOCODING_URL =
   "https://maps.googleapis.com/maps/api/geocode/json";
 const GOOGLE_ROUTE_MATRIX_URL =
   "https://routes.googleapis.com/distanceMatrix/v2:computeRouteMatrix";
+const COVERAGE_ROUTE_ESTIMATE_FACTOR = Number(
+  process.env.COVERAGE_ROUTE_ESTIMATE_FACTOR || 1.3
+);
 
 const getGoogleGeocodingKey = () =>
   process.env.GOOGLE_GEOCODING_KEY ||
@@ -170,6 +173,9 @@ async function geocodeAddress(address, region, key) {
     formattedAddress: result.formatted_address,
     lat: Number(result.geometry.location.lat),
     lng: Number(result.geometry.location.lng),
+    locationType: result.geometry.location_type,
+    partialMatch: Boolean(result.partial_match),
+    types: Array.isArray(result.types) ? result.types : [],
   };
 }
 
@@ -280,15 +286,17 @@ async function computeDrivingDistances(origin, stores, key) {
 
 function buildManualDeliveryResolution({ address, partner, stores, reason }) {
   const fallbackStore = stores[0] || null;
+  const radiusKm =
+    partner.deliveryRadiusKm == null ? null : Number(partner.deliveryRadiusKm);
+  const withinRange = radiusKm == null && Boolean(fallbackStore);
 
   return {
     formattedAddress: address,
     coords: null,
-    withinRange: Boolean(fallbackStore),
-    deliveryRadiusKm:
-      partner.deliveryRadiusKm == null ? null : Number(partner.deliveryRadiusKm),
+    withinRange,
+    deliveryRadiusKm: radiusKm,
     deliveryFee:
-      fallbackStore && partner.deliveryPricingMode === "FIXED"
+      withinRange && fallbackStore && partner.deliveryPricingMode === "FIXED"
         ? computeDeliveryFee(partner, 0)
         : null,
     deliveryFeeBlockSize: Number(partner.deliveryFeeBlockSize || 5),
@@ -298,6 +306,8 @@ function buildManualDeliveryResolution({ address, partner, stores, reason }) {
     pricingMode: partner.deliveryPricingMode,
     geocodingStatus: "MANUAL_FALLBACK",
     geocodingReason: reason,
+    coverageDistanceRequired: radiusKm == null ? null : "PRECISE_ADDRESS",
+    coverageDistanceAvailable: radiusKm == null,
     nearestStore: fallbackStore
       ? {
           id: fallbackStore.id,
@@ -324,6 +334,24 @@ function haversineKm(lat1, lon1, lat2, lon2) {
   return 2 * R * Math.asin(Math.sqrt(a));
 }
 
+function isPreciseCustomerGeocode(geocode) {
+  if (!geocode) return false;
+  if (geocode.source === "PLACE_AUTOCOMPLETE") return true;
+
+  const preciseTypes = new Set([
+    "street_address",
+    "premise",
+    "subpremise",
+    "establishment",
+    "point_of_interest",
+  ]);
+
+  return (
+    geocode.partialMatch !== true &&
+    (geocode.types || []).some((type) => preciseTypes.has(type))
+  );
+}
+
 function computeDeliveryFee(partner, distanceKm) {
   if (partner.deliveryPricingMode === "VARIABLE") {
     const base = Number(partner.deliveryFeeBase || 0);
@@ -341,6 +369,16 @@ const toNumberOrNull = (value) => {
   if (value === "" || value == null) return null;
   const numericValue = Number(value);
   return Number.isFinite(numericValue) ? numericValue : null;
+};
+
+const normalizeRequestCoords = (value) => {
+  const lat = toNumberOrNull(value?.lat);
+  const lng = toNumberOrNull(value?.lng);
+
+  if (lat == null || lng == null) return null;
+  if (lat < -90 || lat > 90 || lng < -180 || lng > 180) return null;
+
+  return { lat, lng };
 };
 
 const toNonNegativeNumber = (value, fallback = 0) => {
@@ -447,20 +485,28 @@ router.post("/:slug/delivery/resolve", async (req, res) => {
       );
     }
 
-    const customerGeocode = await geocodeCustomerAddress(
-      address,
-      partner,
-      stores,
-      googleKey
-    );
+    const requestCoords = normalizeRequestCoords(req.body?.coords);
+    const customerGeocode = requestCoords
+      ? {
+          formattedAddress: String(req.body?.formattedAddress || address).trim() || address,
+          lat: requestCoords.lat,
+          lng: requestCoords.lng,
+          source: "PLACE_AUTOCOMPLETE",
+        }
+      : await geocodeCustomerAddress(
+          address,
+          partner,
+          stores,
+          googleKey
+        );
 
-    if (!customerGeocode) {
+    if (!customerGeocode || !isPreciseCustomerGeocode(customerGeocode)) {
       return res.json(
         buildManualDeliveryResolution({
           address,
           partner,
           stores,
-          reason: "ADDRESS_NOT_FOUND",
+          reason: customerGeocode ? "ADDRESS_NOT_PRECISE" : "ADDRESS_NOT_FOUND",
         })
       );
     }
@@ -529,9 +575,13 @@ router.post("/:slug/delivery/resolve", async (req, res) => {
     const fallbackDistances = eligibleStores
       .map((store) => ({
         ...store,
-        distanciaKm: haversineKm(lat, lng, store.latitude, store.longitude),
+        straightLineDistanceKm: haversineKm(lat, lng, store.latitude, store.longitude),
         routeDuration: null,
-        distanceSource: "HAVERSINE",
+        distanceSource: "HAVERSINE_ROUTE_ESTIMATE",
+      }))
+      .map((store) => ({
+        ...store,
+        distanciaKm: store.straightLineDistanceKm * COVERAGE_ROUTE_ESTIMATE_FACTOR,
       }))
       .sort((a, b) => a.distanciaKm - b.distanciaKm);
 
@@ -541,7 +591,8 @@ router.post("/:slug/delivery/resolve", async (req, res) => {
       googleKey
     );
 
-    const distanceRows = (drivingDistances?.length ? drivingDistances : fallbackDistances)
+    const hasDrivingDistances = Boolean(drivingDistances?.length);
+    const distanceRows = (hasDrivingDistances ? drivingDistances : fallbackDistances)
       .slice()
       .sort((a, b) => a.distanciaKm - b.distanciaKm);
     const nearestStore = distanceRows[0];
@@ -568,12 +619,22 @@ router.post("/:slug/delivery/resolve", async (req, res) => {
       ),
       pricingMode: partner.deliveryPricingMode,
       geocodingStatus: "GEOCODED",
+      coverageDistanceRequired: radiusKm == null ? null : "DRIVING_ROUTE_OR_ESTIMATE",
+      coverageDistanceAvailable: true,
       nearestStore: {
         id: nearestStore.id,
         slug: nearestStore.slug,
         storeName: nearestStore.storeName,
         city: nearestStore.city,
         distanceKm: Number(nearestStore.distanciaKm.toFixed(2)),
+        straightLineDistanceKm:
+          nearestStore.straightLineDistanceKm == null
+            ? null
+            : Number(nearestStore.straightLineDistanceKm.toFixed(2)),
+        routeEstimateFactor:
+          nearestStore.distanceSource === "HAVERSINE_ROUTE_ESTIMATE"
+            ? COVERAGE_ROUTE_ESTIMATE_FACTOR
+            : null,
         distanceSource: nearestStore.distanceSource,
         routeDuration: nearestStore.routeDuration,
       },
