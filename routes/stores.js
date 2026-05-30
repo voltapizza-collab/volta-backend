@@ -1,5 +1,6 @@
 import express from "express";
 import { getBoostSettings } from "../services/boostSettings.js";
+import { sendStoreStatusTrackingSms } from "../services/trackingNotifications.js";
 
 const TZ = process.env.TIMEZONE || "Europe/Madrid";
 const TRENDING_PRICE_BAND = 0.5;
@@ -765,12 +766,53 @@ export default function storesRoutes(prisma) {
     }
 
     try {
+      const previous = await prisma.store.findUnique({
+        where: { id },
+        select: { active: true },
+      });
+
       const updated = await prisma.store.update({
         where: { id },
         data: { active },
+        include: {
+          partner: {
+            select: {
+              id: true,
+              name: true,
+            },
+          },
+        },
       });
 
-      return res.json({ ok: true, active: updated.active });
+      let notification = null;
+      if (previous?.active !== updated.active) {
+        if (updated.partnerId) {
+          const partnerRows = await prisma.$queryRawUnsafe(
+            "SELECT trackingNotificationSettings FROM Partner WHERE id = ?",
+            updated.partnerId
+          );
+          updated.partner = {
+            ...(updated.partner || {}),
+            trackingNotificationSettings:
+              partnerRows?.[0]?.trackingNotificationSettings || null,
+          };
+        }
+
+        try {
+          notification = await sendStoreStatusTrackingSms(prisma, {
+            store: updated,
+          });
+        } catch (notificationError) {
+          console.error("[PATCH /stores/:id/active notification]", notificationError);
+          notification = {
+            ok: false,
+            skipped: true,
+            reason: "notification_failed",
+          };
+        }
+      }
+
+      return res.json({ ok: true, active: updated.active, notification });
     } catch (error) {
       console.error("[PATCH /stores/:id/active]", error);
       return res.status(400).json({ error: error.message });

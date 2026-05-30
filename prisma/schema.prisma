@@ -101,9 +101,9 @@ enum SmsCreditLedgerType {
 enum CustomerSegment {
   S1 // Potencial: 0 compras
   S2 // Nuevo: 1 compra
-  S3 // Dormido: 2+ compras y ticket ultima compra < ticket medio historico
-  S4 // Activo: 2+ compras y ticket ultima compra >= ticket medio historico
-  S5 // VIP: 2+ compras y ticket ultima compra >= ticket objetivo (ticket medio * 1.15)
+  S3 // Dormido: 2+ compras y mas de 30 dias sin compra
+  S4 // Activo: 2+ compras y no dormido
+  S5 // VIP: 5+ compras y ticket promedio sobre la media de tienda
 }
 enum CustomerActivity {
   HOT
@@ -159,6 +159,7 @@ model Partner {
     minimumPaymentAmount Float?   @default(0)
     storefrontButtonConfig Json?
     storefrontMode       String?
+    trackingNotificationSettings Json?
     smsCredits          Int      @default(0)
   smsRecharged        Int      @default(0)
   smsConsumed         Int      @default(0)
@@ -296,6 +297,9 @@ model Ingredient {
   stock            Int                   @default(0)
   unit             String?
   costPrice        Float?
+  description      String?               @db.Text
+  image            String?               @db.Text
+  imagePublicId    String?
   status           IngredientStatus      @default(ACTIVE)
   createdAt        DateTime              @default(now())
   updatedAt        DateTime              @updatedAt

@@ -6,7 +6,7 @@
   "type": "module",
   "scripts": {
     "start": "node scripts/prepareProductionDatabase.js && npx prisma migrate deploy && node index.js",
-    "test": "node tests/telnyx.test.js"
+    "test": "node --test tests/telnyx.test.js tests/trackingNotifications.test.js tests/trackingAlerts.test.js"
   },
   "keywords": [],
   "author": "",

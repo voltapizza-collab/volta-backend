@@ -3,6 +3,10 @@ import { PrismaClient } from "@prisma/client";
 import axios from "axios";
 import multer from "multer";
 import { v2 as cloudinary } from "cloudinary";
+import {
+  ensureBackofficeDemoSession,
+  isBackofficeDemoCredential,
+} from "../services/backofficeDemoSession.js";
 
 const prisma = new PrismaClient();
 const router = express.Router();
@@ -20,6 +24,16 @@ const STOREFRONT_BUTTON_IDS = [
   "payNow",
   "couponCode",
   "boost",
+];
+
+const TRACKING_NOTIFICATION_SERVICE_IDS = [
+  "pendingOrderUnaccepted",
+  "couponRedeemed",
+  "highAverageTicketSale",
+  "storeOpenClosed",
+  "ingredientDisabled",
+  "reservationCanceled",
+  "boostPurchased",
 ];
 
 const isPrismaConnectionClosed = (error) =>
@@ -83,6 +97,7 @@ async function ensurePartnerSettingsColumns() {
     ["minimumPaymentAmount", "DOUBLE NULL DEFAULT 0"],
     ["storefrontButtonConfig", "JSON NULL"],
     ["storefrontMode", "VARCHAR(64) NULL"],
+    ["trackingNotificationSettings", "JSON NULL"],
   ];
 
   let existingColumns = new Set();
@@ -128,7 +143,7 @@ async function getPartnerPolicyById(partnerId) {
             deliveryBaseKm, deliveryExtraPerKm, brandPrimary, brandSecondary,
             brandAccent, brandSurface, brandTextColor, brandFontFamily, brandOfferButtonStyle,
             brandLogoUrl, brandLogoPublicId, minimumPaymentAmount, storefrontButtonConfig,
-            storefrontMode
+            storefrontMode, trackingNotificationSettings
        FROM Partner
       WHERE id = ?`,
     partnerId
@@ -145,7 +160,7 @@ async function getPartnerPolicyBySlug(slug) {
             deliveryBaseKm, deliveryExtraPerKm, brandPrimary, brandSecondary,
             brandAccent, brandSurface, brandTextColor, brandFontFamily, brandOfferButtonStyle,
             brandLogoUrl, brandLogoPublicId, minimumPaymentAmount, storefrontButtonConfig,
-            storefrontMode
+            storefrontMode, trackingNotificationSettings
        FROM Partner
       WHERE slug = ?`,
     slug
@@ -397,6 +412,37 @@ const normalizeStorefrontButtonConfig = (value) => {
   }, {});
 };
 
+const normalizeTrackingNotificationSettings = (value = {}) => {
+  const source =
+    value && typeof value === "object" && !Array.isArray(value) ? value : {};
+  const sourceServices =
+    source.services && typeof source.services === "object" && !Array.isArray(source.services)
+      ? source.services
+      : {};
+  const rawThreshold = Number(source.delayedOrderThresholdMinutes);
+  const rawRecipientPhone = String(source.recipientPhone || "")
+    .replace(/[^\d+]/g, "")
+    .slice(0, 24);
+
+  return {
+    enabled: Boolean(source.enabled),
+    channel: "SMS",
+    recipientPhone: rawRecipientPhone,
+    contactPhoneConfirmed: Boolean(source.contactPhoneConfirmed),
+    contactPhoneConfirmedAt: source.contactPhoneConfirmed
+      ? String(source.contactPhoneConfirmedAt || new Date().toISOString())
+      : null,
+    delayedOrderThresholdMinutes: Number.isInteger(rawThreshold) && rawThreshold >= 1 && rawThreshold <= 180
+      ? rawThreshold
+      : 3,
+    services: TRACKING_NOTIFICATION_SERVICE_IDS.reduce((services, serviceId) => {
+      const rawValue = sourceServices[serviceId];
+      services[serviceId] = Boolean(rawValue);
+      return services;
+    }, {}),
+  };
+};
+
 const toPositiveIntegerOrNull = (value) => {
   if (value === "" || value == null) return null;
   const numericValue = Number(value);
@@ -445,6 +491,20 @@ router.get("/", async (req, res) => {
     include: { stores: true }
   });
   res.json(list);
+});
+
+router.post("/backoffice-demo-session", async (req, res) => {
+  try {
+    if (!isBackofficeDemoCredential(req.body || {})) {
+      return res.status(401).json({ error: "Credenciales invalidas." });
+    }
+
+    const session = await ensureBackofficeDemoSession(prisma);
+    return res.json(session);
+  } catch (error) {
+    console.error("[backoffice-demo-session]", error);
+    return res.status(500).json({ error: "No se pudo preparar la sesion demo." });
+  }
 });
 
 router.post("/:slug/delivery/resolve", async (req, res) => {
@@ -870,6 +930,36 @@ router.patch("/by-id/:partnerId/storefront-buttons", async (req, res) => {
     res.json(partner);
   } catch (e) {
     console.error("UPDATE PARTNER STOREFRONT BUTTONS ERROR:", e);
+    res.status(500).json({ error: e.message });
+  }
+});
+
+router.patch("/by-id/:partnerId/tracking-notifications", async (req, res) => {
+  try {
+    await ensurePartnerSettingsColumns();
+
+    const partnerId = Number(req.params.partnerId);
+
+    if (!Number.isInteger(partnerId)) {
+      return res.status(400).json({ error: "Valid partnerId required" });
+    }
+
+    const settings = normalizeTrackingNotificationSettings(
+      req.body?.trackingNotificationSettings || req.body
+    );
+
+    await prisma.$executeRawUnsafe(
+      `UPDATE Partner
+          SET trackingNotificationSettings = CAST(? AS JSON)
+        WHERE id = ?`,
+      JSON.stringify(settings),
+      partnerId
+    );
+
+    const partner = await getPartnerPolicyById(partnerId);
+    res.json(partner);
+  } catch (e) {
+    console.error("UPDATE PARTNER TRACKING NOTIFICATIONS ERROR:", e);
     res.status(500).json({ error: e.message });
   }
 });

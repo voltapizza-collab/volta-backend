@@ -6,6 +6,7 @@ import {
   retrieveCheckoutSession,
 } from "../services/stripe.js";
 import { sendOrderPaidTrackingSms } from "../services/orderNotifications.js";
+import { sendBoostPurchasedTrackingSms } from "../services/trackingNotifications.js";
 
 const parsePositiveInt = (value) => {
   const parsed = Number(value);
@@ -821,6 +822,46 @@ export default function checkoutRoutes(prisma) {
     });
   };
 
+  const sendBoostPurchasedNotification = async (sale) => {
+    const boostedSale = await prisma.sale.findUnique({
+      where: { id: sale.id },
+      include: {
+        customer: { select: { id: true, name: true, phone: true } },
+        store: {
+          select: {
+            id: true,
+            partnerId: true,
+            storeName: true,
+            partner: {
+              select: {
+                id: true,
+                name: true,
+              },
+            },
+          },
+        },
+      },
+    });
+
+    if (!boostedSale) {
+      return { ok: false, skipped: true, reason: "sale_not_found" };
+    }
+
+    if (boostedSale.partnerId) {
+      const partnerRows = await prisma.$queryRawUnsafe(
+        "SELECT trackingNotificationSettings FROM Partner WHERE id = ?",
+        boostedSale.partnerId
+      );
+      boostedSale.store.partner = {
+        ...(boostedSale.store.partner || {}),
+        trackingNotificationSettings:
+          partnerRows?.[0]?.trackingNotificationSettings || null,
+      };
+    }
+
+    return sendBoostPurchasedTrackingSms(prisma, { sale: boostedSale });
+  };
+
   router.post("/session/confirm", async (req, res) => {
     const sessionId = String(req.body?.sessionId || req.body?.session_id || "").trim();
 
@@ -832,6 +873,14 @@ export default function checkoutRoutes(prisma) {
       const session = await retrieveCheckoutSession(sessionId);
       if (session.metadata?.purpose === "boost_checkout") {
         const result = await markBoostPaidFromStripeSession(session);
+
+        if (!result.alreadyApplied) {
+          sendBoostPurchasedNotification(result.sale)
+            .then((sms) => {
+              if (!sms.ok) console.warn("[checkout.boost-purchased-sms]", sms);
+            })
+            .catch((error) => console.error("[checkout.boost-purchased-sms] error:", error));
+        }
 
         return res.json({
           ok: true,
@@ -880,6 +929,14 @@ export default function checkoutRoutes(prisma) {
     try {
       if (session.metadata?.purpose === "boost_checkout") {
         const result = await markBoostPaidFromStripeSession(session);
+
+        if (!result.alreadyApplied) {
+          sendBoostPurchasedNotification(result.sale)
+            .then((sms) => {
+              if (!sms.ok) console.warn("[checkout.boost-purchased-sms]", sms);
+            })
+            .catch((error) => console.error("[checkout.boost-purchased-sms] error:", error));
+        }
 
         return res.json({
           ok: true,

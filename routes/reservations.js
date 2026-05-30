@@ -1,5 +1,6 @@
 import express from "express";
 import { normalizeE164Phone, sendTelnyxSms } from "../services/telnyx.js";
+import { sendReservationCanceledTrackingSms } from "../services/trackingNotifications.js";
 
 const TZ = process.env.TIMEZONE || "Europe/Madrid";
 
@@ -481,12 +482,67 @@ export default function reservationsRoutes(prisma) {
     if (!id) return res.status(400).json({ error: "Invalid reservation id" });
 
     try {
-      const updated = await prisma.reservation.update({
+      const nextStatus = normalizeStatus(req.params.status);
+      const previous = await prisma.reservation.findUnique({
         where: { id },
-        data: { status: normalizeStatus(req.params.status) },
+        select: { status: true },
       });
 
-      return res.json(serializeReservation(updated));
+      const updated = await prisma.reservation.update({
+        where: { id },
+        data: { status: nextStatus },
+        include: {
+          store: {
+            select: {
+              id: true,
+              partnerId: true,
+              storeName: true,
+              partner: {
+                select: {
+                  id: true,
+                  name: true,
+                },
+              },
+            },
+          },
+        },
+      });
+
+      let notification = null;
+      if (nextStatus === "CANCELED" && previous?.status !== "CANCELED") {
+        if (updated.partnerId) {
+          const partnerRows = await prisma.$queryRawUnsafe(
+            "SELECT trackingNotificationSettings FROM Partner WHERE id = ?",
+            updated.partnerId
+          );
+          updated.store.partner = {
+            ...(updated.store.partner || {}),
+            trackingNotificationSettings:
+              partnerRows?.[0]?.trackingNotificationSettings || null,
+          };
+        }
+
+        try {
+          notification = await sendReservationCanceledTrackingSms(prisma, {
+            reservation: updated,
+          });
+        } catch (notificationError) {
+          console.error(
+            "[PATCH /reservations/:id/:status notification]",
+            notificationError
+          );
+          notification = {
+            ok: false,
+            skipped: true,
+            reason: "notification_failed",
+          };
+        }
+      }
+
+      return res.json({
+        ...serializeReservation(updated),
+        notification,
+      });
     } catch (error) {
       console.error("[PATCH /reservations/:id/:status]", error);
       return res.status(500).json({ error: "internal error" });

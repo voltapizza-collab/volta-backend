@@ -213,12 +213,23 @@ const resolveCustomerTerritory = (customer, stores = []) => {
   return { zipCode: null, source: null };
 };
 
-const serializeCustomerWithTerritory = (customer, stores = []) => {
+const serializeCustomerWithTerritory = (customer, stores = [], summaryOptions = {}) => {
   const territory = resolveCustomerTerritory(customer, stores);
   const { sales, redemptions, assignedCoupons, ...rest } = customer;
+  const summary = summarizeCustomerSales(sales || [], new Date(), summaryOptions);
 
   return {
     ...rest,
+    orderCount: summary.orderCount,
+    averageTicket: summary.averageTicket,
+    lastTicket: summary.lastTicket,
+    lifetimeValue: summary.lifetimeValue,
+    lastOrderAt: summary.lastOrderAt,
+    storeAverageTicket: summary.storeAverageTicket,
+    isAboveStoreAverage: summary.isAboveStoreAverage,
+    daysOff: summary.daysOff ?? rest.daysOff,
+    trend: summary.trend,
+    segment: summary.segment,
     zipCode: rest.zipCode || territory.zipCode,
     lat: hasUsableCoordinates(rest.lat, rest.lng) ? rest.lat : territory.lat ?? rest.lat,
     lng: hasUsableCoordinates(rest.lat, rest.lng) ? rest.lng : territory.lng ?? rest.lng,
@@ -244,8 +255,10 @@ const postalAreaKey = (postalCode) => {
 
 const CUSTOMER_SEGMENTS = ["S1", "S2", "S3", "S4", "S5"];
 
-const getCustomerActivity = (daysOff) =>
-  Number(daysOff || 0) > COLD_DAYS_THRESHOLD ? "COLD" : "HOT";
+const getCustomerActivity = (daysOff, orders = 0) => {
+  if (!orders) return "COLD";
+  return Number(daysOff || 0) > COLD_DAYS_THRESHOLD ? "COLD" : "HOT";
+};
 
 const daysBetween = (left, right = new Date()) => {
   if (!left) return null;
@@ -263,38 +276,60 @@ const getCustomerTrend = ({ orders, avgTicket, lastTicket }) => {
   return "Estable";
 };
 
-const getCustomerSegment = ({ orders, daysOff, avgTicket, lastTicket }) => {
+const getCustomerSegment = ({ orders, daysOff, avgTicket, storeAverageTicket }) => {
   if (orders === 0) return "S1";
   if (orders === 1) return "S2";
-  if (orders >= 10) return "S5";
-  if (Number(daysOff || 0) > 30) return "S3";
-  if (lastTicket >= avgTicket * 1.15) return "S5";
+  if (orders > 5 && Number(storeAverageTicket || 0) > 0 && avgTicket > storeAverageTicket) return "S5";
+  if (orders > 1 && Number(daysOff || 0) > 30) return "S3";
   return "S4";
 };
 
-const summarizeCustomerSales = (sales = [], now = new Date()) => {
+const summarizeCustomerSales = (sales = [], now = new Date(), options = {}) => {
   const rows = sales
     .map((row) => ({
       total: Number(row.total || 0),
-      createdAt: row.createdAt,
+      soldAt: row.date || row.createdAt,
+      storeId: row.storeId ? Number(row.storeId) : null,
     }))
     .filter((row) => Number.isFinite(row.total) && row.total > 0)
-    .sort((left, right) => new Date(right.createdAt).getTime() - new Date(left.createdAt).getTime());
+    .sort((left, right) => new Date(right.soldAt).getTime() - new Date(left.soldAt).getTime());
 
   const orders = rows.length;
   const sum = rows.reduce((acc, row) => acc + row.total, 0);
   const avgTicket = orders ? sum / orders : 0;
   const lastTicket = rows[0]?.total || 0;
-  const daysOff = orders ? daysBetween(rows[0]?.createdAt, now) ?? 0 : null;
+  const daysOff = orders ? daysBetween(rows[0]?.soldAt, now) ?? 0 : null;
+  const comparisonStoreId = Number(options.storeId || rows[0]?.storeId || 0) || null;
+  const storeAverageTicket = comparisonStoreId
+    ? Number(options.storeAverageByStoreId?.get(comparisonStoreId) || 0)
+    : 0;
 
   return {
     orderCount: orders,
     averageTicket: avgTicket,
     lastTicket,
+    lifetimeValue: sum,
+    lastOrderAt: rows[0]?.soldAt || null,
+    storeAverageTicket,
+    isAboveStoreAverage: orders > 0 && storeAverageTicket > 0 ? avgTicket > storeAverageTicket : false,
     daysOff,
     trend: getCustomerTrend({ orders, avgTicket, lastTicket }),
-    segment: getCustomerSegment({ orders, daysOff, avgTicket, lastTicket }),
+    segment: getCustomerSegment({ orders, daysOff, avgTicket, storeAverageTicket }),
   };
+};
+
+const getStoreAverageTickets = async (prisma, partnerId) => {
+  const rows = await prisma.sale.groupBy({
+    by: ["storeId"],
+    where: { partnerId },
+    _avg: { total: true },
+  });
+
+  return new Map(
+    rows
+      .filter((row) => row.storeId && Number(row._avg?.total || 0) > 0)
+      .map((row) => [Number(row.storeId), Number(row._avg.total)])
+  );
 };
 
 const buildStoreScopeFilters = (storeId, selectedStore) => {
@@ -362,8 +397,10 @@ async function buildCustomerWhere(prisma, filters) {
 
   if (temperature === "COLD") {
     extraWhere.daysOff = { gt: COLD_DAYS_THRESHOLD };
+    extraWhere.sales = { some: {} };
   } else if (temperature === "HOT") {
     extraWhere.daysOff = { lte: COLD_DAYS_THRESHOLD };
+    extraWhere.sales = { some: {} };
   }
 
   if (storeId) {
@@ -453,7 +490,7 @@ export default function customersRoutes(prisma) {
 
       const where = partnerId ? { partnerId } : undefined;
 
-      const [list, territoryStores, partnerTerritory] = await Promise.all([
+      const [list, territoryStores, partnerTerritory, storeAverageByStoreId] = await Promise.all([
         prisma.customer.findMany({
           where,
           select: {
@@ -461,21 +498,25 @@ export default function customersRoutes(prisma) {
             partnerId: true,
             name: true,
             phone: true,
+            email: true,
             address_1: true,
             zipCode: true,
             lat: true,
             lng: true,
             daysOff: true,
             segment: true,
+            createdAt: true,
+            observations: true,
             sales: {
               orderBy: { date: "desc" },
-              take: 1,
               select: {
                 storeId: true,
                 address_1: true,
                 lat: true,
                 lng: true,
                 date: true,
+                createdAt: true,
+                total: true,
                 store: {
                   select: {
                     id: true,
@@ -539,11 +580,12 @@ export default function customersRoutes(prisma) {
               select: { country: true },
             })
           : Promise.resolve(null),
+        partnerId ? getStoreAverageTickets(prisma, partnerId) : Promise.resolve(new Map()),
       ]);
 
       const serialized = await Promise.all(
         list.map(async (customer) => {
-          const row = serializeCustomerWithTerritory(customer, territoryStores);
+          const row = serializeCustomerWithTerritory(customer, territoryStores, { storeAverageByStoreId });
           if (hasUsableCoordinates(row.lat, row.lng) || !row.territoryZipCode) return row;
 
           const coords = await geocodePostalCode(row.territoryZipCode, partnerTerritory?.country || "ES");
@@ -622,14 +664,12 @@ export default function customersRoutes(prisma) {
     }
 
     // 🔥 filtro por segmento
-    if (segment && CUSTOMER_SEGMENTS.includes(segment)) {
-      extraWhere.segment = segment;
-    }
-
     if (temperature === "COLD") {
       extraWhere.daysOff = { gt: COLD_DAYS_THRESHOLD };
+      extraWhere.sales = { some: {} };
     } else if (temperature === "HOT") {
       extraWhere.daysOff = { lte: COLD_DAYS_THRESHOLD };
+      extraWhere.sales = { some: {} };
     }
 
     try {
@@ -674,7 +714,7 @@ export default function customersRoutes(prisma) {
 
       const where = createWhereByPartner(partnerId, extraWhere);
 
-      const [items, total] = await Promise.all([
+      const [items, storeAverageByStoreId] = await Promise.all([
         prisma.customer.findMany({
           where,
           orderBy: { createdAt: "desc" },
@@ -698,27 +738,36 @@ export default function customersRoutes(prisma) {
             sales: {
               select: {
                 total: true,
+                date: true,
                 createdAt: true,
+                storeId: true,
               },
             },
             createdAt: true,
             updatedAt: true,
           },
-          skip,
-          take,
         }),
-        prisma.customer.count({ where }),
+        getStoreAverageTickets(prisma, partnerId),
       ]);
 
+      const computedItems = items.map((customer) => {
+        const { sales, ...rest } = customer;
+        return {
+          ...rest,
+          ...summarizeCustomerSales(sales, new Date(), {
+            storeId,
+            storeAverageByStoreId,
+          }),
+        };
+      });
+      const filteredItems =
+        segment && CUSTOMER_SEGMENTS.includes(segment)
+          ? computedItems.filter((customer) => customer.segment === segment)
+          : computedItems;
+
       return res.json({
-        items: items.map((customer) => {
-          const { sales, ...rest } = customer;
-          return {
-            ...rest,
-            ...summarizeCustomerSales(sales),
-          };
-        }),
-        total,
+        items: filteredItems.slice(skip, skip + take),
+        total: filteredItems.length,
         skip,
         take,
       });
@@ -769,23 +818,25 @@ export default function customersRoutes(prisma) {
     }
 
     try {
-      const [bySeg, total, restricted, cold, zipRows, territoryStores] = await Promise.all([
-        prisma.customer.groupBy({
-          by: ["segment"],
+      const [customerRows, total, restricted, zipRows, territoryStores, storeAverageByStoreId] = await Promise.all([
+        prisma.customer.findMany({
           where: { partnerId },
-          _count: { _all: true },
+          select: {
+            sales: {
+              select: {
+                total: true,
+                date: true,
+                createdAt: true,
+                storeId: true,
+              },
+            },
+          },
         }),
         prisma.customer.count({ where: { partnerId } }),
         prisma.customer.count({
           where: {
             partnerId,
             isRestricted: true,
-          },
-        }),
-        prisma.customer.count({
-          where: {
-            partnerId,
-            daysOff: { gt: COLD_DAYS_THRESHOLD },
           },
         }),
         prisma.customer.findMany({
@@ -849,6 +900,7 @@ export default function customersRoutes(prisma) {
             longitude: true,
           },
         }),
+        getStoreAverageTickets(prisma, partnerId),
       ]);
 
       const counts = { S1: 0, S2: 0, S3: 0, S4: 0, S5: 0 };
@@ -858,9 +910,10 @@ export default function customersRoutes(prisma) {
           .filter(Boolean)
       )].sort((left, right) => String(left).localeCompare(String(right)));
 
-      bySeg.forEach((row) => {
-        if (row.segment && Object.prototype.hasOwnProperty.call(counts, row.segment)) {
-          counts[row.segment] = row._count._all || 0;
+      customerRows.forEach((customer) => {
+        const summary = summarizeCustomerSales(customer.sales, new Date(), { storeAverageByStoreId });
+        if (summary.segment && Object.prototype.hasOwnProperty.call(counts, summary.segment)) {
+          counts[summary.segment] += 1;
         }
       });
 
@@ -870,10 +923,6 @@ export default function customersRoutes(prisma) {
         active: {
           restricted,
           unrestricted: Math.max(total - restricted, 0),
-        },
-        temperature: {
-          cold,
-          hot: Math.max(total - cold, 0),
         },
         zipCodes,
         updatedAt: new Date().toISOString(),
@@ -940,21 +989,26 @@ export default function customersRoutes(prisma) {
     }
 
     try {
-      const customers = await prisma.customer.findMany({
-        where: { partnerId },
-        select: {
-          id: true,
-          segment: true,
-          daysOff: true,
-          activity: true,
-          sales: {
-            select: {
-              total: true,
-              createdAt: true,
+      const [customers, storeAverageByStoreId] = await Promise.all([
+        prisma.customer.findMany({
+          where: { partnerId },
+          select: {
+            id: true,
+            segment: true,
+            daysOff: true,
+            activity: true,
+            sales: {
+              select: {
+                total: true,
+                date: true,
+                createdAt: true,
+                storeId: true,
+              },
             },
           },
-        },
-      });
+        }),
+        getStoreAverageTickets(prisma, partnerId),
+      ]);
 
       const updates = [];
       const counts = { S1: 0, S2: 0, S3: 0, S4: 0, S5: 0 };
@@ -962,12 +1016,12 @@ export default function customersRoutes(prisma) {
       const now = new Date();
 
       customers.forEach((customer) => {
-        const summary = summarizeCustomerSales(customer.sales, now);
+        const summary = summarizeCustomerSales(customer.sales, now, { storeAverageByStoreId });
         const segment = summary.segment;
         const daysOff = summary.daysOff ?? customer.daysOff ?? null;
 
         counts[segment] += 1;
-        const activity = getCustomerActivity(daysOff);
+        const activity = getCustomerActivity(daysOff, summary.orderCount);
 
         if (segment !== customer.segment || activity !== customer.activity || daysOff !== customer.daysOff) {
           changed += 1;

@@ -35,6 +35,7 @@ import boostSettingsRoutes from "./routes/boostSettings.js";
 import checkoutRoutes from "./routes/checkout.js";
 import presenceRoutes from "./routes/presence.js";
 import salesRoutes from "./routes/sales.js";
+import trackingAlertsRoutes from "./routes/trackingAlerts.js";
 import { validateTelnyxEnv } from "./services/telnyx.js";
 
 const __filename = fileURLToPath(import.meta.url);
@@ -91,6 +92,7 @@ const boostSettingsRouter = boostSettingsRoutes(prisma);
 const checkoutRouter = checkoutRoutes(prisma);
 const presenceRouter = presenceRoutes();
 const salesRouter = salesRoutes(prisma);
+const trackingAlertsRouter = trackingAlertsRoutes(prisma);
 
 const envOrigins = (process.env.CORS_ORIGINS || "")
   .split(",")
@@ -185,6 +187,7 @@ app.use("/api/checkout", checkoutRouter);
 app.use("/api/presence", presenceRouter);
 app.use("/api/myorders", myordersRouter);
 app.use("/api/sales", salesRouter);
+app.use("/api/tracking-alerts", trackingAlertsRouter);
 app.use("/api/billing", billingRouter);
 app.use("/api/boost-settings", boostSettingsRouter);
 app.use("/api/webhooks", telnyxWebhooksRouter);
@@ -197,7 +200,10 @@ const publicBackofficeUrl =
     : "https://voltapizza.com/Backoffice");
 
 app.get(["/Backoffice", "/backoffice"], (req, res) => {
-  res.redirect(302, publicBackofficeUrl);
+  const queryString = req.originalUrl.includes("?")
+    ? req.originalUrl.slice(req.originalUrl.indexOf("?"))
+    : "";
+  res.redirect(302, `${publicBackofficeUrl}${queryString}`);
 });
 
 

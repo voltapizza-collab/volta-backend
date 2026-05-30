@@ -132,9 +132,13 @@ export async function rechargeSmsCredits(prisma, { partnerId, amount, quantity, 
   });
 }
 
-export async function reserveSmsCreditForMessage(prisma, { partnerId, couponCode, customerId, to } = {}) {
+export async function reserveSmsCreditForMessage(
+  prisma,
+  { partnerId, couponCode, customerId, to, reference, meta } = {}
+) {
   const id = parsePositiveInt(partnerId);
   if (!id) return { ok: false, error: "partnerId_required" };
+  const ledgerReference = reference || couponCode || null;
 
   return prisma.$transaction(async (tx) => {
     const updated = await tx.partner.updateMany({
@@ -174,11 +178,12 @@ export async function reserveSmsCreditForMessage(prisma, { partnerId, couponCode
         unitPrice: SMS_SELL_PRICE_EUR,
         providerCost: SMS_PROVIDER_COST_EUR,
         provider: "telnyx",
-        reference: couponCode || null,
+        reference: ledgerReference,
         meta: {
           couponCode: couponCode || null,
           customerId: customerId || null,
           to: to || null,
+          ...(meta && typeof meta === "object" ? meta : {}),
         },
       },
     });
@@ -191,9 +196,13 @@ export async function reserveSmsCreditForMessage(prisma, { partnerId, couponCode
   });
 }
 
-export async function refundSmsCreditForMessage(prisma, { partnerId, couponCode, customerId, reason } = {}) {
+export async function refundSmsCreditForMessage(
+  prisma,
+  { partnerId, couponCode, customerId, reason, reference, meta } = {}
+) {
   const id = parsePositiveInt(partnerId);
   if (!id) return { ok: false, error: "partnerId_required" };
+  const ledgerReference = reference || couponCode || null;
 
   return prisma.$transaction(async (tx) => {
     const partner = await tx.partner.update({
@@ -214,11 +223,12 @@ export async function refundSmsCreditForMessage(prisma, { partnerId, couponCode,
         unitPrice: SMS_SELL_PRICE_EUR,
         providerCost: SMS_PROVIDER_COST_EUR,
         provider: "telnyx",
-        reference: couponCode || null,
+        reference: ledgerReference,
         meta: {
           couponCode: couponCode || null,
           customerId: customerId || null,
           reason: reason || null,
+          ...(meta && typeof meta === "object" ? meta : {}),
         },
       },
     });
