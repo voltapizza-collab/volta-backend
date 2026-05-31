@@ -217,6 +217,7 @@ const serializeCustomerWithTerritory = (customer, stores = [], summaryOptions = 
   const territory = resolveCustomerTerritory(customer, stores);
   const { sales, redemptions, assignedCoupons, ...rest } = customer;
   const summary = summarizeCustomerSales(sales || [], new Date(), summaryOptions);
+  const topProducts = summarizeCustomerProducts(sales || [], summaryOptions.pizzaNameById);
 
   return {
     ...rest,
@@ -230,6 +231,8 @@ const serializeCustomerWithTerritory = (customer, stores = [], summaryOptions = 
     daysOff: summary.daysOff ?? rest.daysOff,
     trend: summary.trend,
     segment: summary.segment,
+    topProducts,
+    favoriteProduct: topProducts[0] || null,
     zipCode: rest.zipCode || territory.zipCode,
     lat: hasUsableCoordinates(rest.lat, rest.lng) ? rest.lat : territory.lat ?? rest.lat,
     lng: hasUsableCoordinates(rest.lat, rest.lng) ? rest.lng : territory.lng ?? rest.lng,
@@ -254,6 +257,91 @@ const postalAreaKey = (postalCode) => {
 };
 
 const CUSTOMER_SEGMENTS = ["S1", "S2", "S3", "S4", "S5"];
+const QUALIFYING_SALE_STATUS = "PAID";
+
+const parseMaybeJson = (value, fallback = null) => {
+  if (typeof value !== "string") return value ?? fallback;
+  try {
+    return JSON.parse(value);
+  } catch {
+    return fallback;
+  }
+};
+
+const asArray = (value) => {
+  const first = parseMaybeJson(value, []);
+  const second = parseMaybeJson(first, []);
+  return Array.isArray(second) ? second : [];
+};
+
+const getSaleLineQty = (item) => {
+  const parsed = Number(item?.quantity ?? item?.qty ?? item?.cantidad ?? 1);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : 1;
+};
+
+const getSaleLinePizzaId = (item) => {
+  const parsed = Number(item?.pizzaId ?? item?.menuPizzaId ?? item?.productId ?? item?.legacyPizzaId);
+  return Number.isInteger(parsed) && parsed > 0 ? parsed : null;
+};
+
+const normalizeSaleLineName = (value) =>
+  String(value || "")
+    .trim()
+    .replace(/^demo\s+/i, "")
+    .replace(/\s+/g, " ");
+
+const getSaleLineName = (item, pizzaNameById = new Map(), salePartnerId = null) => {
+  const pizzaId = getSaleLinePizzaId(item);
+  const scopedKey = salePartnerId && pizzaId ? `${salePartnerId}:${pizzaId}` : "";
+  const mappedName = normalizeSaleLineName(scopedKey ? pizzaNameById.get(scopedKey) : "");
+  const type = String(item?.type || "").toUpperCase();
+  const customBaseName =
+    item?.customMeta?.baseProductName ||
+    item?.customDetails?.baseProductName ||
+    item?.baseProductName;
+  const directName = normalizeSaleLineName(
+    item?.name || item?.pizzaName || item?.title || item?.productName
+  );
+
+  return String(
+    mappedName ||
+      directName ||
+      (item?.leftName && item?.rightName ? `${item.leftName} / ${item.rightName}` : "") ||
+      (type === "CUSTOM_BUILD" ? customBaseName || "Pizza personalizada" : "") ||
+      "Producto sin nombre"
+  ).trim();
+};
+
+const collectSalePizzaIds = (sales = []) => {
+  const ids = new Set();
+
+  sales.forEach((sale) => {
+    asArray(sale.products).forEach((item) => {
+      const pizzaId = getSaleLinePizzaId(item);
+      if (pizzaId) ids.add(pizzaId);
+    });
+  });
+
+  return [...ids];
+};
+
+const getPizzaNameById = async (prisma, sales = []) => {
+  const ids = collectSalePizzaIds(sales);
+  if (!ids.length) return new Map();
+  const partnerIds = [
+    ...new Set(sales.map((sale) => Number(sale?.partnerId || 0)).filter((id) => id > 0)),
+  ];
+
+  const pizzas = await prisma.menuPizza.findMany({
+    where: {
+      id: { in: ids },
+      ...(partnerIds.length ? { partnerId: { in: partnerIds } } : {}),
+    },
+    select: { id: true, partnerId: true, name: true },
+  });
+
+  return new Map(pizzas.map((pizza) => [`${pizza.partnerId}:${pizza.id}`, pizza.name]));
+};
 
 const getCustomerActivity = (daysOff, orders = 0) => {
   if (!orders) return "COLD";
@@ -284,8 +372,33 @@ const getCustomerSegment = ({ orders, daysOff, avgTicket, storeAverageTicket }) 
   return "S4";
 };
 
+const summarizeCustomerProducts = (sales = [], pizzaNameById = new Map()) => {
+  const productCounts = new Map();
+
+  sales
+    .filter((row) => String(row.status || "").toUpperCase() === QUALIFYING_SALE_STATUS)
+    .forEach((sale) => {
+      asArray(sale.products).forEach((item) => {
+        const name = getSaleLineName(item, pizzaNameById, sale.partnerId);
+        if (!name) return;
+        productCounts.set(name, (productCounts.get(name) || 0) + getSaleLineQty(item));
+      });
+    });
+
+  return [...productCounts.entries()]
+    .map(([name, units]) => ({ name, units }))
+    .sort((left, right) => {
+      if (right.units !== left.units) return right.units - left.units;
+      const leftUnnamed = normalizeComparableText(left.name) === "producto sin nombre";
+      const rightUnnamed = normalizeComparableText(right.name) === "producto sin nombre";
+      if (leftUnnamed !== rightUnnamed) return leftUnnamed ? 1 : -1;
+      return left.name.localeCompare(right.name, "es", { sensitivity: "base" });
+    });
+};
+
 const summarizeCustomerSales = (sales = [], now = new Date(), options = {}) => {
   const rows = sales
+    .filter((row) => String(row.status || "").toUpperCase() === QUALIFYING_SALE_STATUS)
     .map((row) => ({
       total: Number(row.total || 0),
       soldAt: row.date || row.createdAt,
@@ -321,7 +434,7 @@ const summarizeCustomerSales = (sales = [], now = new Date(), options = {}) => {
 const getStoreAverageTickets = async (prisma, partnerId) => {
   const rows = await prisma.sale.groupBy({
     by: ["storeId"],
-    where: { partnerId },
+    where: { partnerId, status: QUALIFYING_SALE_STATUS },
     _avg: { total: true },
   });
 
@@ -510,6 +623,7 @@ export default function customersRoutes(prisma) {
             sales: {
               orderBy: { date: "desc" },
               select: {
+                partnerId: true,
                 storeId: true,
                 address_1: true,
                 lat: true,
@@ -517,6 +631,8 @@ export default function customersRoutes(prisma) {
                 date: true,
                 createdAt: true,
                 total: true,
+                status: true,
+                products: true,
                 store: {
                   select: {
                     id: true,
@@ -583,9 +699,17 @@ export default function customersRoutes(prisma) {
         partnerId ? getStoreAverageTickets(prisma, partnerId) : Promise.resolve(new Map()),
       ]);
 
+      const pizzaNameById = await getPizzaNameById(
+        prisma,
+        list.flatMap((customer) => customer.sales || [])
+      );
+
       const serialized = await Promise.all(
         list.map(async (customer) => {
-          const row = serializeCustomerWithTerritory(customer, territoryStores, { storeAverageByStoreId });
+          const row = serializeCustomerWithTerritory(customer, territoryStores, {
+            storeAverageByStoreId,
+            pizzaNameById,
+          });
           if (hasUsableCoordinates(row.lat, row.lng) || !row.territoryZipCode) return row;
 
           const coords = await geocodePostalCode(row.territoryZipCode, partnerTerritory?.country || "ES");
@@ -617,7 +741,8 @@ export default function customersRoutes(prisma) {
     const country = String(req.query.country || "").trim().toUpperCase();
     const segment = String(req.query.segment || "").trim().toUpperCase();
     const temperature = String(req.query.temperature || "").trim().toUpperCase();
-    const take = Math.min(parsePositiveInt(req.query.take) || 50, 200);
+    const takeAll = String(req.query.take || "").trim().toLowerCase() === "all";
+    const take = takeAll ? null : Math.min(parsePositiveInt(req.query.take) || 50, 5000);
     const skip = Math.max(Number(req.query.skip) || 0, 0);
 
     if (!partnerId) {
@@ -738,9 +863,12 @@ export default function customersRoutes(prisma) {
             sales: {
               select: {
                 total: true,
+                status: true,
                 date: true,
                 createdAt: true,
+                partnerId: true,
                 storeId: true,
+                products: true,
               },
             },
             createdAt: true,
@@ -750,14 +878,22 @@ export default function customersRoutes(prisma) {
         getStoreAverageTickets(prisma, partnerId),
       ]);
 
+      const pizzaNameById = await getPizzaNameById(
+        prisma,
+        items.flatMap((customer) => customer.sales || [])
+      );
+
       const computedItems = items.map((customer) => {
         const { sales, ...rest } = customer;
+        const topProducts = summarizeCustomerProducts(sales, pizzaNameById);
         return {
           ...rest,
           ...summarizeCustomerSales(sales, new Date(), {
             storeId,
             storeAverageByStoreId,
           }),
+          topProducts,
+          favoriteProduct: topProducts[0] || null,
         };
       });
       const filteredItems =
@@ -766,10 +902,10 @@ export default function customersRoutes(prisma) {
           : computedItems;
 
       return res.json({
-        items: filteredItems.slice(skip, skip + take),
+        items: take == null ? filteredItems.slice(skip) : filteredItems.slice(skip, skip + take),
         total: filteredItems.length,
         skip,
-        take,
+        take: take == null ? filteredItems.length : take,
       });
     } catch (error) {
       console.error("[CUSTOMERS /admin] error:", error);
@@ -825,6 +961,7 @@ export default function customersRoutes(prisma) {
             sales: {
               select: {
                 total: true,
+                status: true,
                 date: true,
                 createdAt: true,
                 storeId: true,
@@ -1000,6 +1137,7 @@ export default function customersRoutes(prisma) {
             sales: {
               select: {
                 total: true,
+                status: true,
                 date: true,
                 createdAt: true,
                 storeId: true,

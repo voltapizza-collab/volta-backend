@@ -34,17 +34,7 @@ const getPizzaAvailability = (pizza, stockRow) => {
       return;
     }
 
-    if (!storeStock) {
-      blockers.push({
-        type: "ingredient_missing_in_store",
-        ingredientId: ingredient.id,
-        ingredientName: ingredient.name,
-        label: `${ingredient.name} no esta en el inventario de esta tienda`,
-      });
-      return;
-    }
-
-    if (storeStock.active !== true) {
+    if (storeStock?.active === false) {
       blockers.push({
         type: "ingredient_inactive_in_store",
         ingredientId: ingredient.id,
@@ -127,7 +117,7 @@ export default function stockRoutes(prisma) {
               name: rel.ingredient?.name,
               status:
                 rel.ingredient?.status === "ACTIVE" &&
-                rel.ingredient?.storeStocks?.[0]?.active === true
+                rel.ingredient?.storeStocks?.[0]?.active !== false
                   ? "ACTIVE"
                   : "INACTIVE",
             })),

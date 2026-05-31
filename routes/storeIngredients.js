@@ -64,7 +64,7 @@ const serializeIngredient = (ing, storeStock, extra = {}) => ({
   image: ing.image || null,
   imagePublicId: ing.imagePublicId || null,
   exists: !!storeStock,
-  active: storeStock ? storeStock.active : false,
+  active: storeStock?.active !== false,
   stock: storeStock ? storeStock.stock : 0,
   ...extra,
 });
@@ -230,7 +230,7 @@ router.get("/", async (req, res) => {
 
         // 🔥 NUEVO MODELO VOLTA
         exists: !!storeStock,
-        active: storeStock ? storeStock.active : false,
+        active: storeStock?.active !== false,
         stock: storeStock ? storeStock.stock : 0,
       };
     });

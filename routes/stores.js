@@ -540,7 +540,7 @@ const attachStorePublicMenu = (router, prisma) => {
         return (pizza.ingredients || []).every((rel) => {
           const ingredient = rel.ingredient;
           const storeStock = ingredient?.storeStocks?.[0];
-          return ingredient?.status === "ACTIVE" && storeStock?.active === true;
+          return ingredient?.status === "ACTIVE" && storeStock?.active !== false;
         });
       });
 

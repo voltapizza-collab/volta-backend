@@ -12,7 +12,7 @@ const computeProductStatus = (pizzaStock, ingredientsAll) => {
     const ingredient = rel?.ingredient;
     const storeStock = ingredient?.storeStocks?.[0];
 
-    return ingredient?.status === "ACTIVE" && storeStock?.active === true;
+    return ingredient?.status === "ACTIVE" && storeStock?.active !== false;
   });
 
   return { available };
@@ -121,7 +121,7 @@ export default function menuDisponibleRoutes(prisma) {
           const visibleIngredients = ingredientsAll.filter((rel) => {
             const ing = rel.ingredient;
             const storeStock = ing?.storeStocks?.[0];
-            return ing?.status === "ACTIVE" && storeStock?.active === true;
+            return ing?.status === "ACTIVE" && storeStock?.active !== false;
           });
 
           return {
