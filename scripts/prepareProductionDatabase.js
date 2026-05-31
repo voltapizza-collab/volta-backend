@@ -3,6 +3,7 @@ import { spawnSync } from "child_process";
 import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
+import { ensureIngredientMediaColumns } from "../services/ingredientMediaColumns.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -30,6 +31,9 @@ if (fs.existsSync(envPath)) {
 }
 
 const STOREFRONT_MODE_MIGRATION = "20260525120000_add_storefront_mode";
+const TRACKING_NOTIFICATION_SETTINGS_MIGRATION =
+  "20260529123000_add_tracking_notification_settings";
+const INGREDIENT_MEDIA_MIGRATION = "20260530102000_add_ingredient_media_fields";
 
 const prisma = new PrismaClient();
 
@@ -45,6 +49,26 @@ async function ensureStorefrontModeColumn() {
       "ALTER TABLE `Partner` ADD COLUMN `storefrontMode` VARCHAR(64) NULL"
     );
     console.log("[db-prepare] Added Partner.storefrontMode");
+  } catch (error) {
+    const message = `${error?.message || ""} ${error?.meta?.message || ""}`;
+    if (!message.includes("Duplicate column name")) {
+      throw error;
+    }
+  }
+}
+
+async function ensureTrackingNotificationSettingsColumn() {
+  const rows = await prisma.$queryRawUnsafe(
+    "SHOW COLUMNS FROM `Partner` LIKE 'trackingNotificationSettings'"
+  );
+
+  if (Array.isArray(rows) && rows.length > 0) return;
+
+  try {
+    await prisma.$executeRawUnsafe(
+      "ALTER TABLE `Partner` ADD COLUMN `trackingNotificationSettings` JSON NULL"
+    );
+    console.log("[db-prepare] Added Partner.trackingNotificationSettings");
   } catch (error) {
     const message = `${error?.message || ""} ${error?.meta?.message || ""}`;
     if (!message.includes("Duplicate column name")) {
@@ -89,17 +113,36 @@ function resolveFailedMigration(name) {
 
 try {
   await ensureStorefrontModeColumn();
+  await ensureTrackingNotificationSettingsColumn();
+  await ensureIngredientMediaColumns(prisma);
 
-  const migration = await getMigrationRecord(STOREFRONT_MODE_MIGRATION);
-  const isFailed =
-    migration &&
-    migration.finished_at == null &&
-    migration.rolled_back_at == null;
+  const migrationNames = [
+    STOREFRONT_MODE_MIGRATION,
+    TRACKING_NOTIFICATION_SETTINGS_MIGRATION,
+    INGREDIENT_MEDIA_MIGRATION,
+  ];
 
-  if (isFailed) {
-    console.log(`[db-prepare] Resolving failed migration ${STOREFRONT_MODE_MIGRATION}`);
+  const failedMigrationNames = [];
+
+  for (const migrationName of migrationNames) {
+    const migration = await getMigrationRecord(migrationName);
+    const isFailed =
+      migration &&
+      migration.finished_at == null &&
+      migration.rolled_back_at == null;
+
+    if (isFailed) {
+      failedMigrationNames.push(migrationName);
+    }
+  }
+
+  if (failedMigrationNames.length > 0) {
     await prisma.$disconnect();
-    resolveFailedMigration(STOREFRONT_MODE_MIGRATION);
+
+    failedMigrationNames.forEach((migrationName) => {
+      console.log(`[db-prepare] Resolving failed migration ${migrationName}`);
+      resolveFailedMigration(migrationName);
+    });
   }
 } finally {
   await prisma.$disconnect().catch(() => {});
