@@ -259,6 +259,9 @@ const assertImageUploadWasMultipart = (req) => {
   }
 };
 
+const getRequestBody = (req) =>
+  req.body && typeof req.body === "object" ? req.body : {};
+
 const getErrorStatus = (err, fallback = 400) => {
   if (err?.status) return err.status;
   if (["P1001", "P1002", "P1017"].includes(err?.code)) return 503;
@@ -320,6 +323,7 @@ export default function pizzasRoutes(prisma) {
 
   router.post("/", upload.single("image"), async (req, res) => {
     try {
+      const body = getRequestBody(req);
       const {
         name,
         partnerId,
@@ -331,7 +335,7 @@ export default function pizzasRoutes(prisma) {
         cookingMethod,
         ingredients,
         launchAt,
-      } = req.body;
+      } = body;
 
       assertImageUploadWasMultipart(req);
 
@@ -433,6 +437,7 @@ export default function pizzasRoutes(prisma) {
 
   router.put("/:id", upload.single("image"), async (req, res) => {
     try {
+      const body = getRequestBody(req);
       const id = Number(req.params.id);
       if (!id) return res.status(400).json({ error: "Invalid id" });
 
@@ -446,16 +451,16 @@ export default function pizzasRoutes(prisma) {
 
       assertImageUploadWasMultipart(req);
 
-      const parsedSizes = parseMaybeJson(req.body.sizes, []);
-      const parsedPrices = parseMaybeJson(req.body.priceBySize, {});
-      const parsedIngredients = parseMaybeJson(req.body.ingredients, []);
+      const parsedSizes = parseMaybeJson(body.sizes, []);
+      const parsedPrices = parseMaybeJson(body.priceBySize, {});
+      const parsedIngredients = parseMaybeJson(body.ingredients, []);
       const nextBaseName = normalizeBaseLabel(
-        req.body.baseName || req.body.cookingMethod || existing.cookingMethod
+        body.baseName || body.cookingMethod || existing.cookingMethod
       );
 
       await assertIngredientsAvailableForStore(
         prisma,
-        req.body.storeId,
+        body.storeId,
         existing.partnerId,
         parsedIngredients
       );
@@ -465,8 +470,8 @@ export default function pizzasRoutes(prisma) {
       let nextImage = existing.image ?? null;
       let nextImagePublicId = existing.imagePublicId ?? null;
 
-      if (req.body.categoryId != null && req.body.categoryId !== "") {
-        const category = await getCategoryOrThrow(prisma, req.body.categoryId);
+      if (body.categoryId != null && body.categoryId !== "") {
+        const category = await getCategoryOrThrow(prisma, body.categoryId);
         nextCategoryId = category.id;
         nextCategoryName = category.name;
       }
@@ -480,13 +485,13 @@ export default function pizzasRoutes(prisma) {
       }
 
       const updateData = {
-        name: req.body.name?.trim() ?? existing.name,
+        name: body.name?.trim() ?? existing.name,
         categoryId: nextCategoryId,
         category: nextCategoryName,
         selectSize: parsedSizes,
         priceBySize: parsedPrices,
         cookingMethod: nextBaseName,
-        launchAt: parseLaunchAt(req.body.launchAt),
+        launchAt: parseLaunchAt(body.launchAt),
         image: nextImage,
         imagePublicId: nextImagePublicId,
       };
@@ -506,7 +511,7 @@ export default function pizzasRoutes(prisma) {
       if (
         existingIngredientCount > 0 &&
         ingredientRows.length === 0 &&
-        req.body.allowEmptyIngredients !== "true"
+        body.allowEmptyIngredients !== "true"
       ) {
         const error = new Error(
           "Refusing to clear existing product ingredients without explicit confirmation"
