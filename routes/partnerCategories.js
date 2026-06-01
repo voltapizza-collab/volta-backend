@@ -1,5 +1,11 @@
 import express from "express";
 
+const DEMO_PARTNER_SLUG = "volta-demo";
+const DEMO_ONLY_CATEGORY_NAMES = new Set(["Demo Pizzas", "Demo Especiales"]);
+
+const isDemoOnlyCategory = (category) =>
+  DEMO_ONLY_CATEGORY_NAMES.has(String(category?.name || "").trim());
+
 const getPartnerOrThrow = async (prisma, partnerId) => {
   const parsedPartnerId = Number(partnerId);
 
@@ -11,7 +17,7 @@ const getPartnerOrThrow = async (prisma, partnerId) => {
 
   const partner = await prisma.partner.findUnique({
     where: { id: parsedPartnerId },
-    select: { id: true },
+    select: { id: true, slug: true },
   });
 
   if (!partner) {
@@ -20,24 +26,29 @@ const getPartnerOrThrow = async (prisma, partnerId) => {
     throw error;
   }
 
-  return parsedPartnerId;
+  return partner;
 };
 
-const loadGlobalCategoryFallback = async (prisma) => {
+const loadGlobalCategoryFallback = async (prisma, partner) => {
   const categories = await prisma.category.findMany({
     orderBy: [{ position: "asc" }, { name: "asc" }],
   });
 
-  return categories.map((category, index) => ({
-    id: category.id,
-    partnerCategoryId: null,
-    name: category.name,
-    customizable: category.customizable ?? false,
-    enabled: true,
-    position: category.position ?? index,
-    createdAt: category.createdAt,
-    updatedAt: category.updatedAt,
-  }));
+  return categories
+    .filter(
+      (category) =>
+        partner?.slug === DEMO_PARTNER_SLUG || !isDemoOnlyCategory(category)
+    )
+    .map((category, index) => ({
+      id: category.id,
+      partnerCategoryId: null,
+      name: category.name,
+      customizable: category.customizable ?? false,
+      enabled: true,
+      position: category.position ?? index,
+      createdAt: category.createdAt,
+      updatedAt: category.updatedAt,
+    }));
 };
 
 const persistGlobalCategoryOrder = async (prisma, orderedIds) => {
@@ -51,11 +62,12 @@ const persistGlobalCategoryOrder = async (prisma, orderedIds) => {
   );
 };
 
-const syncPartnerCategories = async (prisma, partnerId) => {
+const syncPartnerCategories = async (prisma, partner) => {
+  const partnerId = partner.id;
   const partnerCategoryModel = prisma.partnerCategory;
 
   if (!partnerCategoryModel) {
-    return loadGlobalCategoryFallback(prisma);
+    return loadGlobalCategoryFallback(prisma, partner);
   }
 
   let categories;
@@ -73,14 +85,19 @@ const syncPartnerCategories = async (prisma, partnerId) => {
     ]);
   } catch (err) {
     console.error("partnerCategories fallback:", err.message);
-    return loadGlobalCategoryFallback(prisma);
+    return loadGlobalCategoryFallback(prisma, partner);
   }
+
+  const visibleCategories = categories.filter(
+    (category) =>
+      partner.slug === DEMO_PARTNER_SLUG || !isDemoOnlyCategory(category)
+  );
 
   const existingByCategoryId = new Map(
     links.map((link) => [link.categoryId, link])
   );
 
-  const missingCategories = categories.filter(
+  const missingCategories = visibleCategories.filter(
     (category) => !existingByCategoryId.has(category.id)
   );
 
@@ -98,7 +115,7 @@ const syncPartnerCategories = async (prisma, partnerId) => {
       });
     } catch (err) {
       console.error("partnerCategories create fallback:", err.message);
-      return loadGlobalCategoryFallback(prisma);
+      return loadGlobalCategoryFallback(prisma, partner);
     }
   }
 
@@ -113,19 +130,24 @@ const syncPartnerCategories = async (prisma, partnerId) => {
     });
   } catch (err) {
     console.error("partnerCategories final fallback:", err.message);
-    return loadGlobalCategoryFallback(prisma);
+    return loadGlobalCategoryFallback(prisma, partner);
   }
 
-  return finalLinks.map((link) => ({
-    id: link.category.id,
-    partnerCategoryId: link.id,
-    name: link.category.name,
-    customizable: link.category.customizable ?? false,
-    enabled: link.enabled,
-    position: link.category.position ?? link.position,
-    createdAt: link.category.createdAt,
-    updatedAt: link.category.updatedAt,
-  }));
+  return finalLinks
+    .filter(
+      (link) =>
+        partner.slug === DEMO_PARTNER_SLUG || !isDemoOnlyCategory(link.category)
+    )
+    .map((link) => ({
+      id: link.category.id,
+      partnerCategoryId: link.id,
+      name: link.category.name,
+      customizable: link.category.customizable ?? false,
+      enabled: link.enabled,
+      position: link.category.position ?? link.position,
+      createdAt: link.category.createdAt,
+      updatedAt: link.category.updatedAt,
+    }));
 };
 
 const withPartnerCategoryFallback = async (prisma, task) => {
@@ -146,8 +168,8 @@ export default function partnerCategoriesRoutes(prisma) {
 
   router.get("/partners/:partnerId/categories", async (req, res) => {
     try {
-      const partnerId = await getPartnerOrThrow(prisma, req.params.partnerId);
-      const rows = await syncPartnerCategories(prisma, partnerId);
+      const partner = await getPartnerOrThrow(prisma, req.params.partnerId);
+      const rows = await syncPartnerCategories(prisma, partner);
       res.json(rows);
     } catch (err) {
       console.error(err);
@@ -157,7 +179,8 @@ export default function partnerCategoriesRoutes(prisma) {
 
   router.patch("/partners/:partnerId/categories/order", async (req, res) => {
     try {
-      const partnerId = await getPartnerOrThrow(prisma, req.params.partnerId);
+      const partner = await getPartnerOrThrow(prisma, req.params.partnerId);
+      const partnerId = partner.id;
       const { orderedIds } = req.body;
 
       if (!Array.isArray(orderedIds) || orderedIds.length === 0) {
@@ -169,7 +192,7 @@ export default function partnerCategoriesRoutes(prisma) {
         return res.json({ ok: true, fallback: true, scope: "global-category" });
       }
 
-      await syncPartnerCategories(prisma, partnerId);
+      await syncPartnerCategories(prisma, partner);
       await persistGlobalCategoryOrder(prisma, orderedIds);
 
       const reordered = await withPartnerCategoryFallback(
@@ -204,7 +227,8 @@ export default function partnerCategoriesRoutes(prisma) {
 
   router.patch("/partners/:partnerId/categories/:categoryId", async (req, res) => {
     try {
-      const partnerId = await getPartnerOrThrow(prisma, req.params.partnerId);
+      const partner = await getPartnerOrThrow(prisma, req.params.partnerId);
+      const partnerId = partner.id;
       const categoryId = Number(req.params.categoryId);
       const { enabled } = req.body;
 
@@ -230,7 +254,7 @@ export default function partnerCategoriesRoutes(prisma) {
         return res.status(404).json({ error: "Category not found" });
       }
 
-      const rows = await syncPartnerCategories(prisma, partnerId);
+      const rows = await syncPartnerCategories(prisma, partner);
       const existing = rows.find((row) => row.id === categoryId);
 
       const updated = await withPartnerCategoryFallback(
