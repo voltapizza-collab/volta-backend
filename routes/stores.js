@@ -70,7 +70,7 @@ const zeroStockForNewStore = async (tx, storeId, partnerId) => {
       storeId,
       pizzaId: pizza.id,
       stock: 0,
-      active: true,
+      active: false,
     })),
     skipDuplicates: true,
   });
@@ -540,7 +540,7 @@ const attachStorePublicMenu = (router, prisma) => {
         return (pizza.ingredients || []).every((rel) => {
           const ingredient = rel.ingredient;
           const storeStock = ingredient?.storeStocks?.[0];
-          return ingredient?.status === "ACTIVE" && storeStock?.active !== false;
+          return ingredient?.status === "ACTIVE" && storeStock?.active === true;
         });
       });
 

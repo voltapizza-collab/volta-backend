@@ -1,4 +1,5 @@
 import express from "express";
+import { ensureStoreIngredientsActive } from "../services/storeMenuActivation.js";
 
 const parsePositiveInt = (value) => {
   const parsed = Number(value);
@@ -34,7 +35,7 @@ const getPizzaAvailability = (pizza, stockRow) => {
       return;
     }
 
-    if (storeStock?.active === false) {
+    if (storeStock?.active !== true) {
       blockers.push({
         type: "ingredient_inactive_in_store",
         ingredientId: ingredient.id,
@@ -208,6 +209,39 @@ export default function stockRoutes(prisma) {
     }
 
     try {
+      const store = await prisma.store.findUnique({
+        where: { id: storeId },
+        select: { partnerId: true },
+      });
+
+      if (!store) {
+        return res.status(404).json({ error: "Store not found" });
+      }
+
+      const pizza = await prisma.menuPizza.findFirst({
+        where: {
+          id: pizzaId,
+          partnerId: store.partnerId,
+        },
+        select: {
+          id: true,
+          ingredients: {
+            select: { ingredientId: true },
+          },
+        },
+      });
+
+      if (!pizza) {
+        return res.status(404).json({ error: "Pizza not found for store partner" });
+      }
+
+      if (active) {
+        await ensureStoreIngredientsActive(prisma, {
+          storeIds: [storeId],
+          ingredientIds: (pizza.ingredients || []).map((row) => row.ingredientId),
+        });
+      }
+
       const updated = await prisma.storePizzaStock.upsert({
         where: { storeId_pizzaId: { storeId, pizzaId } },
         update: { active },

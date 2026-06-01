@@ -339,12 +339,6 @@ router.patch("/:ingredientId", async (req, res) => {
       select: { active: true },
     });
 
-    if (!previous) {
-      return res.status(409).json({
-        error: "Ingredient must be onboarded from Toppings Inventory first",
-      });
-    }
-
     if (data.active === true) {
       const ingredient = await prisma.ingredient.findUnique({
         where: { id: ingredientId },
@@ -358,19 +352,31 @@ router.patch("/:ingredientId", async (req, res) => {
       }
     }
 
-    const updated = await prisma.storeIngredientStock.update({
+    if (!previous && data.active !== true) {
+      return res.status(409).json({
+        error: "Ingredient must be onboarded before deactivation",
+      });
+    }
+
+    const updated = await prisma.storeIngredientStock.upsert({
       where: {
         storeId_ingredientId: {
           storeId,
           ingredientId,
         },
       },
-      data,
+      update: data,
+      create: {
+        storeId,
+        ingredientId,
+        stock: data.stock ?? 0,
+        active: data.active ?? true,
+      },
     });
 
     let notification = null;
     const isDisabling = active !== undefined && Boolean(active) === false;
-    const wasAlreadyDisabled = previous.active === false;
+    const wasAlreadyDisabled = previous?.active === false;
     const shouldNotify =
       source === "pos" || notifyTracking === true || notifyTracking === "true";
 

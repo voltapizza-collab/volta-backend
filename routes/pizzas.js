@@ -2,6 +2,11 @@ import express from "express";
 import multer from "multer";
 import { v2 as cloudinary } from "cloudinary";
 import { assertCloudinaryConfigured } from "../services/cloudinaryConfig.js";
+import {
+  assertIngredientsCanBeActivated,
+  ensureStoreIngredientsActive,
+  ensureStoresBelongToPartner,
+} from "../services/storeMenuActivation.js";
 
 const router = express.Router();
 const upload = multer({ storage: multer.memoryStorage() });
@@ -54,7 +59,41 @@ const getCategoryOrThrow = async (prisma, rawCategoryId) => {
   return category;
 };
 
-const zeroStockForNewPizza = async (prisma, pizzaId, partnerId) => {
+const normalizePositiveIds = (values) => [
+  ...new Set(
+    (Array.isArray(values) ? values : [])
+      .map((value) => Number(value))
+      .filter((value) => Number.isInteger(value) && value > 0)
+  ),
+];
+
+const parseStoreIdsInput = (value) => {
+  const parsed = parseMaybeJson(value, value);
+
+  if (Array.isArray(parsed)) return parsed;
+  if (parsed == null || parsed === "") return [];
+
+  return [parsed];
+};
+
+const getTargetStoreIds = async (prisma, { partnerId, storeId, storeIds }) => {
+  const hasExplicitStoreScope = storeIds != null && storeIds !== "";
+  const targetStoreIds = normalizePositiveIds(
+    hasExplicitStoreScope ? parseStoreIdsInput(storeIds) : parseStoreIdsInput(storeId)
+  );
+
+  return ensureStoresBelongToPartner(prisma, {
+    partnerId,
+    storeIds: targetStoreIds,
+  });
+};
+
+const zeroStockForNewPizza = async (
+  prisma,
+  pizzaId,
+  partnerId,
+  activeStoreIds = []
+) => {
   const stores = await prisma.store.findMany({
     where: { partnerId },
     select: { id: true },
@@ -62,46 +101,26 @@ const zeroStockForNewPizza = async (prisma, pizzaId, partnerId) => {
 
   if (!stores.length) return;
 
+  const activeStoreIdSet = new Set(normalizePositiveIds(activeStoreIds));
+
   await prisma.storePizzaStock.createMany({
     data: stores.map((store) => ({
       storeId: store.id,
       pizzaId,
       stock: 0,
-      active: true,
+      active: activeStoreIdSet.has(store.id),
     })),
     skipDuplicates: true,
   });
 };
 
-const assertIngredientsAvailableForStore = async (
+const assertIngredientsAvailableForStores = async (
   prisma,
-  storeId,
   partnerId,
+  targetStoreIds,
   ingredients
 ) => {
-  if (!storeId) return;
-
-  const parsedStoreId = Number(storeId);
-
-  if (!Number.isInteger(parsedStoreId) || parsedStoreId <= 0) {
-    const error = new Error("Invalid storeId");
-    error.status = 400;
-    throw error;
-  }
-
-  const store = await prisma.store.findFirst({
-    where: {
-      id: parsedStoreId,
-      partnerId,
-    },
-    select: { id: true },
-  });
-
-  if (!store) {
-    const error = new Error("Store not found for partner");
-    error.status = 404;
-    throw error;
-  }
+  if (!targetStoreIds.length) return [];
 
   const ingredientIds = [...new Set(
     (Array.isArray(ingredients) ? ingredients : [])
@@ -109,27 +128,13 @@ const assertIngredientsAvailableForStore = async (
       .filter((id) => Number.isInteger(id) && id > 0)
   )];
 
-  if (!ingredientIds.length) return;
-
-  const storeIngredients = await prisma.storeIngredientStock.findMany({
-    where: {
-      storeId: parsedStoreId,
-      ingredientId: { in: ingredientIds },
-      active: true,
-    },
-    select: { ingredientId: true },
+  await ensureStoresBelongToPartner(prisma, {
+    partnerId,
+    storeIds: targetStoreIds,
   });
+  await assertIngredientsCanBeActivated(prisma, ingredientIds);
 
-  const availableIds = new Set(storeIngredients.map((item) => item.ingredientId));
-  const missingIds = ingredientIds.filter((id) => !availableIds.has(id));
-
-  if (missingIds.length) {
-    const error = new Error(
-      `Some ingredients are not active in store inventory: ${missingIds.join(", ")}`
-    );
-    error.status = 400;
-    throw error;
-  }
+  return ingredientIds;
 };
 
 const syncIngredientCategoryUsesForCategory = async (
@@ -328,6 +333,7 @@ export default function pizzasRoutes(prisma) {
         name,
         partnerId,
         storeId,
+        storeIds,
         categoryId,
         baseName,
         sizes,
@@ -363,11 +369,16 @@ export default function pizzasRoutes(prisma) {
       const parsedSizes = parseMaybeJson(sizes, []);
       const parsedPrices = parseMaybeJson(priceBySize, {});
       const parsedIngredients = parseMaybeJson(ingredients, []);
-
-      await assertIngredientsAvailableForStore(
-        prisma,
+      const targetStoreIds = await getTargetStoreIds(prisma, {
+        partnerId: parsedPartnerId,
         storeId,
+        storeIds,
+      });
+
+      const ingredientIds = await assertIngredientsAvailableForStores(
+        prisma,
         parsedPartnerId,
+        targetStoreIds,
         parsedIngredients
       );
 
@@ -422,7 +433,16 @@ export default function pizzasRoutes(prisma) {
         },
       });
 
-      await zeroStockForNewPizza(prisma, pizza.id, parsedPartnerId);
+      await zeroStockForNewPizza(
+        prisma,
+        pizza.id,
+        parsedPartnerId,
+        targetStoreIds
+      );
+      await ensureStoreIngredientsActive(prisma, {
+        storeIds: targetStoreIds,
+        ingredientIds,
+      });
       await syncIngredientCategoryUsesForCategory(prisma, {
         partnerId: parsedPartnerId,
         categoryId: category.id,
@@ -454,14 +474,19 @@ export default function pizzasRoutes(prisma) {
       const parsedSizes = parseMaybeJson(body.sizes, []);
       const parsedPrices = parseMaybeJson(body.priceBySize, {});
       const parsedIngredients = parseMaybeJson(body.ingredients, []);
+      const targetStoreIds = await getTargetStoreIds(prisma, {
+        partnerId: existing.partnerId,
+        storeId: body.storeId,
+        storeIds: body.storeIds,
+      });
       const nextBaseName = normalizeBaseLabel(
         body.baseName || body.cookingMethod || existing.cookingMethod
       );
 
-      await assertIngredientsAvailableForStore(
+      const targetIngredientIds = await assertIngredientsAvailableForStores(
         prisma,
-        body.storeId,
         existing.partnerId,
+        targetStoreIds,
         parsedIngredients
       );
 
@@ -565,6 +590,10 @@ export default function pizzasRoutes(prisma) {
         throw err;
       }
 
+      await ensureStoreIngredientsActive(prisma, {
+        storeIds: targetStoreIds,
+        ingredientIds: targetIngredientIds,
+      });
       await syncIngredientCategoryUsesForCategory(prisma, {
         partnerId: existing.partnerId,
         categoryId: nextCategoryId,

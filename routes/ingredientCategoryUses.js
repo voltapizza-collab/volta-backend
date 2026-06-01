@@ -145,7 +145,7 @@ export default function ingredientCategoryUsesRoutes(prisma) {
         if (ingredient?.status !== "ACTIVE") return false;
         if (!storeId) return true;
 
-        return ingredient?.storeStocks?.[0]?.active !== false;
+        return ingredient?.storeStocks?.[0]?.active === true;
       };
 
       const availableRows = rows.filter((row) =>
