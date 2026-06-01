@@ -13,7 +13,6 @@ const DEMO_INGREDIENT_NAMES = new Set([
   "champinones demo",
 ]);
 
-// helper seguro
 const parseId = (v) => {
   const n = Number(v);
   return Number.isInteger(n) && n > 0 ? n : null;
@@ -52,22 +51,26 @@ const isDemoStore = async (storeId) => {
   return store.partner?.slug === DEMO_PARTNER_SLUG;
 };
 
-const serializeIngredient = (ing, storeStock, extra = {}) => ({
-  id: ing.id,
-  name: ing.name,
-  category: ing.category,
-  status: ing.status,
-  allergens: normalizeAllergens(ing.allergens),
-  unit: ing.unit,
-  costPrice: ing.costPrice,
-  description: ing.description || "",
-  image: ing.image || null,
-  imagePublicId: ing.imagePublicId || null,
-  exists: !!storeStock,
-  active: storeStock?.active !== false,
-  stock: storeStock ? storeStock.stock : 0,
-  ...extra,
-});
+const serializeIngredient = (ing, storeStock, extra = {}) => {
+  const isPriced = Number(ing.costPrice) > 0;
+
+  return {
+    id: ing.id,
+    name: ing.name,
+    category: ing.category,
+    status: ing.status,
+    allergens: normalizeAllergens(ing.allergens),
+    unit: ing.unit,
+    costPrice: ing.costPrice,
+    description: ing.description || "",
+    image: ing.image || null,
+    imagePublicId: ing.imagePublicId || null,
+    exists: !!storeStock,
+    active: ing.status === "ACTIVE" && isPriced && storeStock?.active === true,
+    stock: storeStock ? storeStock.stock : 0,
+    ...extra,
+  };
+};
 
 const getMenuScopedIngredients = async (storeId) => {
   const store = await prisma.store.findUnique({
@@ -131,7 +134,7 @@ const getMenuScopedIngredients = async (storeId) => {
   pizzas.forEach((pizza) => {
     (pizza.ingredients || []).forEach((rel) => {
       const ingredient = rel.ingredient;
-      if (!ingredient) return;
+      if (!ingredient || ingredient.status !== "ACTIVE") return;
 
       if (!byIngredient.has(ingredient.id)) {
         byIngredient.set(ingredient.id, {
@@ -178,10 +181,6 @@ const getMenuScopedIngredients = async (storeId) => {
     });
 };
 
-/*
- * GET /stores/:storeId/ingredients
- * → devuelve TODOS los ingredientes + estado en la tienda
- */
 router.get("/", async (req, res) => {
   try {
     await ensureIngredientMediaColumns(prisma);
@@ -205,6 +204,7 @@ router.get("/", async (req, res) => {
     }
 
     const ingredients = await prisma.ingredient.findMany({
+      where: { status: "ACTIVE" },
       orderBy: { name: "asc" },
       include: {
         storeStocks: {
@@ -213,27 +213,9 @@ router.get("/", async (req, res) => {
       },
     });
 
-    const result = ingredients.filter((ing) => allowDemoIngredients || !isDemoIngredient(ing)).map((ing) => {
-      const storeStock = ing.storeStocks[0];
-
-      return {
-        id: ing.id,
-        name: ing.name,
-        category: ing.category,
-        status: ing.status,
-        allergens: normalizeAllergens(ing.allergens),
-        unit: ing.unit,
-        costPrice: ing.costPrice,
-        description: ing.description || "",
-        image: ing.image || null,
-        imagePublicId: ing.imagePublicId || null,
-
-        // 🔥 NUEVO MODELO VOLTA
-        exists: !!storeStock,
-        active: storeStock?.active !== false,
-        stock: storeStock ? storeStock.stock : 0,
-      };
-    });
+    const result = ingredients
+      .filter((ing) => allowDemoIngredients || !isDemoIngredient(ing))
+      .map((ing) => serializeIngredient(ing, ing.storeStocks[0]));
 
     res.json(result);
   } catch (err) {
@@ -242,11 +224,6 @@ router.get("/", async (req, res) => {
   }
 });
 
-/*
- * POST /stores/:storeId/ingredients
- * BODY: { ingredientIds: [1,2,3] }
- * → añade ingredientes a la tienda (UPSERT)
- */
 router.post("/", async (req, res) => {
   try {
     const storeId = parseId(req.params.storeId);
@@ -262,7 +239,39 @@ router.post("/", async (req, res) => {
       });
     }
 
-    const ops = ingredientIds.map((ingredientId) =>
+    const normalizedIds = [
+      ...new Set(
+        ingredientIds
+          .map((ingredientId) => parseId(ingredientId))
+          .filter(Boolean)
+      ),
+    ];
+
+    if (!normalizedIds.length) {
+      return res.status(400).json({
+        error: "ingredientIds must contain valid ids",
+      });
+    }
+
+    const activeIngredients = await prisma.ingredient.findMany({
+      where: {
+        id: { in: normalizedIds },
+        status: "ACTIVE",
+        costPrice: { gt: 0 },
+      },
+      select: { id: true },
+    });
+    const onboardableIds = new Set(activeIngredients.map((item) => item.id));
+    const blockedIds = normalizedIds.filter((id) => !onboardableIds.has(id));
+
+    if (blockedIds.length) {
+      return res.status(400).json({
+        error: "Ingredients must be active and priced before onboarding",
+        ingredientIds: blockedIds,
+      });
+    }
+
+    const ops = normalizedIds.map((ingredientId) =>
       prisma.storeIngredientStock.upsert({
         where: {
           storeId_ingredientId: {
@@ -286,7 +295,7 @@ router.post("/", async (req, res) => {
 
     res.json({
       success: true,
-      count: ingredientIds.length,
+      count: normalizedIds.length,
     });
   } catch (err) {
     console.error("[POST store ingredients]", err);
@@ -294,10 +303,6 @@ router.post("/", async (req, res) => {
   }
 });
 
-/*
- * PATCH /stores/:storeId/ingredients/:ingredientId
- * → actualizar stock o active
- */
 router.patch("/:ingredientId", async (req, res) => {
   try {
     const storeId = parseId(req.params.storeId);
@@ -307,7 +312,7 @@ router.patch("/:ingredientId", async (req, res) => {
       return res.status(400).json({ error: "Invalid ids" });
     }
 
-    const { active, stock } = req.body;
+    const { active, stock, source, notifyTracking } = req.body;
     const data = {};
 
     if (active !== undefined) data.active = Boolean(active);
@@ -320,6 +325,10 @@ router.patch("/:ingredientId", async (req, res) => {
       data.stock = Math.trunc(n);
     }
 
+    if (!Object.keys(data).length) {
+      return res.status(400).json({ error: "No valid fields to update" });
+    }
+
     const previous = await prisma.storeIngredientStock.findUnique({
       where: {
         storeId_ingredientId: {
@@ -330,27 +339,42 @@ router.patch("/:ingredientId", async (req, res) => {
       select: { active: true },
     });
 
-    const updated = await prisma.storeIngredientStock.upsert({
+    if (!previous) {
+      return res.status(409).json({
+        error: "Ingredient must be onboarded from Toppings Inventory first",
+      });
+    }
+
+    if (data.active === true) {
+      const ingredient = await prisma.ingredient.findUnique({
+        where: { id: ingredientId },
+        select: { status: true, costPrice: true },
+      });
+
+      if (ingredient?.status !== "ACTIVE" || Number(ingredient?.costPrice) <= 0) {
+        return res.status(400).json({
+          error: "Ingredient must be active and priced before activation",
+        });
+      }
+    }
+
+    const updated = await prisma.storeIngredientStock.update({
       where: {
         storeId_ingredientId: {
           storeId,
           ingredientId,
         },
       },
-      update: data,
-      create: {
-        storeId,
-        ingredientId,
-        stock: data.stock ?? 0,
-        active: data.active ?? true,
-      },
+      data,
     });
 
     let notification = null;
     const isDisabling = active !== undefined && Boolean(active) === false;
-    const wasAlreadyDisabled = previous?.active === false;
+    const wasAlreadyDisabled = previous.active === false;
+    const shouldNotify =
+      source === "pos" || notifyTracking === true || notifyTracking === "true";
 
-    if (isDisabling && !wasAlreadyDisabled) {
+    if (shouldNotify && isDisabling && !wasAlreadyDisabled) {
       const [store, ingredient] = await Promise.all([
         prisma.store.findUnique({
           where: { id: storeId },
@@ -407,10 +431,6 @@ router.patch("/:ingredientId", async (req, res) => {
   }
 });
 
-/*
- * DELETE /stores/:storeId/ingredients/:ingredientId
- * → elimina el ingrediente de la tienda
- */
 router.delete("/:ingredientId", async (req, res) => {
   try {
     const storeId = parseId(req.params.storeId);

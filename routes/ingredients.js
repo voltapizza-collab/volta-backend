@@ -3,6 +3,7 @@ import { PrismaClient } from "@prisma/client";
 import multer from "multer";
 import { v2 as cloudinary } from "cloudinary";
 import { ensureIngredientMediaColumns } from "../services/ingredientMediaColumns.js";
+import { assertCloudinaryConfigured } from "../services/cloudinaryConfig.js";
 
 const prisma = new PrismaClient();
 const router = express.Router();
@@ -13,12 +14,6 @@ const DEMO_INGREDIENT_NAMES = new Set([
   "tomate san marzano demo",
   "champinones demo",
 ]);
-
-cloudinary.config({
-  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
-  api_key: process.env.CLOUDINARY_API_KEY,
-  api_secret: process.env.CLOUDINARY_API_SECRET,
-});
 
 const parseMaybeJson = (value, fallback) => {
   if (value == null || value === "") return fallback;
@@ -50,15 +45,7 @@ const isDemoIngredient = (ingredient) =>
 const uploadIngredientImage = async (file, ingredientId) => {
   if (!file) return null;
 
-  if (
-    !process.env.CLOUDINARY_CLOUD_NAME ||
-    !process.env.CLOUDINARY_API_KEY ||
-    !process.env.CLOUDINARY_API_SECRET
-  ) {
-    const error = new Error("Cloudinary not configured");
-    error.status = 503;
-    throw error;
-  }
+  assertCloudinaryConfigured();
 
   const result = await cloudinary.uploader.upload(
     `data:${file.mimetype};base64,${file.buffer.toString("base64")}`,
@@ -73,7 +60,7 @@ const uploadIngredientImage = async (file, ingredientId) => {
 
 const getErrorStatus = (err, fallback = 400) => {
   if (err?.status) return err.status;
-  if (err?.code === "P1001") return 503;
+  if (["P1001", "P1002", "P1017"].includes(err?.code)) return 503;
   return fallback;
 };
 
@@ -135,22 +122,6 @@ router.post("/", upload.single("image"), async (req, res) => {
           description: normalizeText(description, 420) || null,
         },
       });
-
-      const stores = await tx.store.findMany({
-        select: { id: true },
-      });
-
-      if (stores.length) {
-        await tx.storeIngredientStock.createMany({
-          data: stores.map((store) => ({
-            storeId: store.id,
-            ingredientId: created.id,
-            stock: 0,
-            active: true,
-          })),
-          skipDuplicates: true,
-        });
-      }
 
       return created;
     });
@@ -298,6 +269,7 @@ router.delete("/:id", async (req, res) => {
     ]);
 
     if (existing.imagePublicId) {
+      assertCloudinaryConfigured();
       await cloudinary.uploader.destroy(existing.imagePublicId).catch((error) => {
         console.error("Cloudinary ingredient image cleanup failed:", error);
       });
@@ -398,22 +370,6 @@ router.patch("/suggestions/:id/approve", async (req, res) => {
               allergens: [],
             },
           });
-
-      const stores = await tx.store.findMany({
-        select: { id: true },
-      });
-
-      if (stores.length) {
-        await tx.storeIngredientStock.createMany({
-          data: stores.map((store) => ({
-            storeId: store.id,
-            ingredientId: ingredient.id,
-            stock: 0,
-            active: true,
-          })),
-          skipDuplicates: true,
-        });
-      }
 
       return { suggestion: updatedSuggestion, ingredient };
     });

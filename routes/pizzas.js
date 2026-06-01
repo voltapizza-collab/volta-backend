@@ -1,15 +1,10 @@
 import express from "express";
 import multer from "multer";
 import { v2 as cloudinary } from "cloudinary";
+import { assertCloudinaryConfigured } from "../services/cloudinaryConfig.js";
 
 const router = express.Router();
 const upload = multer({ storage: multer.memoryStorage() });
-
-cloudinary.config({
-  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
-  api_key: process.env.CLOUDINARY_API_KEY,
-  api_secret: process.env.CLOUDINARY_API_SECRET,
-});
 
 const parseMaybeJson = (value, fallback) => {
   if (value == null || value === "") return fallback;
@@ -237,15 +232,7 @@ const canUseCategoryId = (err) =>
 const uploadPizzaImage = async (file, partnerId) => {
   if (!file) return { image: null, imagePublicId: null };
 
-  if (
-    !process.env.CLOUDINARY_CLOUD_NAME ||
-    !process.env.CLOUDINARY_API_KEY ||
-    !process.env.CLOUDINARY_API_SECRET
-  ) {
-    const error = new Error("Cloudinary not configured");
-    error.status = 503;
-    throw error;
-  }
+  assertCloudinaryConfigured();
 
   const result = await cloudinary.uploader.upload(
     `data:${file.mimetype};base64,${file.buffer.toString("base64")}`,
@@ -274,8 +261,36 @@ const assertImageUploadWasMultipart = (req) => {
 
 const getErrorStatus = (err, fallback = 400) => {
   if (err?.status) return err.status;
-  if (err?.code === "P1001") return 503;
+  if (["P1001", "P1002", "P1017"].includes(err?.code)) return 503;
   return fallback;
+};
+
+const getErrorCode = (err) => {
+  if (err?.code === "IMAGE_UPLOAD_NOT_CONFIGURED") {
+    return "image_upload_not_configured";
+  }
+
+  if (["P1001", "P1002", "P1017"].includes(err?.code)) {
+    return "database_unavailable";
+  }
+
+  const message = String(err?.message || "");
+  if (
+    message.includes("Can't reach database server") ||
+    message.includes("Server has closed the connection")
+  ) {
+    return "database_unavailable";
+  }
+
+  return undefined;
+};
+
+const sendError = (res, err, fallback = 400) => {
+  const code = getErrorCode(err);
+  res.status(getErrorStatus(err, fallback)).json({
+    error: err.message,
+    ...(code ? { code } : {}),
+  });
 };
 
 export default function pizzasRoutes(prisma) {
@@ -412,7 +427,7 @@ export default function pizzasRoutes(prisma) {
       res.json(mapPizza(createdPizza || pizza));
     } catch (err) {
       console.error("POST /pizzas error:", err);
-      res.status(getErrorStatus(err)).json({ error: err.message });
+      sendError(res, err);
     }
   });
 
@@ -559,7 +574,7 @@ export default function pizzasRoutes(prisma) {
       res.json({ ok: true, id });
     } catch (err) {
       console.error("PUT /pizzas error:", err);
-      res.status(getErrorStatus(err)).json({ error: err.message });
+      sendError(res, err);
     }
   });
 
@@ -572,6 +587,7 @@ export default function pizzasRoutes(prisma) {
       });
 
       if (existing?.imagePublicId) {
+        assertCloudinaryConfigured();
         await cloudinary.uploader.destroy(existing.imagePublicId);
       }
 

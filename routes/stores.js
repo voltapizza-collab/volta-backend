@@ -1092,22 +1092,6 @@ export default function storesRoutes(prisma) {
 
         await zeroStockForNewStore(tx, store.id, partnerId);
 
-        const ingredients = await tx.ingredient.findMany({
-          select: { id: true },
-        });
-
-        if (ingredients.length) {
-          await tx.storeIngredientStock.createMany({
-            data: ingredients.map((ingredient) => ({
-              storeId: store.id,
-              ingredientId: ingredient.id,
-              stock: 0,
-              active: true,
-            })),
-            skipDuplicates: true,
-          });
-        }
-
         return store;
       });
 

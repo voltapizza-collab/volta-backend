@@ -1,14 +1,9 @@
 import express from "express";
 import multer from "multer";
 import { v2 as cloudinary } from "cloudinary";
+import { assertCloudinaryConfigured } from "../services/cloudinaryConfig.js";
 
 const upload = multer({ storage: multer.memoryStorage() });
-
-cloudinary.config({
-  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
-  api_key: process.env.CLOUDINARY_API_KEY,
-  api_secret: process.env.CLOUDINARY_API_SECRET,
-});
 
 const parsePositiveInt = (value) => {
   const parsed = Number(value);
@@ -92,6 +87,8 @@ const parseItems = (value) => {
 
 const uploadPromoImage = async (file, partnerId) => {
   if (!file) return { image: null, imagePublicId: null };
+
+  assertCloudinaryConfigured();
 
   const result = await cloudinary.uploader.upload(
     `data:${file.mimetype};base64,${file.buffer.toString("base64")}`,
@@ -257,6 +254,7 @@ export default function promosRoutes(prisma) {
 
       if (req.file) {
         if (imagePublicId) {
+          assertCloudinaryConfigured();
           await cloudinary.uploader.destroy(imagePublicId);
         }
 
@@ -310,6 +308,7 @@ export default function promosRoutes(prisma) {
       }
 
       if (existing.imagePublicId) {
+        assertCloudinaryConfigured();
         await cloudinary.uploader.destroy(existing.imagePublicId);
       }
 

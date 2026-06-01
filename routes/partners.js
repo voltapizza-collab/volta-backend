@@ -3,6 +3,7 @@ import { PrismaClient } from "@prisma/client";
 import axios from "axios";
 import multer from "multer";
 import { v2 as cloudinary } from "cloudinary";
+import { assertCloudinaryConfigured } from "../services/cloudinaryConfig.js";
 import {
   ensureBackofficeDemoSession,
   isBackofficeDemoCredential,
@@ -68,12 +69,6 @@ const getGoogleGeocodingKey = () =>
   process.env.GOOGLE_MAPS_API_KEY ||
   process.env.REACT_APP_GOOGLE_KEY ||
   "";
-
-cloudinary.config({
-  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
-  api_key: process.env.CLOUDINARY_API_KEY,
-  api_secret: process.env.CLOUDINARY_API_SECRET,
-});
 
 async function ensurePartnerSettingsColumns() {
   const columns = [
@@ -462,6 +457,8 @@ async function uploadPartnerLogo(file, partnerId) {
     error.status = 400;
     throw error;
   }
+
+  assertCloudinaryConfigured();
 
   const result = await cloudinary.uploader.upload(
     `data:${file.mimetype};base64,${file.buffer.toString("base64")}`,
@@ -1020,12 +1017,9 @@ router.post("/by-id/:partnerId/logo", upload.single("logo"), async (req, res) =>
       return res.status(404).json({ error: "Partner not found" });
     }
 
-    if (!process.env.CLOUDINARY_CLOUD_NAME || !process.env.CLOUDINARY_API_KEY || !process.env.CLOUDINARY_API_SECRET) {
-      return res.status(503).json({ error: "Cloudinary not configured" });
-    }
-
     if (partner.brandLogoPublicId) {
       try {
+        assertCloudinaryConfigured();
         await cloudinary.uploader.destroy(partner.brandLogoPublicId);
       } catch (destroyError) {
         console.error("PARTNER LOGO DESTROY ERROR:", destroyError?.message || destroyError);
