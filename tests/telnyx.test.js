@@ -21,7 +21,7 @@ import {
 const TELNYX_ENV_KEYS = [
   "TELNYX_API_KEY",
   "TELNYX_MESSAGING_PROFILE_ID",
-  "TELNYX_SENDER_ID",
+  "SMS_SENDER_ID",
   "TELNYX_WEBHOOK_URL",
   "TELNYX_WEBHOOK_PUBLIC_KEY",
   "TELNYX_SKIP_WEBHOOK_VERIFY",
@@ -40,7 +40,7 @@ const restoreEnv = (snapshot) => {
 const setTelnyxEnv = () => {
   process.env.TELNYX_API_KEY = "test_api_key";
   process.env.TELNYX_MESSAGING_PROFILE_ID = "00000000-0000-0000-0000-000000000000";
-  process.env.TELNYX_SENDER_ID = "PizzaOnline";
+  process.env.SMS_SENDER_ID = "VOLTAPIZZA";
   process.env.TELNYX_WEBHOOK_URL = "https://example.test/api/webhooks/telnyx";
   process.env.TELNYX_WEBHOOK_PUBLIC_KEY = Buffer.alloc(32).toString("base64");
 };
@@ -113,7 +113,7 @@ test("validateTelnyxEnv reports missing required vars without secret values", ()
     assert.deepEqual(status.missing, [
       "TELNYX_API_KEY",
       "TELNYX_MESSAGING_PROFILE_ID",
-      "TELNYX_SENDER_ID",
+      "SMS_SENDER_ID",
       "TELNYX_WEBHOOK_PUBLIC_KEY",
     ]);
   } finally {
@@ -276,13 +276,13 @@ test("sendTelnyxSms posts expected Telnyx v2 message payload", async () => {
   try {
     const result = await sendTelnyxSms({
       to: "612345678",
-      text: "PizzaOnline: Your private pizza offer is ready: 10% off. Use code VOL-PFABC123. Reply STOP to opt out.",
+      text: "VOLTAPIZZA: Your private pizza offer is ready: 10% off. Use code VOL-PFABC123. Reply STOP to opt out.",
       tags: ["coupon:VOL-PFABC123"],
     });
 
     assert.equal(result.ok, true);
     assert.equal(captured.url, "https://api.telnyx.com/v2/messages");
-    assert.equal(captured.payload.from, "PizzaOnline");
+    assert.equal(captured.payload.from, "VOLTAPIZZA");
     assert.equal(captured.payload.to, "+34612345678");
     assert.equal(captured.payload.messaging_profile_id, process.env.TELNYX_MESSAGING_PROFILE_ID);
     assert.deepEqual(captured.payload.tags, ["coupon:VOL-PFABC123"]);

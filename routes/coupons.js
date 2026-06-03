@@ -944,7 +944,7 @@ const buildCouponRedeemUrl = async (prisma, { coupon, zipCode }) => {
 };
 
 const buildPrivateCouponSms = ({ partnerName, coupon, redeemUrl }) => {
-  const brand = cleanSmsPart(process.env.TELNYX_SMS_BRAND || process.env.TELNYX_SENDER_ID || partnerName || "PizzaOnline");
+  const brand = cleanSmsPart(partnerName || process.env.TELNYX_SMS_BRAND || "VoltaPizza");
   const title = cleanSmsPart(buildCouponTitle(coupon));
   const expiry = formatCouponExpiry(coupon.expiresAt);
   const details = `${title}${expiry ? ` valid until ${expiry}` : ""}`;

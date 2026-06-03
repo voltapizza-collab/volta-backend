@@ -133,8 +133,9 @@ const buildReservationSms = ({
 }) => {
   const date = formatDateES(reservationDate);
   const place = [storeName, storeAddress].filter(Boolean).join(" - ");
+  const brand = String(partnerName || process.env.TELNYX_SMS_BRAND || "VoltaPizza").replace(/\s+/g, " ").trim();
 
-  return `Hola ${customerName || ""}
+  return `${brand}: hola ${customerName || ""}
 
 Tu reserva esta confirmada.
 
@@ -146,7 +147,7 @@ Lugar: ${place || "Tienda seleccionada"}
 Si necesitas cancelar:
 ${cancelLink}
 
-Te esperamos en ${partnerName || "VoltaPizza"}`;
+Te esperamos.`;
 };
 
 async function genCustomerCode(prisma) {

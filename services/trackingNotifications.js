@@ -61,15 +61,17 @@ const formatTimestampES = (value) => {
 const withTimestamp = (text, occurredAt) =>
   `${cleanSmsPart(text)} Momento: ${formatTimestampES(occurredAt)}.`;
 
+const smsBrand = (partnerName) => cleanSmsPart(partnerName || process.env.TELNYX_SMS_BRAND || "VoltaPizza");
+
 const buildIngredientDisabledText = ({ partnerName, storeName, ingredientName, occurredAt }) => {
-  const brand = cleanSmsPart(process.env.TELNYX_SMS_BRAND || process.env.TELNYX_SENDER_ID || partnerName || "Volta");
+  const brand = smsBrand(partnerName);
   const ingredient = cleanSmsPart(ingredientName || "Ingrediente");
   const store = cleanSmsPart(storeName || "la tienda");
   return withTimestamp(`${brand}: alerta de inventario. ${ingredient} fue desactivado en ${store}.`, occurredAt);
 };
 
 const buildStoreStatusText = ({ partnerName, storeName, active, occurredAt }) => {
-  const brand = cleanSmsPart(process.env.TELNYX_SMS_BRAND || process.env.TELNYX_SENDER_ID || partnerName || "Volta");
+  const brand = smsBrand(partnerName);
   const store = cleanSmsPart(storeName || "la tienda");
   return withTimestamp(`${brand}: alerta de tienda. ${store} fue ${active ? "abierta" : "cerrada"} para pedidos.`, occurredAt);
 };
@@ -86,7 +88,7 @@ const formatDateES = (date) => {
 };
 
 const buildReservationCanceledText = ({ partnerName, storeName, customerName, reservationDate, reservationTime, partySize, occurredAt }) => {
-  const brand = cleanSmsPart(process.env.TELNYX_SMS_BRAND || process.env.TELNYX_SENDER_ID || partnerName || "Volta");
+  const brand = smsBrand(partnerName);
   const customer = cleanSmsPart(customerName || "Cliente");
   const store = cleanSmsPart(storeName || "la tienda");
   const date = formatDateES(reservationDate);
@@ -102,7 +104,7 @@ const getSaleCustomerName = (sale) => {
 };
 
 const buildBoostPurchasedText = ({ partnerName, storeName, sale, occurredAt }) => {
-  const brand = cleanSmsPart(process.env.TELNYX_SMS_BRAND || process.env.TELNYX_SENDER_ID || partnerName || "Volta");
+  const brand = smsBrand(partnerName);
   const store = cleanSmsPart(storeName || "la tienda");
   const code = cleanSmsPart(sale?.code || "pedido");
   const amount = Number(sale?.boostAmount || 0);

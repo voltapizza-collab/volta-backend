@@ -124,6 +124,8 @@ const normalizeProductKey = (value) =>
     .replace(/\s+/g, " ")
     .trim();
 
+const isBeverageCategory = (value) => normalizeProductKey(value) === "bebidas";
+
 const getSaleLineQty = (item) => {
   const qty = Number(item?.quantity ?? item?.qty ?? item?.cantidad ?? 1);
   return Number.isFinite(qty) && qty > 0 ? qty : 1;
@@ -253,6 +255,7 @@ const buildTrendingMenu = async (prisma, { storeId, menu, now }) => {
   });
 
   const ranked = menu
+    .filter((pizza) => !isBeverageCategory(pizza.category))
     .map((pizza) => {
       const metrics = ensureMetrics(pizza.pizzaId);
       const trendDelta = metrics.soldLast7Days - metrics.soldPrevious7Days;
@@ -273,18 +276,17 @@ const buildTrendingMenu = async (prisma, { storeId, menu, now }) => {
           trendPercent,
           lastOrderedAt: metrics.lastOrderedAt,
           lastOrderedLabel: formatLastOrderedLabel(metrics.lastOrderedAt, now),
-          rankingBasis:
-            metrics.soldLast7Days > 0 ? "last7Days" : "historicalFallback",
+          rankingBasis: "bestSellers",
         },
       };
     })
     .filter((pizza) => pizza.trend.soldLast7Days > 0 || pizza.trend.soldAllTime > 0)
     .sort((left, right) => {
-      if (right.trend.soldLast7Days !== left.trend.soldLast7Days) {
-        return right.trend.soldLast7Days - left.trend.soldLast7Days;
-      }
       if (right.trend.soldAllTime !== left.trend.soldAllTime) {
         return right.trend.soldAllTime - left.trend.soldAllTime;
+      }
+      if (right.trend.soldLast7Days !== left.trend.soldLast7Days) {
+        return right.trend.soldLast7Days - left.trend.soldLast7Days;
       }
       return left.name.localeCompare(right.name);
     })
@@ -299,7 +301,7 @@ const buildTrendingMenu = async (prisma, { storeId, menu, now }) => {
 
   const rankedIds = new Set(ranked.map((pizza) => pizza.pizzaId));
   const fillers = menu
-    .filter((pizza) => !rankedIds.has(pizza.pizzaId))
+    .filter((pizza) => !rankedIds.has(pizza.pizzaId) && !isBeverageCategory(pizza.category))
     .slice(0, Math.max(3 - ranked.length, 0))
     .map((pizza, index) => ({
       ...pizza,

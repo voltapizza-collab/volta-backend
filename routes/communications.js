@@ -159,9 +159,7 @@ const sanitizeMessage = (value) => String(value || "").replace(/\s+/g, " ").trim
 const cleanSmsPart = (value) => String(value || "").replace(/\s+/g, " ").trim();
 
 const buildCampaignText = ({ partnerName, message }) => {
-  const brand = cleanSmsPart(
-    process.env.TELNYX_SMS_BRAND || process.env.TELNYX_SENDER_ID || partnerName || "PizzaOnline"
-  );
+  const brand = cleanSmsPart(partnerName || process.env.TELNYX_SMS_BRAND || "VoltaPizza");
   return cleanSmsPart(`${brand}: ${message}. Reply STOP to opt out.`);
 };
 

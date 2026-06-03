@@ -11,7 +11,7 @@ const cleanEnv = (value) => String(value || "").trim();
 const telnyxConfig = () => ({
   apiKey: cleanEnv(process.env.TELNYX_API_KEY),
   messagingProfileId: cleanEnv(process.env.TELNYX_MESSAGING_PROFILE_ID),
-  senderId: cleanEnv(process.env.TELNYX_SENDER_ID),
+  senderId: cleanEnv(process.env.SMS_SENDER_ID),
   webhookUrl: cleanEnv(process.env.TELNYX_WEBHOOK_URL),
   webhookPublicKey: cleanEnv(process.env.TELNYX_WEBHOOK_PUBLIC_KEY),
 });
@@ -23,13 +23,13 @@ export const validateTelnyxEnv = ({ requireWebhookPublicKey = false } = {}) => {
 
   if (!config.apiKey) missing.push("TELNYX_API_KEY");
   if (!config.messagingProfileId) missing.push("TELNYX_MESSAGING_PROFILE_ID");
-  if (!config.senderId) missing.push("TELNYX_SENDER_ID");
+  if (!config.senderId) missing.push("SMS_SENDER_ID");
   if (requireWebhookPublicKey && !config.webhookPublicKey) {
     missing.push("TELNYX_WEBHOOK_PUBLIC_KEY");
   }
   if (!config.webhookUrl) warnings.push("TELNYX_WEBHOOK_URL is not set");
   if (config.senderId && config.senderId.startsWith("+")) {
-    warnings.push("TELNYX_SENDER_ID should be an alphanumeric sender ID, not a phone number");
+    warnings.push("SMS_SENDER_ID should be an alphanumeric sender ID, not a phone number");
   }
 
   return {
@@ -146,7 +146,7 @@ export async function sendTelnyxSms({ to, text, tags = [] }) {
 
   try {
     const payload = {
-      // TELNYX_SENDER_ID is intended to be a configurable alphanumeric sender ID.
+      // SMS_SENDER_ID is intended to be a configurable alphanumeric sender ID.
       from: config.senderId,
       to: toPhone,
       text,

@@ -26,6 +26,26 @@ const customerFirstName = (sale) => {
   return String(raw).trim().split(/\s+/)[0] || "tu pedido";
 };
 
+const cleanSmsPart = (value) => String(value || "").replace(/\s+/g, " ").trim();
+
+const resolvePartnerName = async (prisma, sale) => {
+  const inlineName = cleanSmsPart(sale?.partner?.name || sale?.store?.partner?.name);
+  if (inlineName) return inlineName;
+
+  const partnerId = Number(sale?.partnerId || sale?.store?.partnerId || 0);
+  if (!partnerId) return cleanSmsPart(process.env.TELNYX_SMS_BRAND || "VoltaPizza");
+
+  try {
+    const partner = await prisma.partner.findUnique({
+      where: { id: partnerId },
+      select: { name: true },
+    });
+    return cleanSmsPart(partner?.name || process.env.TELNYX_SMS_BRAND || "VoltaPizza");
+  } catch {
+    return cleanSmsPart(process.env.TELNYX_SMS_BRAND || "VoltaPizza");
+  }
+};
+
 export async function sendOrderPaidTrackingSms(prisma, sale) {
   const data = readCustomerData(sale);
   const to = normalizeE164Phone(data.phone || sale?.customer?.phone);
@@ -34,8 +54,9 @@ export async function sendOrderPaidTrackingSms(prisma, sale) {
   }
 
   const trackingUrl = buildOrderTrackingUrl(sale);
+  const partnerName = await resolvePartnerName(prisma, sale);
   const text = [
-    `Pago confirmado, ${customerFirstName(sale)}.`,
+    `${partnerName}: pago confirmado, ${customerFirstName(sale)}.`,
     `Tu pedido ${sale.code} ya entro en cocina.`,
     `Sigue el estado aqui: ${trackingUrl}`,
   ].join(" ");
@@ -83,10 +104,11 @@ export async function sendOrderReadySms(prisma, sale) {
   }
 
   const storeName = sale?.store?.storeName || "la tienda";
+  const partnerName = await resolvePartnerName(prisma, sale);
   const isDelivery = sale.delivery === "COURIER";
   const text = isDelivery
-    ? `Tu pedido ${sale.code} va en camino desde ${storeName}. Gracias por tu compra.`
-    : `Tu pedido ${sale.code} esta listo para recoger en ${storeName}. Gracias por tu compra.`;
+    ? `${partnerName}: tu pedido ${sale.code} va en camino desde ${storeName}. Gracias por tu compra.`
+    : `${partnerName}: tu pedido ${sale.code} esta listo para recoger en ${storeName}. Gracias por tu compra.`;
 
   const reservation = await reserveSmsCreditForMessage(prisma, {
     partnerId: sale.partnerId,
@@ -135,8 +157,8 @@ export async function sendOrderCustomerMessageSms(prisma, sale, message) {
   }
 
   const trackingUrl = `${buildOrderTrackingUrl(sale)}?chat=1#chat`;
-  const storeName = sale?.store?.storeName || "Volta Pizza";
-  const text = `${storeName}: ${cleanMessage} Abre y responde aqui: ${trackingUrl}`;
+  const partnerName = await resolvePartnerName(prisma, sale);
+  const text = `${partnerName}: ${cleanMessage} Abre y responde aqui: ${trackingUrl}`;
 
   const reservation = await reserveSmsCreditForMessage(prisma, {
     partnerId: sale.partnerId,
