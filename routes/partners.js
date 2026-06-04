@@ -70,6 +70,66 @@ const getGoogleGeocodingKey = () =>
   process.env.REACT_APP_GOOGLE_KEY ||
   "";
 
+const storeTimeZone = () => process.env.TIMEZONE || "Europe/Madrid";
+
+const getStoreClockNow = () => {
+  const zoned = new Date().toLocaleString("sv-SE", {
+    timeZone: storeTimeZone(),
+  });
+
+  return new Date(zoned.replace(" ", "T"));
+};
+
+const parseStoreMinute = (value) => {
+  if (typeof value === "number" && Number.isFinite(value)) return Math.trunc(value);
+
+  const match = String(value || "").trim().match(/^(\d{1,2}):(\d{2})/);
+  if (!match) return null;
+
+  const hours = Number(match[1]);
+  const minutes = Number(match[2]);
+
+  return Number.isFinite(hours) && Number.isFinite(minutes) ? hours * 60 + minutes : null;
+};
+
+const isStoreOpenNow = (store, now = new Date()) => {
+  const hours = Array.isArray(store?.hours) ? store.hours : [];
+  if (!hours.length) return true;
+
+  const today = new Date(now);
+  today.setHours(0, 0, 0, 0);
+  const todayDay = today.getDay();
+
+  for (let offset = -1; offset <= 0; offset += 1) {
+    const date = new Date(today);
+    date.setDate(today.getDate() + offset);
+    const dayOfWeek = ((todayDay + offset) % 7 + 7) % 7;
+    const windows = hours.filter((item) => Number(item.dayOfWeek) === dayOfWeek);
+
+    for (const window of windows) {
+      const openMinute = parseStoreMinute(window.openTime);
+      const closeMinute = parseStoreMinute(window.closeTime);
+      if (openMinute == null || closeMinute == null) continue;
+
+      const openAt = new Date(date);
+      openAt.setMinutes(openMinute, 0, 0);
+
+      const closeAt = new Date(date);
+      closeAt.setMinutes(closeMinute, 0, 0);
+      if (closeMinute <= openMinute) closeAt.setDate(closeAt.getDate() + 1);
+
+      if (now >= openAt && now < closeAt) return true;
+    }
+  }
+
+  return false;
+};
+
+const filterOperationalStores = (stores = [], now = getStoreClockNow()) =>
+  stores.filter(
+    (store) => store?.active !== false && store?.acceptingOrders !== false && isStoreOpenNow(store, now)
+  );
+
 async function ensurePartnerSettingsColumns() {
   const columns = [
     ["deliveryRadiusKm", "DOUBLE NULL"],
@@ -522,14 +582,20 @@ router.post("/:slug/delivery/resolve", async (req, res) => {
       return res.status(404).json({ error: "Partner not found" });
     }
 
-    const stores = await prisma.store.findMany({
+    const rawStores = await prisma.store.findMany({
       where: {
         partnerId: Number(partner.id),
         active: true,
         acceptingOrders: true,
       },
+      include: {
+        hours: {
+          orderBy: [{ dayOfWeek: "asc" }, { openTime: "asc" }],
+        },
+      },
       orderBy: { storeName: "asc" },
     });
+    const stores = filterOperationalStores(rawStores);
 
     if (!googleKey) {
       return res.json(
@@ -702,16 +768,22 @@ router.post("/:slug/delivery/resolve", async (req, res) => {
       await ensurePartnerSettingsColumns();
       const address = String(req.body?.address || "").trim();
       const partner = await getPartnerPolicyBySlug(req.params.slug);
-      const stores = partner
+      const rawStores = partner
         ? await prisma.store.findMany({
             where: {
               partnerId: Number(partner.id),
               active: true,
               acceptingOrders: true,
             },
+            include: {
+              hours: {
+                orderBy: [{ dayOfWeek: "asc" }, { openTime: "asc" }],
+              },
+            },
             orderBy: { storeName: "asc" },
           })
         : [];
+      const stores = filterOperationalStores(rawStores);
 
       if (partner && address) {
         return res.json(
@@ -748,6 +820,11 @@ router.get("/:slug", async (req, res) => {
       where: {
         partnerId: Number(partner.id),
         active: true,
+      },
+      include: {
+        hours: {
+          orderBy: [{ dayOfWeek: "asc" }, { openTime: "asc" }],
+        },
       },
       orderBy: { storeName: "asc" },
     });

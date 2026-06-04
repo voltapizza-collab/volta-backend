@@ -545,6 +545,52 @@ const attachStorePublicMenu = (router, prisma) => {
           return ingredient?.status === "ACTIVE" && storeStock?.active === true;
         });
       });
+      const approvalByPizzaId = new Map();
+      const approvalPizzaIds = [
+        ...new Set(
+          availablePizzas
+            .map((pizza) => Number(pizza.id))
+            .filter((id) => Number.isInteger(id) && id > 0)
+        ),
+      ];
+
+      if (approvalPizzaIds.length) {
+        try {
+          const approvalRows = await prisma.productReviewVote.groupBy({
+            by: ["productId", "vote"],
+            where: {
+              storeId: store.id,
+              productId: { in: approvalPizzaIds },
+              vote: { in: ["LIKE", "DISLIKE"] },
+            },
+            _count: { _all: true },
+          });
+
+          approvalRows.forEach((row) => {
+            const productId = Number(row.productId);
+            if (!Number.isInteger(productId) || productId <= 0) return;
+
+            const current =
+              approvalByPizzaId.get(productId) || {
+                likes: 0,
+                dislikes: 0,
+                total: 0,
+                approvalPercent: 0,
+              };
+            const count = Number(row._count?._all || 0);
+
+            if (row.vote === "LIKE") current.likes += count;
+            if (row.vote === "DISLIKE") current.dislikes += count;
+            current.total = current.likes + current.dislikes;
+            current.approvalPercent = current.total
+              ? Math.round((current.likes / current.total) * 100)
+              : 0;
+            approvalByPizzaId.set(productId, current);
+          });
+        } catch (approvalError) {
+          console.warn("[stores.menu] product approvals unavailable:", approvalError?.code || approvalError?.message);
+        }
+      }
 
       const now = new Date();
       let directDiscountRows = [];
@@ -593,6 +639,13 @@ const attachStorePublicMenu = (router, prisma) => {
           priceBySize: pizza.priceBySize ?? {},
           image: pizza.image ?? null,
           launchAt: pizza.launchAt ?? null,
+          approval:
+            approvalByPizzaId.get(Number(pizza.id)) || {
+              likes: 0,
+              dislikes: 0,
+              total: 0,
+              approvalPercent: 0,
+            },
           stock: pizza.stocks?.[0]?.stock ?? null,
           ingredients: (pizza.ingredients || []).map((rel) => ({
             id: rel.ingredient.id,

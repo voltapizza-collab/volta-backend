@@ -1,6 +1,7 @@
 ﻿import express from "express";
 import { getBoostSettings } from "../services/boostSettings.js";
 import { sendOrderCustomerMessageSms, sendOrderReadySms } from "../services/orderNotifications.js";
+import { createProductReviewRequestForSale } from "../services/productReviews.js";
 import { createBoostCheckoutSession, isStripeCheckoutConfigured } from "../services/stripe.js";
 
 const TZ = process.env.TIMEZONE || "Europe/Madrid";
@@ -1241,8 +1242,14 @@ export default function myordersRoutes(prisma) {
           });
 
       if (!notification.ok) console.warn("[myorders.ready-sms]", notification);
+      const reviewRequest = sale.processed
+        ? { ok: false, skipped: true, reason: "already_processed" }
+        : await createProductReviewRequestForSale(prisma, updated).catch((error) => {
+            console.error("[myorders.review-request] error:", error);
+            return { ok: false, skipped: true, reason: "review_request_error" };
+          });
 
-      return res.json({ ok: true, order: formatSale(updated), notification });
+      return res.json({ ok: true, order: formatSale(updated), notification, reviewRequest });
     } catch (error) {
       console.error("[myorders.ready] error:", error);
       return res.status(500).json({ error: "Error marking order ready" });

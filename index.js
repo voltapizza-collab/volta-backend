@@ -36,6 +36,8 @@ import checkoutRoutes from "./routes/checkout.js";
 import presenceRoutes from "./routes/presence.js";
 import salesRoutes from "./routes/sales.js";
 import trackingAlertsRoutes from "./routes/trackingAlerts.js";
+import productReviewsRoutes from "./routes/productReviews.js";
+import { startProductReviewWorker } from "./services/productReviews.js";
 import { validateTelnyxEnv } from "./services/telnyx.js";
 
 const __filename = fileURLToPath(import.meta.url);
@@ -93,6 +95,7 @@ const checkoutRouter = checkoutRoutes(prisma);
 const presenceRouter = presenceRoutes();
 const salesRouter = salesRoutes(prisma);
 const trackingAlertsRouter = trackingAlertsRoutes(prisma);
+const productReviewsRouter = productReviewsRoutes(prisma);
 
 const envOrigins = (process.env.CORS_ORIGINS || "")
   .split(",")
@@ -188,6 +191,7 @@ app.use("/api/presence", presenceRouter);
 app.use("/api/myorders", myordersRouter);
 app.use("/api/sales", salesRouter);
 app.use("/api/tracking-alerts", trackingAlertsRouter);
+app.use("/api/product-reviews", productReviewsRouter);
 app.use("/api/billing", billingRouter);
 app.use("/api/boost-settings", boostSettingsRouter);
 app.use("/api/webhooks", telnyxWebhooksRouter);
@@ -227,12 +231,24 @@ app.get("/", (req, res) => {
 });
 
 const PORT = process.env.PORT || 8080;
+let productReviewWorker = null;
+let startupFailed = false;
 
 const server = app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
+  setImmediate(() => {
+    if (startupFailed) return;
+
+    productReviewWorker = startProductReviewWorker(prisma);
+    console.log(`Server running on port ${PORT}`);
+  });
 });
 
-server.on("error", (error) => {
+server.on("error", async (error) => {
+  startupFailed = true;
   console.error("[server] listen error:", error);
-  process.exitCode = 1;
+  productReviewWorker?.stop();
+  await prisma.$disconnect().catch((disconnectError) => {
+    console.error("[server] prisma disconnect error:", disconnectError);
+  });
+  process.exit(1);
 });

@@ -170,6 +170,8 @@ model Partner {
   menuPizzas         MenuPizza[]
   customers          Customer[]
   sales              Sale[]
+  productReviewRequests ProductReviewRequest[]
+  productReviewVotes ProductReviewVote[]
   coupons            Coupon[]
   promos             Promo[]
   directDiscounts    DirectDiscount[]
@@ -206,6 +208,8 @@ model Store {
   stocks               StorePizzaStock[]
   ingredientStocks     StoreIngredientStock[]
   sales                Sale[]
+  productReviewRequests ProductReviewRequest[]
+  productReviewVotes   ProductReviewVote[]
   redemptions          CouponRedemption[] @relation("StoreToRedemptions")
   games                Game[]
   hours                StoreHours[]
@@ -365,6 +369,8 @@ model Sale {
   boostMeta               Json?
 
   redemptions             CouponRedemption[]  @relation("SaleToRedemptions")
+  productReviewRequest    ProductReviewRequest?
+  productReviewVotes      ProductReviewVote[]
 
   @@index([date])
   @@index([partnerId])
@@ -451,10 +457,65 @@ model Customer {
 
   assignedCoupons   Coupon[]            @relation("CustomerAssignedCoupons")
   sales             Sale[]              @relation("CustomerSales")
+  productReviewRequests ProductReviewRequest[]
+  productReviewVotes ProductReviewVote[]
   redemptions       CouponRedemption[]  @relation("CustomerToRedemptions")
   plays             GamePlay[]
 
   @@index([partnerId])
+}
+model ProductReviewRequest {
+  id              Int                 @id @default(autoincrement())
+  token           String              @unique @db.VarChar(191)
+  saleId          Int                 @unique
+  partnerId       Int
+  storeId         Int
+  customerId      Int?
+  customerPhone   String?             @db.VarChar(64)
+  status          String              @default("PENDING") @db.VarChar(32)
+  sendAfter       DateTime
+  sentAt          DateTime?
+  respondedAt     DateTime?
+  messageStatus   String?             @db.VarChar(64)
+  messageMeta     Json?
+  createdAt       DateTime            @default(now())
+  updatedAt       DateTime            @updatedAt
+
+  sale            Sale                @relation(fields: [saleId], references: [id], onDelete: Cascade)
+  partner         Partner             @relation(fields: [partnerId], references: [id], onDelete: Cascade)
+  store           Store               @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  customer        Customer?           @relation(fields: [customerId], references: [id], onDelete: SetNull)
+  votes           ProductReviewVote[]
+
+  @@index([partnerId, status, sendAfter])
+  @@index([storeId])
+  @@index([customerId])
+}
+model ProductReviewVote {
+  id              Int                  @id @default(autoincrement())
+  requestId       Int
+  saleId          Int
+  partnerId       Int
+  storeId         Int
+  customerId      Int?
+  productId       Int?
+  lineKey         String               @db.VarChar(191)
+  productName     String               @db.VarChar(191)
+  vote            String               @db.VarChar(16)
+  createdAt       DateTime             @default(now())
+  updatedAt       DateTime             @updatedAt
+
+  request         ProductReviewRequest @relation(fields: [requestId], references: [id], onDelete: Cascade)
+  sale            Sale                 @relation(fields: [saleId], references: [id], onDelete: Cascade)
+  partner         Partner              @relation(fields: [partnerId], references: [id], onDelete: Cascade)
+  store           Store                @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  customer        Customer?            @relation(fields: [customerId], references: [id], onDelete: SetNull)
+
+  @@unique([requestId, lineKey])
+  @@index([partnerId, productId, vote])
+  @@index([storeId, productId, vote])
+  @@index([saleId])
+  @@index([customerId])
 }
 model CouponRedemption {
   id               Int               @id @default(autoincrement())
