@@ -192,6 +192,21 @@ app.use("/api/billing", billingRouter);
 app.use("/api/boost-settings", boostSettingsRouter);
 app.use("/api/webhooks", telnyxWebhooksRouter);
 
+app.get("/health", (_req, res) => {
+  res.json({ ok: true, service: "volta-backend", checkedAt: new Date().toISOString() });
+});
+
+app.get("/api/system/status", (_req, res) => {
+  const telnyx = validateTelnyxEnv({ requireWebhookPublicKey: true });
+
+  res.json({
+    ok: true,
+    service: "volta-backend",
+    checkedAt: new Date().toISOString(),
+    telnyx,
+  });
+});
+
 const configuredFrontendUrl = process.env.PUBLIC_FRONTEND_URL?.trim();
 const publicBackofficeUrl =
   process.env.BACKOFFICE_URL?.trim() ||

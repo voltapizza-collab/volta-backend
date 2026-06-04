@@ -22,6 +22,7 @@ const TELNYX_ENV_KEYS = [
   "TELNYX_API_KEY",
   "TELNYX_MESSAGING_PROFILE_ID",
   "SMS_SENDER_ID",
+  "TELNYX_SENDER_ID",
   "TELNYX_WEBHOOK_URL",
   "TELNYX_WEBHOOK_PUBLIC_KEY",
   "TELNYX_SKIP_WEBHOOK_VERIFY",
@@ -246,6 +247,38 @@ test("sendTelnyxSms rejects invalid recipient phone format before Telnyx call", 
     assert.equal(result.status, "failed");
     assert.equal(result.error.title, "invalid_phone");
     assert.equal(called, false);
+  } finally {
+    axios.post = originalPost;
+    restoreEnv(env);
+  }
+});
+
+test("sendTelnyxSms accepts TELNYX_SENDER_ID as deployed sender alias", async () => {
+  const env = snapshotEnv();
+  const originalPost = axios.post;
+  TELNYX_ENV_KEYS.forEach((key) => delete process.env[key]);
+  process.env.TELNYX_API_KEY = "test_api_key";
+  process.env.TELNYX_MESSAGING_PROFILE_ID = "00000000-0000-0000-0000-000000000000";
+  process.env.TELNYX_SENDER_ID = "VOLTAPIZZA";
+
+  let captured = null;
+  axios.post = async (url, payload, options) => {
+    captured = { url, payload, options };
+    return {
+      data: {
+        data: {
+          id: "msg_test",
+          to: [{ status: "queued" }],
+        },
+      },
+    };
+  };
+
+  try {
+    const result = await sendTelnyxSms({ to: "+34612345678", text: "Test" });
+
+    assert.equal(result.ok, true);
+    assert.equal(captured.payload.from, "VOLTAPIZZA");
   } finally {
     axios.post = originalPost;
     restoreEnv(env);

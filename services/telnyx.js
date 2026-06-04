@@ -11,7 +11,7 @@ const cleanEnv = (value) => String(value || "").trim();
 const telnyxConfig = () => ({
   apiKey: cleanEnv(process.env.TELNYX_API_KEY),
   messagingProfileId: cleanEnv(process.env.TELNYX_MESSAGING_PROFILE_ID),
-  senderId: cleanEnv(process.env.SMS_SENDER_ID),
+  senderId: cleanEnv(process.env.SMS_SENDER_ID) || cleanEnv(process.env.TELNYX_SENDER_ID),
   webhookUrl: cleanEnv(process.env.TELNYX_WEBHOOK_URL),
   webhookPublicKey: cleanEnv(process.env.TELNYX_WEBHOOK_PUBLIC_KEY),
 });

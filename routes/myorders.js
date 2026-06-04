@@ -1,9 +1,10 @@
-import express from "express";
+﻿import express from "express";
 import { getBoostSettings } from "../services/boostSettings.js";
 import { sendOrderCustomerMessageSms, sendOrderReadySms } from "../services/orderNotifications.js";
 import { createBoostCheckoutSession, isStripeCheckoutConfigured } from "../services/stripe.js";
 
 const TZ = process.env.TIMEZONE || "Europe/Madrid";
+const WEEKDAY_LABELS = ["domingo", "lunes", "martes", "miercoles", "jueves", "viernes", "sabado"];
 
 const parsePositiveInt = (value) => {
   const parsed = Number(value);
@@ -19,6 +20,35 @@ const parseOptionalDate = (value) => {
 const nowInTZ = () => {
   const snapshot = new Date().toLocaleString("sv-SE", { timeZone: TZ });
   return new Date(snapshot.replace(" ", "T"));
+};
+
+const getLocalDateParts = (value) => {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return null;
+
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    timeZone: TZ,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  })
+    .formatToParts(date)
+    .reduce((acc, part) => {
+      acc[part.type] = part.value;
+      return acc;
+    }, {});
+
+  const key = `${parts.year}-${parts.month}-${parts.day}`;
+  const localDate = new Date(`${key}T00:00:00Z`);
+  const weekday = localDate.getUTCDay();
+
+  return {
+    key,
+    isoDate: key,
+    dayOfMonth: Number(parts.day),
+    weekday,
+    weekdayLabel: WEEKDAY_LABELS[weekday],
+  };
 };
 
 const startOfLocalDay = (date) =>
@@ -133,6 +163,192 @@ const getScheduledFor = (sale) => {
 
 const roundMoney = (value) => Math.round(Number(value || 0) * 100) / 100;
 const toCents = (value) => Math.round(roundMoney(value) * 100);
+
+const average = (values) => {
+  if (!values.length) return 0;
+  return values.reduce((sum, value) => sum + value, 0) / values.length;
+};
+
+const summarizeDailySales = (sales) => {
+  const dailyMap = new Map();
+
+  sales.forEach((sale) => {
+    const total = Number(sale.total || 0);
+    if (!Number.isFinite(total)) return;
+
+    const parts = getLocalDateParts(sale.date || sale.createdAt);
+    if (!parts) return;
+
+    const row = dailyMap.get(parts.key) || {
+      ...parts,
+      revenue: 0,
+      orders: 0,
+    };
+    row.revenue += total;
+    row.orders += 1;
+    dailyMap.set(parts.key, row);
+  });
+
+  return [...dailyMap.values()].filter((row) => row.revenue > 0);
+};
+
+const summarizeCalendarGroup = (rows, keyName) => {
+  const buckets = new Map();
+
+  rows.forEach((row) => {
+    const key = row[keyName];
+    const bucket = buckets.get(key) || { count: 0, revenue: 0 };
+    bucket.count += 1;
+    bucket.revenue += row.revenue;
+    buckets.set(key, bucket);
+  });
+
+  return buckets;
+};
+
+const summarizeCalendarRankings = (buckets, labelForKey) =>
+  [...buckets.entries()]
+    .map(([key, bucket]) => ({
+      key,
+      label: labelForKey(key),
+      averageRevenue: bucket.count ? bucket.revenue / bucket.count : 0,
+      samples: bucket.count || 0,
+    }))
+    .filter((row) => row.averageRevenue > 0)
+    .sort(
+      (left, right) =>
+        right.averageRevenue - left.averageRevenue ||
+        right.samples - left.samples ||
+        String(left.label).localeCompare(String(right.label))
+    );
+
+const getCalendarAverage = (buckets, key, fallbackAverage) => {
+  const bucket = buckets.get(key);
+  if (!bucket || !bucket.count) {
+    return {
+      averageRevenue: fallbackAverage,
+      count: 0,
+    };
+  }
+
+  return {
+    averageRevenue: bucket.revenue / bucket.count,
+    count: bucket.count,
+  };
+};
+
+const pickCalendarWeights = ({ weekdayAverage, monthdayAverage }) => {
+  if (weekdayAverage <= 0 && monthdayAverage <= 0) {
+    return { weekday: 0.5, monthday: 0.5, stronger: "none" };
+  }
+
+  const total = weekdayAverage + monthdayAverage;
+  const weekday = total > 0 ? weekdayAverage / total : 0.5;
+  const monthday = total > 0 ? monthdayAverage / total : 0.5;
+
+  return {
+    weekday,
+    monthday,
+    stronger:
+      monthdayAverage > weekdayAverage
+        ? "monthday"
+        : weekdayAverage > monthdayAverage
+        ? "weekday"
+        : "tie",
+  };
+};
+
+const buildCalendarIndicators = (sales, now = nowInTZ()) => {
+  const dailyRows = summarizeDailySales(sales);
+  const baseDailyRevenue = average(dailyRows.map((row) => row.revenue));
+  const weekdayBuckets = summarizeCalendarGroup(dailyRows, "weekday");
+  const monthdayBuckets = summarizeCalendarGroup(dailyRows, "dayOfMonth");
+  const weekdayRankings = summarizeCalendarRankings(
+    weekdayBuckets,
+    (key) => WEEKDAY_LABELS[Number(key)] || String(key)
+  );
+  const monthdayRankings = summarizeCalendarRankings(monthdayBuckets, (key) => `dia ${key}`);
+  const topWeekdayKeys = new Set(weekdayRankings.slice(0, 3).map((row) => row.key));
+  const topMonthdayKeys = new Set(monthdayRankings.slice(0, 3).map((row) => row.key));
+
+  const describeDate = (date) => {
+    const parts = getLocalDateParts(date);
+    const weekday = getCalendarAverage(weekdayBuckets, parts.weekday, baseDailyRevenue);
+    const monthday = getCalendarAverage(monthdayBuckets, parts.dayOfMonth, baseDailyRevenue);
+    const weights = pickCalendarWeights({
+      weekdayAverage: weekday.averageRevenue,
+      monthdayAverage: monthday.averageRevenue,
+    });
+    const expectedRevenue =
+      weights.weekday * weekday.averageRevenue + weights.monthday * monthday.averageRevenue;
+    const calendarIndex = baseDailyRevenue > 0 ? expectedRevenue / baseDailyRevenue : 0;
+    const isTopWeekday = topWeekdayKeys.has(parts.weekday);
+    const isTopMonthday = topMonthdayKeys.has(parts.dayOfMonth);
+
+    return {
+      date: parts.isoDate,
+      dayOfMonth: parts.dayOfMonth,
+      weekday: parts.weekday,
+      weekdayLabel: parts.weekdayLabel,
+      expectedRevenue: roundMoney(expectedRevenue),
+      potentialScore: roundMoney(calendarIndex * 100),
+      calendarIndex,
+      weekdayAverage: roundMoney(weekday.averageRevenue),
+      monthdayAverage: roundMoney(monthday.averageRevenue),
+      weekdaySamples: weekday.count,
+      monthdaySamples: monthday.count,
+      isTopWeekday,
+      isTopMonthday,
+      tramoLevel: isTopWeekday && isTopMonthday ? "cross" : isTopWeekday || isTopMonthday ? "strong" : "normal",
+      tramoReason:
+        isTopWeekday && isTopMonthday
+          ? "Cruce fuerte"
+          : isTopWeekday
+          ? "Dia semana fuerte"
+          : isTopMonthday
+          ? "Dia mes fuerte"
+          : "Potencial normal",
+      weights: {
+        weekday: weights.weekday,
+        monthday: weights.monthday,
+        weekdayPct: Math.round(weights.weekday * 100),
+        monthdayPct: Math.round(weights.monthday * 100),
+        stronger: weights.stronger,
+      },
+    };
+  };
+
+  const today = startOfLocalDay(now);
+  const upcomingDays = Array.from({ length: 14 }, (_, index) => describeDate(addDays(today, index)));
+  const topUpcomingDays = [...upcomingDays]
+    .filter((day) => day.expectedRevenue > 0)
+    .sort((left, right) => {
+      const levelDiff =
+        (right.tramoLevel === "cross" ? 2 : right.tramoLevel === "strong" ? 1 : 0) -
+        (left.tramoLevel === "cross" ? 2 : left.tramoLevel === "strong" ? 1 : 0);
+      if (levelDiff) return levelDiff;
+      return right.expectedRevenue - left.expectedRevenue || new Date(left.date) - new Date(right.date);
+    })
+    .slice(0, 8);
+
+  return {
+    baseDailyRevenue: roundMoney(baseDailyRevenue),
+    sampleDays: dailyRows.length,
+    expectedToday: describeDate(today),
+    upcomingDays,
+    topUpcomingDays,
+    rankings: {
+      weekdays: weekdayRankings.slice(0, 7).map((row) => ({
+        ...row,
+        averageRevenue: roundMoney(row.averageRevenue),
+      })),
+      monthdays: monthdayRankings.slice(0, 10).map((row) => ({
+        ...row,
+        averageRevenue: roundMoney(row.averageRevenue),
+      })),
+    },
+  };
+};
 
 const buildBoostReturnUrl = (req, sale, status) => {
   const origin = String(
@@ -760,14 +976,16 @@ export default function myordersRoutes(prisma) {
     const storeId = parsePositiveInt(req.query.storeId);
     const period = String(req.query.period || "today").toLowerCase() === "week" ? "week" : "today";
     const { from, to, label } = getPeriodRange(period);
-    const scope = orderScopeWhere({ partnerId, storeId });
+    const scope = orderScopeWhere({ partnerId, storeId, activeStoresOnly: false });
 
     try {
       const [
         sales,
+        historicalSales,
         pendingCount,
         newCustomers,
         activeStores,
+        availableStores,
         stores,
       ] = await Promise.all([
         prisma.sale.findMany({
@@ -782,6 +1000,19 @@ export default function myordersRoutes(prisma) {
             customer: { select: { id: true } },
           },
           orderBy: { date: "desc" },
+        }),
+        prisma.sale.findMany({
+          where: {
+            ...scope,
+            status: { not: "CANCELED" },
+          },
+          select: {
+            id: true,
+            date: true,
+            createdAt: true,
+            total: true,
+          },
+          orderBy: { date: "asc" },
         }),
         prisma.sale.count({
           where: pendingOrderWhere({ partnerId, storeId, activeStoresOnly: false }),
@@ -801,7 +1032,19 @@ export default function myordersRoutes(prisma) {
         }),
         prisma.store.findMany({
           where: {
-            active: true,
+            ...(partnerId ? { partnerId } : {}),
+          },
+          select: {
+            id: true,
+            storeName: true,
+            slug: true,
+            partnerId: true,
+            partner: { select: { name: true, currency: true } },
+          },
+          orderBy: [{ partnerId: "asc" }, { storeName: "asc" }],
+        }),
+        prisma.store.findMany({
+          where: {
             ...(partnerId ? { partnerId } : {}),
             ...(storeId ? { id: storeId } : {}),
           },
@@ -883,13 +1126,18 @@ export default function myordersRoutes(prisma) {
       const topProducts = [...productMap.values()]
         .sort((left, right) => right.qty - left.qty || left.name.localeCompare(right.name))
         .slice(0, 6);
+      const calendarIndicators = buildCalendarIndicators(historicalSales);
 
       return res.json({
         period,
         periodLabel: label,
         from,
         to,
-        currency: safeSales[0]?.partner?.currency || stores[0]?.partner?.currency || "EUR",
+        currency:
+          safeSales[0]?.partner?.currency ||
+          stores[0]?.partner?.currency ||
+          availableStores[0]?.partner?.currency ||
+          "EUR",
         kpis: {
           revenue,
           ordersCount,
@@ -901,6 +1149,14 @@ export default function myordersRoutes(prisma) {
           deliveryOrders,
           pickupOrders,
         },
+        calendarIndicators,
+        availableStores: availableStores.map((store) => ({
+          storeId: store.id,
+          storeName: store.storeName,
+          partnerId: store.partnerId,
+          partnerName: store.partner?.name || "",
+          currency: store.partner?.currency || "EUR",
+        })),
         stores: [...storeMap.values()].sort((left, right) => {
           if (right.pending !== left.pending) return right.pending - left.pending;
           if (right.revenue !== left.revenue) return right.revenue - left.revenue;
@@ -939,7 +1195,7 @@ export default function myordersRoutes(prisma) {
       const scheduledFor = getScheduledFor(sale);
       if (scheduledFor && new Date(scheduledFor).getTime() > Date.now()) {
         return res.status(409).json({
-          error: "espera el momento 🧘‍♂️",
+          error: "espera el momento Ã°Å¸Â§ËœÃ¢â‚¬ÂÃ¢â„¢â€šÃ¯Â¸Â",
           code: "SCHEDULED_ORDER_LOCKED",
           scheduledFor,
           serverTime: new Date().toISOString(),
