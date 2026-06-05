@@ -66,6 +66,24 @@ if (fs.existsSync(envPath)) {
 }
 
 const app = express();
+const hostRedirects = {
+  "juego.mycrushpizza.com": "https://voltapizza.com/mycrushpizza/coupons",
+};
+
+app.use((req, res, next) => {
+  const hostname = String(req.hostname || "").toLowerCase();
+  const destination = hostRedirects[hostname];
+
+  if (destination) {
+    const queryString = req.originalUrl.includes("?")
+      ? req.originalUrl.slice(req.originalUrl.indexOf("?"))
+      : "";
+    return res.redirect(301, `${destination}${queryString}`);
+  }
+
+  return next();
+});
+
 const telnyxEnvStatus = validateTelnyxEnv({ requireWebhookPublicKey: true });
 if (!telnyxEnvStatus.enabled) {
   console.warn("[telnyx] Missing env vars:", telnyxEnvStatus.missing.join(", "));

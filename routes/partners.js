@@ -130,6 +130,15 @@ const filterOperationalStores = (stores = [], now = getStoreClockNow()) =>
     (store) => store?.active !== false && store?.acceptingOrders !== false && isStoreOpenNow(store, now)
   );
 
+export const selectDeliveryCoverageStores = (stores = [], now = getStoreClockNow()) => {
+  const activeStores = stores.filter(
+    (store) => store?.active !== false && store?.acceptingOrders !== false
+  );
+  const operationalStores = filterOperationalStores(activeStores, now);
+
+  return operationalStores.length ? operationalStores : activeStores;
+};
+
 async function ensurePartnerSettingsColumns() {
   const columns = [
     ["deliveryRadiusKm", "DOUBLE NULL"],
@@ -354,11 +363,11 @@ async function computeDrivingDistances(origin, stores, key) {
   }
 }
 
-function buildManualDeliveryResolution({ address, partner, stores, reason }) {
+export function buildManualDeliveryResolution({ address, partner, stores, reason }) {
   const fallbackStore = stores[0] || null;
   const radiusKm =
     partner.deliveryRadiusKm == null ? null : Number(partner.deliveryRadiusKm);
-  const withinRange = radiusKm == null && Boolean(fallbackStore);
+  const withinRange = Boolean(fallbackStore);
 
   return {
     formattedAddress: address,
@@ -366,7 +375,7 @@ function buildManualDeliveryResolution({ address, partner, stores, reason }) {
     withinRange,
     deliveryRadiusKm: radiusKm,
     deliveryFee:
-      withinRange && fallbackStore && partner.deliveryPricingMode === "FIXED"
+      withinRange && fallbackStore
         ? computeDeliveryFee(partner, 0)
         : null,
     deliveryFeeBlockSize: Number(partner.deliveryFeeBlockSize || 5),
@@ -376,7 +385,7 @@ function buildManualDeliveryResolution({ address, partner, stores, reason }) {
     pricingMode: partner.deliveryPricingMode,
     geocodingStatus: "MANUAL_FALLBACK",
     geocodingReason: reason,
-    coverageDistanceRequired: radiusKm == null ? null : "PRECISE_ADDRESS",
+    coverageDistanceRequired: radiusKm == null ? null : "MANUAL_REVIEW",
     coverageDistanceAvailable: radiusKm == null,
     nearestStore: fallbackStore
       ? {
@@ -385,6 +394,7 @@ function buildManualDeliveryResolution({ address, partner, stores, reason }) {
           storeName: fallbackStore.storeName,
           city: fallbackStore.city,
           distanceKm: null,
+          distanceSource: "MANUAL_FALLBACK",
         }
       : null,
   };
@@ -404,7 +414,7 @@ function haversineKm(lat1, lon1, lat2, lon2) {
   return 2 * R * Math.asin(Math.sqrt(a));
 }
 
-function isPreciseCustomerGeocode(geocode) {
+export function isPreciseCustomerGeocode(geocode) {
   if (!geocode) return false;
   if (geocode.source === "PLACE_AUTOCOMPLETE") return true;
 
@@ -422,7 +432,7 @@ function isPreciseCustomerGeocode(geocode) {
   );
 }
 
-function computeDeliveryFee(partner, distanceKm) {
+export function computeDeliveryFee(partner, distanceKm) {
   if (partner.deliveryPricingMode === "VARIABLE") {
     const base = Number(partner.deliveryFeeBase || 0);
     const baseKm = Number(partner.deliveryBaseKm || 0);
@@ -595,7 +605,7 @@ router.post("/:slug/delivery/resolve", async (req, res) => {
       },
       orderBy: { storeName: "asc" },
     });
-    const stores = filterOperationalStores(rawStores);
+    const stores = selectDeliveryCoverageStores(rawStores);
 
     if (!googleKey) {
       return res.json(
@@ -623,19 +633,32 @@ router.post("/:slug/delivery/resolve", async (req, res) => {
           googleKey
         );
 
-    if (!customerGeocode || !isPreciseCustomerGeocode(customerGeocode)) {
+    if (!customerGeocode) {
       return res.json(
         buildManualDeliveryResolution({
           address,
           partner,
           stores,
-          reason: customerGeocode ? "ADDRESS_NOT_PRECISE" : "ADDRESS_NOT_FOUND",
+          reason: "ADDRESS_NOT_FOUND",
         })
       );
     }
 
-    const lat = customerGeocode.lat;
-    const lng = customerGeocode.lng;
+    const lat = Number(customerGeocode.lat);
+    const lng = Number(customerGeocode.lng);
+
+    if (!Number.isFinite(lat) || !Number.isFinite(lng)) {
+      return res.json(
+        buildManualDeliveryResolution({
+          address,
+          partner,
+          stores,
+          reason: "ADDRESS_COORDS_UNAVAILABLE",
+        })
+      );
+    }
+
+    const preciseCustomerGeocode = isPreciseCustomerGeocode(customerGeocode);
 
     const storesWithResolvedCoords = await Promise.all(
       stores.map(async (store) => {
@@ -689,10 +712,14 @@ router.post("/:slug/delivery/resolve", async (req, res) => {
     );
 
     if (!eligibleStores.length) {
-      return res.status(422).json({
-        error: "NO_STORES_WITH_COORDS",
-        message: "No hay tiendas listas para calcular delivery.",
-      });
+      return res.json(
+        buildManualDeliveryResolution({
+          address,
+          partner,
+          stores,
+          reason: "NO_STORES_WITH_COORDS",
+        })
+      );
     }
 
     const fallbackDistances = eligibleStores
@@ -741,7 +768,8 @@ router.post("/:slug/delivery/resolve", async (req, res) => {
         partner.deliveryMaxPizzasPerOrder
       ),
       pricingMode: partner.deliveryPricingMode,
-      geocodingStatus: "GEOCODED",
+      geocodingStatus: preciseCustomerGeocode ? "GEOCODED" : "GEOCODED_APPROXIMATE",
+      geocodingReason: preciseCustomerGeocode ? null : "ADDRESS_NOT_PRECISE",
       coverageDistanceRequired: radiusKm == null ? null : "DRIVING_ROUTE_OR_ESTIMATE",
       coverageDistanceAvailable: true,
       nearestStore: {
@@ -783,7 +811,7 @@ router.post("/:slug/delivery/resolve", async (req, res) => {
             orderBy: { storeName: "asc" },
           })
         : [];
-      const stores = filterOperationalStores(rawStores);
+      const stores = selectDeliveryCoverageStores(rawStores);
 
       if (partner && address) {
         return res.json(

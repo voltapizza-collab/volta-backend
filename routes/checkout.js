@@ -16,6 +16,11 @@ const parsePositiveInt = (value) => {
 const roundMoney = (value) => Math.round(Number(value || 0) * 100) / 100;
 const toCents = (value) => Math.round(roundMoney(value) * 100);
 const PRISMA_CONNECTIVITY_CODES = new Set(["P1001", "P1002", "P1017"]);
+const PROMO_LINE_SOURCES = new Set(["promo"]);
+const PROMO_LINE_TYPES = new Set(["PROMO"]);
+const TOP_DEAL_LINE_SOURCES = new Set(["discount", "direct_discount", "direct-discount", "top_deal", "topdeal", "offer"]);
+const TOP_DEAL_LINE_TYPES = new Set(["DISCOUNT", "DIRECT_DISCOUNT", "DIRECT-DISCOUNT", "TOP_DEAL", "TOPDEAL", "OFFER"]);
+const TZ = process.env.TIMEZONE || "Europe/Madrid";
 
 const isPrismaConnectivityError = (error) => {
   const code = error?.code || error?.errorCode;
@@ -79,6 +84,74 @@ const getLineQty = (line) => {
   return Number.isFinite(qty) && qty > 0 ? qty : 1;
 };
 
+const asIdSet = (value) => {
+  const list = asArray(value);
+  return new Set(
+    list
+      .map((item) => Number(item))
+      .filter((item) => Number.isInteger(item) && item > 0)
+  );
+};
+
+const normalizeComparableText = (value = "") =>
+  String(value || "")
+    .trim()
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "");
+
+const nowInTZ = () => {
+  const snapshot = new Date().toLocaleString("sv-SE", { timeZone: TZ });
+  return new Date(snapshot.replace(" ", "T"));
+};
+
+const minutesOfDay = (dateLike) => {
+  const date = dateLike instanceof Date ? dateLike : new Date(dateLike);
+  return date.getHours() * 60 + date.getMinutes();
+};
+
+const esDayToNum = (value) => {
+  const map = {
+    domingo: 0,
+    lunes: 1,
+    martes: 2,
+    miercoles: 3,
+    "miércoles": 3,
+    jueves: 4,
+    viernes: 5,
+    sabado: 6,
+    "sábado": 6,
+  };
+  const normalized = String(value || "").trim().toLowerCase();
+  return normalized in map ? map[normalized] : null;
+};
+
+const normalizeDaysActive = (value) => {
+  if (!value) return [];
+  let list = value;
+
+  if (typeof value === "string") {
+    try {
+      list = JSON.parse(value);
+    } catch {
+      list = value.split(",");
+    }
+  }
+
+  if (!Array.isArray(list)) return [];
+
+  return [
+    ...new Set(
+      list
+        .map((item) => {
+          if (typeof item === "number" && item >= 0 && item <= 6) return item;
+          return esDayToNum(item);
+        })
+        .filter((item) => item != null)
+    ),
+  ].sort();
+};
+
 const isCouponLine = (line) => {
   const type = String(line?.type || "").toUpperCase();
   const source = String(line?.source || "").toLowerCase();
@@ -90,6 +163,83 @@ const isIncentiveRewardLine = (line) => {
   const source = String(line?.source || "").toLowerCase();
   return type === "INCENTIVE_REWARD" || source === "incentive_reward";
 };
+
+const isPromoLine = (line) => {
+  const type = String(line?.type || "").trim().toUpperCase();
+  const source = String(line?.source || "").trim().toLowerCase();
+  const cartLineId = String(line?.cartLineId || "").trim().toLowerCase();
+  return (
+    Boolean(parsePositiveInt(line?.promoId)) ||
+    asArray(line?.promoItems).length > 0 ||
+    PROMO_LINE_TYPES.has(type) ||
+    PROMO_LINE_SOURCES.has(source) ||
+    cartLineId.startsWith("promo-")
+  );
+};
+
+const isTopDealLine = (line) => {
+  const type = String(line?.type || "").trim().toUpperCase();
+  const source = String(line?.source || "").trim().toLowerCase();
+  return Boolean(line?.directDiscount) || TOP_DEAL_LINE_TYPES.has(type) || TOP_DEAL_LINE_SOURCES.has(source);
+};
+
+const isBoostLine = (line) => {
+  const type = String(line?.type || "").trim().toLowerCase();
+  const source = String(line?.source || "").trim().toLowerCase();
+  return type === "queue_boost" || source === "queue_boost";
+};
+
+const isDirectDiscountActive = (discount, reference) => {
+  const current = reference.getTime();
+  if (String(discount?.status || "ACTIVE").toUpperCase() !== "ACTIVE") return false;
+  if (discount.activeFrom && new Date(discount.activeFrom).getTime() > current) return false;
+  if (discount.expiresAt && new Date(discount.expiresAt).getTime() <= current) return false;
+
+  const days = normalizeDaysActive(discount.daysActive);
+  if (days.length && !days.includes(reference.getDay())) return false;
+
+  if (discount.windowStart != null || discount.windowEnd != null) {
+    const start = discount.windowStart == null ? 0 : Number(discount.windowStart);
+    const end = discount.windowEnd == null ? 24 * 60 : Number(discount.windowEnd);
+    const minutes = minutesOfDay(reference);
+
+    if (start <= end && (minutes < start || minutes >= end)) return false;
+    if (start > end && minutes < start && minutes >= end) return false;
+  }
+
+  return true;
+};
+
+const discountAppliesToStore = (discount, storeId) => {
+  const storeIds = asIdSet(discount?.storeIds);
+  return storeIds.size === 0 || storeIds.has(Number(storeId));
+};
+
+const discountAppliesToCartLine = (discount, line) => {
+  const targetType = String(discount?.targetType || "").toUpperCase();
+  const productIds = asIdSet(discount?.productIds);
+  const pizzaId = parsePositiveInt(line?.pizzaId);
+
+  if (pizzaId && productIds.has(pizzaId)) return true;
+  if (targetType === "PRODUCT") return false;
+  if (targetType !== "CATEGORY") return false;
+
+  const categoryIds = asIdSet(discount?.categoryIds);
+  const categoryId = parsePositiveInt(line?.categoryId);
+  if (categoryId && categoryIds.has(categoryId)) return true;
+
+  const categoryNames = asArray(discount?.categoryNames);
+  const lineCategory = normalizeComparableText(line?.category);
+  return Boolean(
+    lineCategory &&
+      categoryNames.some((categoryName) => normalizeComparableText(categoryName) === lineCategory)
+  );
+};
+
+const lineHasActiveTopDeal = (line, activeTopDeals, storeId) =>
+  activeTopDeals.some(
+    (discount) => discountAppliesToStore(discount, storeId) && discountAppliesToCartLine(discount, line)
+  );
 
 const isCustomBuildLine = (line) => {
   const type = String(line?.type || "").toUpperCase();
@@ -172,6 +322,7 @@ const sanitizeLine = (line, index) => ({
   rightPizzaId: parsePositiveInt(line?.rightPizzaId),
   leftName: line?.leftName ? String(line.leftName).trim().slice(0, 160) : null,
   rightName: line?.rightName ? String(line.rightName).trim().slice(0, 160) : null,
+  categoryId: parsePositiveInt(line?.categoryId),
   category: String(line?.category || "").trim().slice(0, 120),
   size: String(line?.size || "").trim().slice(0, 80),
   qty: getLineQty(line),
@@ -197,15 +348,12 @@ const sanitizeLine = (line, index) => ({
   boost: line?.boost && typeof line.boost === "object" ? line.boost : null,
 });
 
-const getEligibleCouponSubtotal = (lines) =>
+export const getEligibleCouponSubtotal = (lines, { activeTopDeals = [], storeId = null } = {}) =>
   lines
     .filter((line) => {
-      const type = String(line?.type || "").toUpperCase();
-      const source = String(line?.source || "").toLowerCase();
       if (isCouponLine(line) || isIncentiveRewardLine(line)) return false;
-      if (line?.directDiscount) return false;
-      if (line?.promoId || type === "PROMO" || source === "promo") return false;
-      if (source === "queue_boost") return false;
+      if (isBoostLine(line) || isPromoLine(line) || isTopDealLine(line)) return false;
+      if (storeId && lineHasActiveTopDeal(line, activeTopDeals, storeId)) return false;
       return true;
     })
     .reduce((sum, line) => sum + Math.max(0, getLineTotal(line)), 0);
@@ -496,8 +644,31 @@ export default function checkoutRoutes(prisma) {
         });
       }
 
+      const activeTopDeals = (
+        await prisma.directDiscount.findMany({
+          where: {
+            partnerId,
+            status: "ACTIVE",
+            AND: [
+              {
+                OR: [
+                  { activeFrom: null },
+                  { activeFrom: { lte: new Date() } },
+                ],
+              },
+              {
+                OR: [
+                  { expiresAt: null },
+                  { expiresAt: { gt: new Date() } },
+                ],
+              },
+            ],
+          },
+        })
+      ).filter((discount) => isDirectDiscountActive(discount, nowInTZ()));
+
       const couponLine = lines.find(isCouponLine);
-      const eligibleSubtotal = getEligibleCouponSubtotal(lines);
+      const eligibleSubtotal = getEligibleCouponSubtotal(lines, { activeTopDeals, storeId });
 
       if (couponLine?.couponCode) {
         const coupon = await prisma.coupon.findFirst({

@@ -6,7 +6,7 @@
   "type": "module",
   "scripts": {
     "start": "node scripts/prepareProductionDatabase.js && npx prisma migrate deploy && node index.js",
-    "test": "node --test tests/cloudinaryConfig.test.js tests/telnyx.test.js tests/trackingNotifications.test.js tests/trackingAlerts.test.js tests/storeMenuActivation.test.js"
+    "test": "node --test tests/cloudinaryConfig.test.js tests/telnyx.test.js tests/trackingNotifications.test.js tests/trackingAlerts.test.js tests/storeMenuActivation.test.js tests/deliveryResolution.test.js tests/checkoutCouponOverlap.test.js tests/myordersFilters.test.js"
   },
   "keywords": [],
   "author": "",

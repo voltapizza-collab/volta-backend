@@ -590,6 +590,12 @@ const pendingOrderWhere = ({ partnerId, storeId, activeStoresOnly = true }) => (
   status: "PAID",
 });
 
+export const completedOrderWhere = ({ partnerId, storeId, activeStoresOnly = true }) => ({
+  ...orderScopeWhere({ partnerId, storeId, activeStoresOnly }),
+  processed: true,
+  status: "PAID",
+});
+
 const queueOrderBy = [{ date: "asc" }, { createdAt: "asc" }];
 
 const compareQueueAge = (left, right) => {
@@ -992,7 +998,7 @@ export default function myordersRoutes(prisma) {
         prisma.sale.findMany({
           where: {
             ...scope,
-            status: { not: "CANCELED" },
+            ...completedOrderWhere({ partnerId, storeId, activeStoresOnly: false }),
             date: { gte: from, lt: to },
           },
           include: {
@@ -1005,7 +1011,7 @@ export default function myordersRoutes(prisma) {
         prisma.sale.findMany({
           where: {
             ...scope,
-            status: { not: "CANCELED" },
+            ...completedOrderWhere({ partnerId, storeId, activeStoresOnly: false }),
           },
           select: {
             id: true,
@@ -1184,13 +1190,17 @@ export default function myordersRoutes(prisma) {
       const sale = await prisma.sale.findFirst({
         where: {
           id,
-          status: { not: "CANCELED" },
+          status: "PAID",
         },
-        select: { id: true, processed: true, customerData: true },
+        select: { id: true, status: true, processed: true, customerData: true },
       });
 
       if (!sale) {
-        return res.status(404).json({ error: "Order not found" });
+        return res.status(404).json({ error: "Order not found or payment not confirmed" });
+      }
+
+      if (sale.processed) {
+        return res.status(409).json({ error: "Order already completed" });
       }
 
       const scheduledFor = getScheduledFor(sale);
