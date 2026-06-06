@@ -114,6 +114,54 @@ const nowInTZ = () => {
   return new Date(snapshot.replace(" ", "T"));
 };
 
+const parseMaybeJson = (value, fallback) => {
+  if (value == null || value === "") return fallback;
+  if (typeof value !== "string") return value;
+
+  try {
+    return JSON.parse(value);
+  } catch {
+    return fallback;
+  }
+};
+
+const normalizePositiveIds = (value) => {
+  const parsed = parseMaybeJson(value, value);
+  const list = Array.isArray(parsed) ? parsed : parsed == null || parsed === "" ? [] : [parsed];
+
+  return [
+    ...new Set(
+      list
+        .map((item) => Number(item))
+        .filter((item) => Number.isInteger(item) && item > 0)
+    ),
+  ];
+};
+
+const normalizePriceAdjustmentRules = (value) => {
+  const parsed = parseMaybeJson(value, []);
+  const list = Array.isArray(parsed) ? parsed : [];
+
+  return list
+    .map((rule) => ({
+      id: String(rule?.id || "").trim(),
+      title: String(rule?.title || "").trim(),
+      type: "PERCENT",
+      value: Number(rule?.value),
+      targetType: String(rule?.targetType || "ALL").toUpperCase(),
+      categoryIds: normalizePositiveIds(rule?.categoryIds),
+      productIds: normalizePositiveIds(rule?.productIds),
+      storeIds: normalizePositiveIds(rule?.storeIds),
+      activeFrom: rule?.activeFrom ? new Date(rule.activeFrom) : null,
+      expiresAt: rule?.expiresAt ? new Date(rule.expiresAt) : null,
+      daysActive: normalizePromoDaysActive(rule?.daysActive),
+      windowStart: rule?.windowStart == null ? null : Number(rule.windowStart),
+      windowEnd: rule?.windowEnd == null ? null : Number(rule.windowEnd),
+      status: String(rule?.status || "ACTIVE").toUpperCase(),
+    }))
+    .filter((rule) => Number.isFinite(rule.value) && rule.value !== 0);
+};
+
 const normalizeProductKey = (value) =>
   String(value || "")
     .trim()
@@ -335,6 +383,13 @@ const isPromoWithinWindow = (promo, reference) => {
   return minutes >= start || minutes < end;
 };
 
+const isPriceAdjustmentWithinWindow = (rule, reference) => {
+  if (rule.status !== "ACTIVE") return false;
+  if (rule.activeFrom && rule.activeFrom > reference) return false;
+  if (rule.expiresAt && rule.expiresAt <= reference) return false;
+  return isPromoWithinWindow(rule, reference);
+};
+
 const asIdSet = (value) => {
   const list = Array.isArray(value) ? value : [];
   return new Set(
@@ -374,6 +429,62 @@ const discountAppliesToPizza = (discount, pizza) => {
 const discountAppliesToStore = (discount, storeId) => {
   const storeIds = asIdSet(discount.storeIds);
   return storeIds.size === 0 || storeIds.has(Number(storeId));
+};
+
+const priceAdjustmentAppliesToPizza = (rule, pizza, storeId) => {
+  const storeIds = asIdSet(rule.storeIds);
+  if (storeIds.size > 0 && !storeIds.has(Number(storeId))) return false;
+
+  if (rule.targetType === "ALL") return true;
+
+  if (rule.targetType === "PRODUCT") {
+    return asIdSet(rule.productIds).has(Number(pizza.id || pizza.pizzaId));
+  }
+
+  if (rule.targetType === "CATEGORY") {
+    return asIdSet(rule.categoryIds).has(Number(pizza.categoryId));
+  }
+
+  return false;
+};
+
+const applyPriceAdjustmentRulesToPizza = (pizza, rules, storeId) => {
+  const activeRules = rules.filter((rule) =>
+    priceAdjustmentAppliesToPizza(rule, pizza, storeId)
+  );
+
+  if (!activeRules.length) return pizza;
+
+  const originalBasePriceBySize = pizza.priceBySize || {};
+  const adjustedPriceBySize = Object.entries(originalBasePriceBySize).reduce(
+    (nextPrices, [size, price]) => {
+      const basePrice = Number(price);
+      if (!Number.isFinite(basePrice) || basePrice <= 0) {
+        nextPrices[size] = price;
+        return nextPrices;
+      }
+
+      const adjusted = activeRules.reduce(
+        (currentPrice, rule) => currentPrice * (1 + Number(rule.value || 0) / 100),
+        basePrice
+      );
+      nextPrices[size] = roundMoney(Math.max(0, adjusted));
+      return nextPrices;
+    },
+    {}
+  );
+
+  return {
+    ...pizza,
+    originalBasePriceBySize,
+    priceBySize: adjustedPriceBySize,
+    priceAdjustments: activeRules.map((rule) => ({
+      id: rule.id,
+      title: rule.title,
+      value: rule.value,
+      targetType: rule.targetType,
+    })),
+  };
 };
 
 const getDiscountedPrice = (price, discount) => {
@@ -455,6 +566,19 @@ const attachStorePublicMenu = (router, prisma) => {
         return res.status(404).json({ error: "Partner not found" });
       }
 
+      let priceAdjustmentRows = [];
+      try {
+        priceAdjustmentRows = await prisma.$queryRawUnsafe(
+          "SELECT priceAdjustmentRules FROM Partner WHERE id = ?",
+          partner.id
+        );
+      } catch (priceAdjustmentError) {
+        console.warn(
+          "[stores.menu] price adjustments unavailable:",
+          priceAdjustmentError?.code || priceAdjustmentError?.message
+        );
+      }
+
       const store = await prisma.store.findFirst({
         where: {
           slug: storeSlug,
@@ -482,6 +606,8 @@ const attachStorePublicMenu = (router, prisma) => {
           priceBySize: true,
           image: true,
           launchAt: true,
+          availableUntil: true,
+          productTags: true,
           categoryRef: {
             select: {
               position: true,
@@ -624,9 +750,18 @@ const attachStorePublicMenu = (router, prisma) => {
       const activeDirectDiscounts = directDiscountRows.filter((discount) =>
         isPromoWithinWindow(discount, directDiscountWindowNow)
       );
-      const mapPublicPizza = (pizza, available, { applyDiscount = true } = {}) => {
-        const publicPizza = {
+      const priceAdjustmentWindowNow = nowInTZ();
+      const activePriceAdjustments = normalizePriceAdjustmentRules(
+        priceAdjustmentRows?.[0]?.priceAdjustmentRules
+      ).filter((rule) => isPriceAdjustmentWithinWindow(rule, priceAdjustmentWindowNow));
+      const mapPublicPizza = (
+        pizza,
+        available,
+        { applyDiscount = true, applyPriceAdjustments = true } = {}
+      ) => {
+        const publicPizzaBase = {
           pizzaId: pizza.id,
+          id: pizza.id,
           name: pizza.name,
           categoryId: pizza.categoryId ?? null,
           category: pizza.category ?? null,
@@ -639,6 +774,8 @@ const attachStorePublicMenu = (router, prisma) => {
           priceBySize: pizza.priceBySize ?? {},
           image: pizza.image ?? null,
           launchAt: pizza.launchAt ?? null,
+          availableUntil: pizza.availableUntil ?? null,
+          productTags: Array.isArray(pizza.productTags) ? pizza.productTags : [],
           approval:
             approvalByPizzaId.get(Number(pizza.id)) || {
               likes: 0,
@@ -658,19 +795,31 @@ const attachStorePublicMenu = (router, prisma) => {
           extras: [],
           available,
         };
-        if (!applyDiscount) return publicPizza;
 
         const bestDiscount = chooseBestDiscountForPizza(pizza, activeDirectDiscounts, store.id);
+        const shouldApplyPriceAdjustment =
+          applyPriceAdjustments && !bestDiscount && !pizza.trend;
+        const publicPizza = shouldApplyPriceAdjustment
+          ? applyPriceAdjustmentRulesToPizza(publicPizzaBase, activePriceAdjustments, store.id)
+          : publicPizzaBase;
+
+        if (!applyDiscount) return publicPizza;
+
         return applyDirectDiscountToPizza(publicPizza, bestDiscount);
       };
       const menu = availablePizzas
-        .filter((pizza) => !pizza.launchAt || pizza.launchAt <= now)
+        .filter((pizza) => (!pizza.launchAt || pizza.launchAt <= now) && (!pizza.availableUntil || pizza.availableUntil > now))
         .map((pizza) => mapPublicPizza(pizza, true));
       const trendingSourceMenu = availablePizzas
-        .filter((pizza) => !pizza.launchAt || pizza.launchAt <= now)
-        .map((pizza) => mapPublicPizza(pizza, true, { applyDiscount: false }));
+        .filter((pizza) => (!pizza.launchAt || pizza.launchAt <= now) && (!pizza.availableUntil || pizza.availableUntil > now))
+        .map((pizza) =>
+          mapPublicPizza(pizza, true, {
+            applyDiscount: false,
+            applyPriceAdjustments: false,
+          })
+        );
       const upcoming = availablePizzas
-        .filter((pizza) => pizza.launchAt && pizza.launchAt > now)
+        .filter((pizza) => pizza.launchAt && pizza.launchAt > now && (!pizza.availableUntil || pizza.availableUntil > now))
         .map((pizza) => mapPublicPizza(pizza, false));
       const trending = await buildTrendingMenu(prisma, {
         storeId: store.id,

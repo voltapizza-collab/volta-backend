@@ -603,7 +603,7 @@ export default function customersRoutes(prisma) {
 
       const where = partnerId ? { partnerId } : undefined;
 
-      const [list, territoryStores, partnerTerritory, storeAverageByStoreId] = await Promise.all([
+      const [list, territoryStores, partnerTerritory, storeAverageByStoreId, reviewVoteRows] = await Promise.all([
         prisma.customer.findMany({
           where,
           select: {
@@ -697,7 +697,39 @@ export default function customersRoutes(prisma) {
             })
           : Promise.resolve(null),
         partnerId ? getStoreAverageTickets(prisma, partnerId) : Promise.resolve(new Map()),
+        partnerId
+          ? prisma.productReviewVote.groupBy({
+              by: ["customerId", "vote"],
+              where: {
+                partnerId,
+                customerId: { not: null },
+              },
+              _count: { _all: true },
+              _max: { createdAt: true },
+            })
+          : Promise.resolve([]),
       ]);
+
+      const reviewStatsByCustomerId = new Map();
+      reviewVoteRows.forEach((row) => {
+        if (!row.customerId) return;
+        const current = reviewStatsByCustomerId.get(row.customerId) || {
+          reviewLikes: 0,
+          reviewDislikes: 0,
+          reviewLastVoteAt: null,
+        };
+        if (row.vote === "LIKE") current.reviewLikes += row._count?._all || 0;
+        if (row.vote === "DISLIKE") current.reviewDislikes += row._count?._all || 0;
+        const lastVoteAt = row._max?.createdAt || null;
+        if (
+          lastVoteAt &&
+          (!current.reviewLastVoteAt ||
+            new Date(lastVoteAt).getTime() > new Date(current.reviewLastVoteAt).getTime())
+        ) {
+          current.reviewLastVoteAt = lastVoteAt;
+        }
+        reviewStatsByCustomerId.set(row.customerId, current);
+      });
 
       const pizzaNameById = await getPizzaNameById(
         prisma,
@@ -710,13 +742,23 @@ export default function customersRoutes(prisma) {
             storeAverageByStoreId,
             pizzaNameById,
           });
-          if (hasUsableCoordinates(row.lat, row.lng) || !row.territoryZipCode) return row;
+          const reviewStats = reviewStatsByCustomerId.get(customer.id) || {
+            reviewLikes: 0,
+            reviewDislikes: 0,
+            reviewLastVoteAt: null,
+          };
+          const rowWithReviews = {
+            ...row,
+            ...reviewStats,
+            reviewVotes: reviewStats.reviewLikes + reviewStats.reviewDislikes,
+          };
+          if (hasUsableCoordinates(row.lat, row.lng) || !row.territoryZipCode) return rowWithReviews;
 
           const coords = await geocodePostalCode(row.territoryZipCode, partnerTerritory?.country || "ES");
-          if (!hasUsableCoordinates(coords.lat, coords.lng)) return row;
+          if (!hasUsableCoordinates(coords.lat, coords.lng)) return rowWithReviews;
 
           return {
-            ...row,
+            ...rowWithReviews,
             lat: coords.lat,
             lng: coords.lng,
             territoryLat: coords.lat,

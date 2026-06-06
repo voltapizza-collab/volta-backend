@@ -52,6 +52,25 @@ const getLocalDateParts = (value) => {
   };
 };
 
+const getLocalHour = (value) => {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return null;
+
+  const parts = new Intl.DateTimeFormat("en-GB", {
+    timeZone: TZ,
+    hour: "2-digit",
+    hourCycle: "h23",
+  })
+    .formatToParts(date)
+    .reduce((acc, part) => {
+      acc[part.type] = part.value;
+      return acc;
+    }, {});
+
+  const hour = Number(parts.hour);
+  return Number.isInteger(hour) && hour >= 0 && hour <= 23 ? hour : null;
+};
+
 const startOfLocalDay = (date) =>
   new Date(date.getFullYear(), date.getMonth(), date.getDate());
 
@@ -107,6 +126,19 @@ const asArray = (value) => {
 const asObject = (value) => {
   const parsed = parseMaybeJson(value, {});
   return parsed && typeof parsed === "object" && !Array.isArray(parsed) ? parsed : {};
+};
+
+const getLineQty = (item) => {
+  const qty = Number(item?.quantity ?? item?.qty ?? item?.cantidad ?? 1);
+  return Number.isFinite(qty) && qty > 0 ? qty : 1;
+};
+
+const countSaleProductUnits = (sale) => {
+  const items = asArray(sale?.products);
+  if (!items.length) return 1;
+
+  const units = items.reduce((sum, item) => sum + getLineQty(item), 0);
+  return units > 0 ? units : 1;
 };
 
 const cleanChatText = (value) => String(value || "").trim().replace(/\s+/g, " ");
@@ -351,6 +383,278 @@ const buildCalendarIndicators = (sales, now = nowInTZ()) => {
   };
 };
 
+const HEATMAP_WEEKDAY_ORDER = [1, 2, 3, 4, 5, 6, 0];
+
+const normalizeStoreHourWindow = (slot) => {
+  const weekday = Number(slot?.dayOfWeek);
+  const openTime = Number(slot?.openTime);
+  const closeTime = Number(slot?.closeTime);
+
+  if (
+    !Number.isInteger(weekday) ||
+    weekday < 0 ||
+    weekday > 6 ||
+    !Number.isFinite(openTime) ||
+    !Number.isFinite(closeTime)
+  ) {
+    return null;
+  }
+
+  return {
+    storeId: parsePositiveInt(slot?.storeId),
+    weekday,
+    openTime: Math.max(0, Math.trunc(openTime)),
+    closeTime: Math.max(0, Math.trunc(closeTime)),
+  };
+};
+
+const hourOverlapsWindow = (hour, openTime, closeTime) => {
+  const hourStart = hour * 60;
+  const hourEnd = hourStart + 60;
+  return hourStart < closeTime && hourEnd > openTime;
+};
+
+const buildScheduleMatrix = (storeHours = []) => {
+  const openKeys = new Set();
+  const storeOpenKeys = new Set();
+  const scheduledStoreIds = new Set();
+  const openHours = new Set();
+
+  storeHours.map(normalizeStoreHourWindow).filter(Boolean).forEach((slot) => {
+    const windows = [{ weekday: slot.weekday, openTime: slot.openTime, closeTime: slot.closeTime }];
+
+    if (slot.closeTime <= slot.openTime) {
+      windows[0].closeTime = 24 * 60;
+      windows.push({
+        weekday: (slot.weekday + 1) % 7,
+        openTime: 0,
+        closeTime: slot.closeTime,
+      });
+    }
+
+    windows.forEach((window) => {
+      for (let hour = 0; hour < 24; hour += 1) {
+        if (!hourOverlapsWindow(hour, window.openTime, window.closeTime)) continue;
+        const openKey = `${window.weekday}:${hour}`;
+        openKeys.add(openKey);
+        if (slot.storeId) {
+          storeOpenKeys.add(`${slot.storeId}:${openKey}`);
+          scheduledStoreIds.add(slot.storeId);
+        }
+        openHours.add(hour);
+      }
+    });
+  });
+
+  return {
+    hasSchedule: openKeys.size > 0,
+    openKeys,
+    storeOpenKeys,
+    scheduledStoreIds,
+    openHours,
+  };
+};
+
+const buildTrafficHeatmap = (sales, calendarIndicators, storeHours = [], now = nowInTZ()) => {
+  const cellMap = new Map();
+  const weekdayMap = new Map();
+  const activeHours = new Set();
+  const schedule = buildScheduleMatrix(storeHours);
+  let sampleOrders = 0;
+  let sampleProducts = 0;
+
+  sales.forEach((sale) => {
+    const total = Number(sale.total || 0);
+    if (!Number.isFinite(total)) return;
+
+    const value = sale.date || sale.createdAt;
+    const parts = getLocalDateParts(value);
+    const hour = getLocalHour(value);
+    if (!parts || hour == null) return;
+
+    const scheduleKey = `${parts.weekday}:${hour}`;
+    const saleStoreId = parsePositiveInt(sale.storeId);
+    if (
+      schedule.hasSchedule &&
+      saleStoreId &&
+      schedule.scheduledStoreIds.has(saleStoreId) &&
+      !schedule.storeOpenKeys.has(`${saleStoreId}:${scheduleKey}`)
+    ) {
+      return;
+    }
+
+    const key = `${parts.weekday}:${hour}`;
+    const cell = cellMap.get(key) || {
+      weekday: parts.weekday,
+      hour,
+      orders: 0,
+      products: 0,
+      revenue: 0,
+    };
+    const productUnits = countSaleProductUnits(sale);
+    cell.orders += 1;
+    cell.products += productUnits;
+    cell.revenue += total;
+    cellMap.set(key, cell);
+
+    const weekday = weekdayMap.get(parts.weekday) || {
+      weekday: parts.weekday,
+      orders: 0,
+      products: 0,
+      revenue: 0,
+    };
+    weekday.orders += 1;
+    weekday.products += productUnits;
+    weekday.revenue += total;
+    weekdayMap.set(parts.weekday, weekday);
+
+    activeHours.add(hour);
+    sampleOrders += 1;
+    sampleProducts += productUnits;
+  });
+
+  const scheduledHours = [...schedule.openHours].sort((left, right) => left - right);
+  const observedHours = [...activeHours].sort((left, right) => left - right);
+  const hours = schedule.hasSchedule
+    ? scheduledHours
+    : Array.from(
+        {
+          length:
+            (observedHours.length ? Math.max(observedHours[observedHours.length - 1], 23) : 23) -
+            (observedHours.length ? Math.min(observedHours[0], 11) : 11) +
+            1,
+        },
+        (_, index) => index + (observedHours.length ? Math.min(observedHours[0], 11) : 11)
+      );
+
+  const maxProducts = Math.max(1, ...[...cellMap.values()].map((cell) => cell.products));
+  const topKeys = new Set(
+    [...cellMap.values()]
+      .sort(
+        (left, right) =>
+          right.products - left.products ||
+          right.orders - left.orders ||
+          right.revenue - left.revenue
+      )
+      .slice(0, 3)
+      .map((cell) => `${cell.weekday}:${cell.hour}`)
+  );
+
+  const days = HEATMAP_WEEKDAY_ORDER.map((weekday) => {
+    const bucket = weekdayMap.get(weekday) || { orders: 0, revenue: 0 };
+    return {
+      weekday,
+      label: WEEKDAY_LABELS[weekday],
+      orders: bucket.orders,
+      products: bucket.products || 0,
+      revenue: roundMoney(bucket.revenue),
+    };
+  });
+
+  const rows = hours.map((hour) => ({
+    hour,
+    label: `${String(hour).padStart(2, "0")}:00`,
+    cells: HEATMAP_WEEKDAY_ORDER.map((weekday) => {
+      const key = `${weekday}:${hour}`;
+      const isOpen = !schedule.hasSchedule || schedule.openKeys.has(key);
+      const cell = cellMap.get(key) || { orders: 0, products: 0, revenue: 0 };
+      return {
+        weekday,
+        hour,
+        isOpen,
+        orders: cell.orders,
+        products: cell.products,
+        revenue: roundMoney(cell.revenue),
+        intensity: isOpen && cell.products ? roundMoney(cell.products / maxProducts) : 0,
+        isPeak: isOpen && topKeys.has(key),
+      };
+    }),
+  }));
+
+  const topWindows = [...cellMap.values()]
+    .sort(
+      (left, right) =>
+        right.products - left.products ||
+        right.orders - left.orders ||
+        right.revenue - left.revenue
+    )
+    .slice(0, 5)
+    .map((cell) => ({
+      weekday: cell.weekday,
+      weekdayLabel: WEEKDAY_LABELS[cell.weekday],
+      hour: cell.hour,
+      label: `${WEEKDAY_LABELS[cell.weekday]} ${String(cell.hour).padStart(2, "0")}:00`,
+      orders: cell.orders,
+      products: cell.products,
+      revenue: roundMoney(cell.revenue),
+      intensity: roundMoney(cell.products / maxProducts),
+    }));
+
+  const bestHoursByWeekday = new Map();
+  HEATMAP_WEEKDAY_ORDER.forEach((weekday) => {
+    const best = [...cellMap.values()]
+      .filter((cell) => cell.weekday === weekday)
+      .sort(
+        (left, right) =>
+          right.products - left.products ||
+          right.orders - left.orders ||
+          right.revenue - left.revenue
+      )
+      .slice(0, 2);
+    bestHoursByWeekday.set(weekday, best);
+  });
+
+  const nextWaves = (calendarIndicators?.upcomingDays || [])
+    .slice(0, 14)
+    .flatMap((day) =>
+      (bestHoursByWeekday.get(day.weekday) || []).map((cell) => ({
+        date: day.date,
+        dayOfMonth: day.dayOfMonth,
+        weekday: day.weekday,
+        weekdayLabel: day.weekdayLabel,
+        hour: cell.hour,
+        label: `${day.weekdayLabel} ${day.dayOfMonth}, ${String(cell.hour).padStart(2, "0")}:00`,
+        orders: cell.orders,
+        products: cell.products,
+        revenue: roundMoney(cell.revenue),
+        expectedRevenue: day.expectedRevenue,
+        isTopUpcoming: Boolean(day.isTopWeekday || day.isTopMonthday),
+      }))
+    )
+    .sort((left, right) => {
+      if (right.isTopUpcoming !== left.isTopUpcoming) return right.isTopUpcoming ? 1 : -1;
+      return (
+        right.products - left.products ||
+        right.orders - left.orders ||
+        new Date(left.date) - new Date(right.date)
+      );
+    })
+    .slice(0, 6);
+
+  const nowParts = getLocalDateParts(now);
+  const nowHour = getLocalHour(now);
+
+  return {
+    sampleOrders,
+    sampleProducts,
+    days,
+    hours,
+    rows,
+    hasSchedule: schedule.hasSchedule,
+    topWindows,
+    nextWaves,
+    peak: topWindows[0] || null,
+    current: nowParts
+      ? {
+          weekday: nowParts.weekday,
+          weekdayLabel: nowParts.weekdayLabel,
+          dayOfMonth: nowParts.dayOfMonth,
+          hour: nowHour,
+        }
+      : null,
+  };
+};
+
 const buildBoostReturnUrl = (req, sale, status) => {
   const origin = String(
     req.body?.frontendOrigin || process.env.FRONT_BASE_URL || process.env.PUBLIC_FRONTEND_URL || ""
@@ -370,11 +674,6 @@ const normalizePhone = (value) =>
   String(value || "")
     .replace(/[^\d+]/g, "")
     .trim();
-
-const getLineQty = (item) => {
-  const qty = Number(item?.quantity ?? item?.qty ?? item?.cantidad ?? 1);
-  return Number.isFinite(qty) && qty > 0 ? qty : 1;
-};
 
 const getLineName = (item) =>
   String(
@@ -1015,9 +1314,11 @@ export default function myordersRoutes(prisma) {
           },
           select: {
             id: true,
+            storeId: true,
             date: true,
             createdAt: true,
             total: true,
+            products: true,
           },
           orderBy: { date: "asc" },
         }),
@@ -1047,6 +1348,10 @@ export default function myordersRoutes(prisma) {
             slug: true,
             partnerId: true,
             partner: { select: { name: true, currency: true } },
+            hours: {
+              select: { storeId: true, dayOfWeek: true, openTime: true, closeTime: true },
+              orderBy: [{ dayOfWeek: "asc" }, { openTime: "asc" }],
+            },
           },
           orderBy: [{ partnerId: "asc" }, { storeName: "asc" }],
         }),
@@ -1133,7 +1438,9 @@ export default function myordersRoutes(prisma) {
       const topProducts = [...productMap.values()]
         .sort((left, right) => right.qty - left.qty || left.name.localeCompare(right.name))
         .slice(0, 6);
+      const storeHours = stores.flatMap((store) => store.hours || []);
       const calendarIndicators = buildCalendarIndicators(historicalSales);
+      const trafficHeatmap = buildTrafficHeatmap(historicalSales, calendarIndicators, storeHours);
 
       return res.json({
         period,
@@ -1157,6 +1464,7 @@ export default function myordersRoutes(prisma) {
           pickupOrders,
         },
         calendarIndicators,
+        trafficHeatmap,
         availableStores: availableStores.map((store) => ({
           storeId: store.id,
           storeName: store.storeName,

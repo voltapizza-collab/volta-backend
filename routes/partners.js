@@ -37,6 +37,9 @@ const TRACKING_NOTIFICATION_SERVICE_IDS = [
   "boostPurchased",
 ];
 
+const PRICE_ADJUSTMENT_TARGET_TYPES = ["ALL", "CATEGORY", "PRODUCT"];
+const PRICE_ADJUSTMENT_STATUSES = ["ACTIVE", "PAUSED"];
+
 const isPrismaConnectionClosed = (error) =>
   error?.code === "P1017" ||
   String(error?.message || "").includes("Server has closed the connection");
@@ -162,6 +165,7 @@ async function ensurePartnerSettingsColumns() {
     ["storefrontButtonConfig", "JSON NULL"],
     ["storefrontMode", "VARCHAR(64) NULL"],
     ["trackingNotificationSettings", "JSON NULL"],
+    ["priceAdjustmentRules", "JSON NULL"],
   ];
 
   let existingColumns = new Set();
@@ -207,7 +211,7 @@ async function getPartnerPolicyById(partnerId) {
             deliveryBaseKm, deliveryExtraPerKm, brandPrimary, brandSecondary,
             brandAccent, brandSurface, brandTextColor, brandFontFamily, brandOfferButtonStyle,
             brandLogoUrl, brandLogoPublicId, minimumPaymentAmount, storefrontButtonConfig,
-            storefrontMode, trackingNotificationSettings
+            storefrontMode, trackingNotificationSettings, priceAdjustmentRules
        FROM Partner
       WHERE id = ?`,
     partnerId
@@ -224,7 +228,7 @@ async function getPartnerPolicyBySlug(slug) {
             deliveryBaseKm, deliveryExtraPerKm, brandPrimary, brandSecondary,
             brandAccent, brandSurface, brandTextColor, brandFontFamily, brandOfferButtonStyle,
             brandLogoUrl, brandLogoPublicId, minimumPaymentAmount, storefrontButtonConfig,
-            storefrontMode, trackingNotificationSettings
+            storefrontMode, trackingNotificationSettings, priceAdjustmentRules
        FROM Partner
       WHERE slug = ?`,
     slug
@@ -465,6 +469,150 @@ const toNonNegativeNumber = (value, fallback = 0) => {
   if (value === "" || value == null) return fallback;
   const numericValue = Number(value);
   return Number.isFinite(numericValue) && numericValue >= 0 ? numericValue : fallback;
+};
+
+const roundMoney = (value) => Math.round(Number(value || 0) * 100) / 100;
+
+const parseMaybeJson = (value, fallback) => {
+  if (value == null || value === "") return fallback;
+  if (typeof value !== "string") return value;
+
+  try {
+    return JSON.parse(value);
+  } catch {
+    return fallback;
+  }
+};
+
+const normalizePositiveIds = (value) => {
+  const parsed = parseMaybeJson(value, value);
+  const list = Array.isArray(parsed) ? parsed : parsed == null || parsed === "" ? [] : [parsed];
+
+  return [
+    ...new Set(
+      list
+        .map((item) => Number(item))
+        .filter((item) => Number.isInteger(item) && item > 0)
+    ),
+  ];
+};
+
+const normalizeDaysActive = (value) => {
+  const parsed = parseMaybeJson(value, value);
+  const list = Array.isArray(parsed) ? parsed : parsed == null || parsed === "" ? [] : [parsed];
+
+  return [
+    ...new Set(
+      list
+        .map((item) => Number(item))
+        .filter((item) => Number.isInteger(item) && item >= 0 && item <= 6)
+    ),
+  ].sort();
+};
+
+const normalizeNullableDate = (value) => {
+  if (value == null || value === "") return null;
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? null : date.toISOString();
+};
+
+const normalizeNullableMinute = (value) => {
+  if (value == null || value === "") return null;
+  const parsed = Number(value);
+  return Number.isInteger(parsed) && parsed >= 0 && parsed <= 24 * 60 ? parsed : null;
+};
+
+const normalizeAdjustmentPercent = (value) => {
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed)) return null;
+  if (parsed < -100 || parsed > 100) return null;
+  return roundMoney(parsed);
+};
+
+const normalizePriceAdjustmentRule = (source = {}, index = 0) => {
+  const value = normalizeAdjustmentPercent(source.value);
+  if (value == null) return null;
+
+  const targetType = PRICE_ADJUSTMENT_TARGET_TYPES.includes(
+    String(source.targetType || "").toUpperCase()
+  )
+    ? String(source.targetType).toUpperCase()
+    : "ALL";
+  const categoryIds = normalizePositiveIds(source.categoryIds);
+  const productIds = normalizePositiveIds(source.productIds);
+  const storeIds = normalizePositiveIds(source.storeIds);
+  const status = PRICE_ADJUSTMENT_STATUSES.includes(
+    String(source.status || "").toUpperCase()
+  )
+    ? String(source.status).toUpperCase()
+    : "ACTIVE";
+  const id = String(source.id || "").trim() || `price-rule-${Date.now()}-${index}`;
+  const title =
+    String(source.title || "").trim() ||
+    `${value > 0 ? "Subida" : "Bajada"} ${Math.abs(value)}%`;
+
+  if (targetType === "CATEGORY" && !categoryIds.length) return null;
+  if (targetType === "PRODUCT" && !productIds.length) return null;
+
+  return {
+    id,
+    title,
+    type: "PERCENT",
+    value,
+    targetType,
+    categoryIds,
+    productIds,
+    storeIds,
+    activeFrom: normalizeNullableDate(source.activeFrom),
+    expiresAt: normalizeNullableDate(source.expiresAt),
+    daysActive: normalizeDaysActive(source.daysActive),
+    windowStart: normalizeNullableMinute(source.windowStart),
+    windowEnd: normalizeNullableMinute(source.windowEnd),
+    status,
+  };
+};
+
+const normalizePriceAdjustmentRules = (value) => {
+  const parsed = parseMaybeJson(value, []);
+  const list = Array.isArray(parsed) ? parsed : [];
+
+  return list
+    .map((rule, index) => normalizePriceAdjustmentRule(rule, index))
+    .filter(Boolean);
+};
+
+const buildPriceAdjustmentWhere = (partnerId, adjustment) => {
+  const where = {
+    partnerId,
+    type: "SELLABLE",
+  };
+
+  if (adjustment.targetType === "CATEGORY") {
+    where.categoryId = { in: adjustment.categoryIds };
+  }
+
+  if (adjustment.targetType === "PRODUCT") {
+    where.id = { in: adjustment.productIds };
+  }
+
+  return where;
+};
+
+const applyPercentToPriceBySize = (priceBySize, percent) => {
+  const source =
+    priceBySize && typeof priceBySize === "object" && !Array.isArray(priceBySize)
+      ? priceBySize
+      : {};
+  const multiplier = 1 + percent / 100;
+
+  return Object.fromEntries(
+    Object.entries(source).map(([size, price]) => {
+      const numericPrice = Number(price);
+      if (!Number.isFinite(numericPrice) || numericPrice <= 0) return [size, price];
+
+      return [size, roundMoney(Math.max(0, numericPrice * multiplier))];
+    })
+  );
 };
 
 const normalizeStorefrontButtonConfig = (value) => {
@@ -1002,6 +1150,133 @@ router.patch("/by-id/:partnerId/policies", async (req, res) => {
     res.json(partner);
   } catch (e) {
     console.error("UPDATE PARTNER POLICIES ERROR:", e);
+    res.status(500).json({ error: e.message });
+  }
+});
+
+router.get("/by-id/:partnerId/price-adjustments", async (req, res) => {
+  try {
+    await ensurePartnerSettingsColumns();
+
+    const partnerId = Number(req.params.partnerId);
+
+    if (!Number.isInteger(partnerId)) {
+      return res.status(400).json({ error: "Valid partnerId required" });
+    }
+
+    const rows = await prisma.$queryRawUnsafe(
+      `SELECT priceAdjustmentRules FROM Partner WHERE id = ?`,
+      partnerId
+    );
+
+    if (!rows?.length) {
+      return res.status(404).json({ error: "Partner not found" });
+    }
+
+    return res.json({
+      ok: true,
+      rules: normalizePriceAdjustmentRules(rows[0].priceAdjustmentRules),
+    });
+  } catch (e) {
+    console.error("GET PARTNER PRICE ADJUSTMENTS ERROR:", e);
+    res.status(500).json({ error: e.message });
+  }
+});
+
+router.put("/by-id/:partnerId/price-adjustments", async (req, res) => {
+  try {
+    await ensurePartnerSettingsColumns();
+
+    const partnerId = Number(req.params.partnerId);
+
+    if (!Number.isInteger(partnerId)) {
+      return res.status(400).json({ error: "Valid partnerId required" });
+    }
+
+    const partner = await getPartnerPolicyById(partnerId);
+
+    if (!partner) {
+      return res.status(404).json({ error: "Partner not found" });
+    }
+
+    const rules = normalizePriceAdjustmentRules(req.body?.rules);
+
+    await prisma.$executeRawUnsafe(
+      `UPDATE Partner
+          SET priceAdjustmentRules = CAST(? AS JSON)
+        WHERE id = ?`,
+      JSON.stringify(rules),
+      partnerId
+    );
+
+    return res.json({ ok: true, rules });
+  } catch (e) {
+    console.error("UPDATE PARTNER PRICE ADJUSTMENTS ERROR:", e);
+    res.status(500).json({ error: e.message });
+  }
+});
+
+router.post("/by-id/:partnerId/price-adjustments/apply", async (req, res) => {
+  try {
+    await ensurePartnerSettingsColumns();
+
+    const partnerId = Number(req.params.partnerId);
+
+    if (!Number.isInteger(partnerId)) {
+      return res.status(400).json({ error: "Valid partnerId required" });
+    }
+
+    const adjustment = normalizePriceAdjustmentRule(
+      {
+        ...req.body,
+        title: req.body?.title || "Ajuste permanente",
+        status: "ACTIVE",
+      },
+      0
+    );
+
+    if (!adjustment) {
+      return res.status(400).json({ error: "Invalid price adjustment" });
+    }
+
+    const partner = await getPartnerPolicyById(partnerId);
+
+    if (!partner) {
+      return res.status(404).json({ error: "Partner not found" });
+    }
+
+    const pizzas = await prisma.menuPizza.findMany({
+      where: buildPriceAdjustmentWhere(partnerId, adjustment),
+      select: {
+        id: true,
+        priceBySize: true,
+      },
+    });
+
+    if (pizzas.length) {
+      await prisma.$transaction(
+        pizzas.map((pizza) =>
+          prisma.menuPizza.update({
+            where: { id: pizza.id },
+            data: {
+              priceBySize: applyPercentToPriceBySize(
+                pizza.priceBySize,
+                adjustment.value
+              ),
+            },
+          })
+        )
+      );
+    }
+
+    return res.json({
+      ok: true,
+      affectedProducts: pizzas.length,
+      value: adjustment.value,
+      targetType: adjustment.targetType,
+    });
+  } catch (e) {
+    console.error("APPLY PARTNER PRICE ADJUSTMENT ERROR:", e);
     res.status(500).json({ error: e.message });
   }
 });

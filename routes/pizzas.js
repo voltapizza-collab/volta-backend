@@ -29,6 +29,25 @@ const parseLaunchAt = (value) => {
   return Number.isNaN(date.getTime()) ? null : date;
 };
 
+const PRODUCT_TAGS = new Set([
+  "spicy",
+  "vegan",
+]);
+
+const parseProductTags = (value) => {
+  const parsed = parseMaybeJson(value, []);
+
+  if (!Array.isArray(parsed)) return [];
+
+  return [
+    ...new Set(
+      parsed
+        .map((tag) => String(tag || "").trim())
+        .filter((tag) => PRODUCT_TAGS.has(tag))
+    ),
+  ];
+};
+
 const normalizeBaseLabel = (value) => {
   const clean = String(value || "")
     .trim()
@@ -212,6 +231,7 @@ const mapPizza = (pizza) => ({
   categoryId: pizza.categoryId ?? null,
   categoryName: pizza.category ?? null,
   category: pizza.category ?? null,
+  productTags: Array.isArray(pizza.productTags) ? pizza.productTags : [],
   ingredients: (pizza.ingredients || []).map((rel) => ({
     id: rel.ingredientId,
     name: rel.ingredient?.name,
@@ -301,7 +321,222 @@ const sendError = (res, err, fallback = 400) => {
   });
 };
 
+const normalizeTextKey = (value = "") =>
+  String(value || "")
+    .trim()
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z0-9]+/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+
+const isExcludedOverviewCategory = (value) => {
+  const key = normalizeTextKey(value);
+  return key === "bebidas" || key === "complementos";
+};
+
+const isExcludedTopIngredient = (value) => {
+  const key = normalizeTextKey(value);
+  return key.includes("tomate") || key.includes("mozzarella") || key.includes("mozarella");
+};
+
+const getSaleLineQty = (item) => {
+  const qty = Number(item?.quantity ?? item?.qty ?? item?.cantidad ?? 1);
+  return Number.isFinite(qty) && qty > 0 ? qty : 1;
+};
+
+const getSaleLinePizzaId = (item, pizzaIdByName) => {
+  const directId = Number(item?.pizzaId ?? item?.menuPizzaId ?? item?.productId);
+  if (Number.isInteger(directId) && directId > 0) return directId;
+
+  const nameKey = normalizeTextKey(
+    item?.name || item?.pizzaName || item?.title || item?.productName
+  );
+  return pizzaIdByName.get(nameKey) || null;
+};
+
 export default function pizzasRoutes(prisma) {
+  router.get("/overview", async (req, res) => {
+    try {
+      const partnerId = req.query.partnerId
+        ? Number(req.query.partnerId)
+        : null;
+
+      if (!Number.isInteger(partnerId) || partnerId <= 0) {
+        return res.status(400).json({ error: "Valid partnerId required" });
+      }
+
+      const [pizzas, stores, sales] = await Promise.all([
+        prisma.menuPizza.findMany({
+          where: {
+            partnerId,
+            type: "SELLABLE",
+          },
+          orderBy: { createdAt: "desc" },
+          include: {
+            ingredients: { include: { ingredient: true } },
+          },
+        }),
+        prisma.store.findMany({
+          where: { partnerId },
+          select: { id: true, storeName: true, slug: true },
+          orderBy: { storeName: "asc" },
+        }),
+        prisma.sale.findMany({
+          where: {
+            partnerId,
+            status: { not: "CANCELED" },
+          },
+          select: {
+            storeId: true,
+            products: true,
+            date: true,
+            createdAt: true,
+          },
+          orderBy: { date: "desc" },
+        }),
+      ]);
+
+      const relevantPizzas = pizzas.filter(
+        (pizza) => !isExcludedOverviewCategory(pizza.category)
+      );
+      const pizzaIdByName = new Map(
+        relevantPizzas.map((pizza) => [normalizeTextKey(pizza.name), pizza.id])
+      );
+      const pizzaById = new Map(relevantPizzas.map((pizza) => [pizza.id, pizza]));
+      const categoryMap = new Map();
+
+      relevantPizzas.forEach((pizza) => {
+        const categoryId = Number(pizza.categoryId);
+        const key = Number.isInteger(categoryId) && categoryId > 0
+          ? `id:${categoryId}`
+          : `name:${pizza.category || "Sin categoria"}`;
+        const current =
+          categoryMap.get(key) || {
+            categoryId: Number.isInteger(categoryId) ? categoryId : null,
+            name: pizza.category || "Sin categoria",
+            active: 0,
+            inactive: 0,
+            total: 0,
+          };
+
+        if (pizza.status === "INACTIVE") current.inactive += 1;
+        else current.active += 1;
+        current.total += 1;
+        categoryMap.set(key, current);
+      });
+
+      const ingredientMap = new Map();
+      relevantPizzas.forEach((pizza) => {
+        (pizza.ingredients || []).forEach((rel) => {
+          const ingredientName = rel.ingredient?.name || `Ingrediente ${rel.ingredientId}`;
+          if (isExcludedTopIngredient(ingredientName)) return;
+
+          const key = rel.ingredientId || ingredientName;
+          const qtyBySize = rel.qtyBySize || {};
+          const totalQty = Object.values(qtyBySize).reduce(
+            (sum, value) => sum + Number(value || 0),
+            0
+          );
+          const current =
+            ingredientMap.get(key) || {
+              id: rel.ingredientId,
+              name: ingredientName,
+              pizzas: 0,
+              totalQty: 0,
+            };
+
+          current.pizzas += 1;
+          current.totalQty += totalQty;
+          ingredientMap.set(key, current);
+        });
+      });
+
+      const storeTopMap = new Map(
+        stores.map((store) => [
+          store.id,
+          {
+            storeId: store.id,
+            storeName: store.storeName,
+            products: new Map(),
+          },
+        ])
+      );
+
+      sales.forEach((sale) => {
+        const storeRow = storeTopMap.get(sale.storeId);
+        if (!storeRow) return;
+
+        const products = Array.isArray(sale.products) ? sale.products : [];
+        products.forEach((item) => {
+          const pizzaId = getSaleLinePizzaId(item, pizzaIdByName);
+          if (!pizzaId || !pizzaById.has(pizzaId)) return;
+
+          const pizza = pizzaById.get(pizzaId);
+          const current =
+            storeRow.products.get(pizzaId) || {
+              pizzaId,
+              name: pizza.name,
+              qty: 0,
+            };
+
+          current.qty += getSaleLineQty(item);
+          storeRow.products.set(pizzaId, current);
+        });
+      });
+
+      const categories = [...categoryMap.values()].sort(
+        (left, right) => right.total - left.total || left.name.localeCompare(right.name, "es")
+      );
+      const topIngredients = [...ingredientMap.values()]
+        .sort(
+          (left, right) =>
+            right.pizzas - left.pizzas ||
+            right.totalQty - left.totalQty ||
+            left.name.localeCompare(right.name, "es")
+        )
+        .slice(0, 5);
+      const topPizzaByStore = [...storeTopMap.values()].map((store) => {
+        const topProduct = [...store.products.values()].sort(
+          (left, right) => right.qty - left.qty || left.name.localeCompare(right.name, "es")
+        )[0];
+
+        return {
+          storeId: store.storeId,
+          storeName: store.storeName,
+          topPizza: topProduct || null,
+        };
+      });
+      const newestPizza = relevantPizzas
+        .filter((pizza) => pizza.createdAt)
+        .sort((left, right) => new Date(right.createdAt) - new Date(left.createdAt))[0];
+
+      return res.json({
+        categories,
+        topIngredients,
+        topPizzaByStore,
+        latestProduct: newestPizza
+          ? {
+              id: newestPizza.id,
+              name: newestPizza.name,
+              category: newestPizza.category,
+              status: newestPizza.status,
+              createdAt: newestPizza.createdAt,
+            }
+          : null,
+        totals: {
+          active: relevantPizzas.filter((pizza) => pizza.status !== "INACTIVE").length,
+          inactive: relevantPizzas.filter((pizza) => pizza.status === "INACTIVE").length,
+          total: relevantPizzas.length,
+        },
+      });
+    } catch (err) {
+      console.error("GET /pizzas/overview error:", err);
+      res.status(500).json({ error: "Error fetching pizza overview" });
+    }
+  });
+
   router.get("/", async (req, res) => {
     try {
       const partnerId = req.query.partnerId
@@ -341,6 +576,8 @@ export default function pizzasRoutes(prisma) {
         cookingMethod,
         ingredients,
         launchAt,
+        availableUntil,
+        productTags,
       } = body;
 
       assertImageUploadWasMultipart(req);
@@ -403,6 +640,8 @@ export default function pizzasRoutes(prisma) {
         priceBySize: parsedPrices,
         cookingMethod: normalizeBaseLabel(baseName || cookingMethod),
         launchAt: parseLaunchAt(launchAt),
+        availableUntil: parseLaunchAt(availableUntil),
+        productTags: parseProductTags(productTags),
         image,
         imagePublicId,
         ingredients: { create: ingredientRelations },
@@ -517,6 +756,8 @@ export default function pizzasRoutes(prisma) {
         priceBySize: parsedPrices,
         cookingMethod: nextBaseName,
         launchAt: parseLaunchAt(body.launchAt),
+        availableUntil: parseLaunchAt(body.availableUntil),
+        productTags: parseProductTags(body.productTags),
         image: nextImage,
         imagePublicId: nextImagePublicId,
       };

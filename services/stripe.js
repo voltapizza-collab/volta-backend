@@ -15,9 +15,9 @@ const appendParam = (params, key, value) => {
   }
 };
 
-const appendPaymentMethodTypes = (params) => {
+const appendPaymentMethodTypes = (params, { includeKlarna = true } = {}) => {
   const methods = ["card"];
-  if (process.env.STRIPE_ENABLE_KLARNA !== "0") methods.push("klarna");
+  if (includeKlarna && process.env.STRIPE_ENABLE_KLARNA !== "0") methods.push("klarna");
 
   methods.forEach((method, index) => {
     appendParam(params, `payment_method_types[${index}]`, method);
@@ -129,14 +129,14 @@ export const createOrderCheckoutSession = async ({
 
   appendParam(params, "mode", "payment");
   appendParam(params, "branding_settings[display_name]", CHECKOUT_DISPLAY_NAME);
-  appendPaymentMethodTypes(params);
+  appendPaymentMethodTypes(params, { includeKlarna: false });
   appendParam(params, "success_url", successUrl);
   appendParam(params, "cancel_url", cancelUrl);
   appendParam(params, "locale", "es");
   appendParam(params, "client_reference_id", `order:${saleId}`);
   appendParam(params, "customer_email", customerData.email);
   appendParam(params, "customer_creation", "if_required");
-  appendParam(params, "billing_address_collection", "auto");
+  appendParam(params, "phone_number_collection[enabled]", "false");
   appendParam(params, "line_items[0][quantity]", 1);
   appendParam(params, "line_items[0][price_data][currency]", cleanCurrency);
   appendParam(params, "line_items[0][price_data][unit_amount]", amountCents);
@@ -147,11 +147,17 @@ export const createOrderCheckoutSession = async ({
   appendParam(params, "metadata[storeId]", storeId);
   appendParam(params, "metadata[saleId]", saleId);
   appendParam(params, "metadata[orderCode]", orderCode);
+  appendParam(params, "metadata[customerName]", customerData.name);
+  appendParam(params, "metadata[customerPhone]", customerData.phone);
+  appendParam(params, "metadata[customerEmail]", customerData.email);
   appendParam(params, "payment_intent_data[metadata][purpose]", "order_checkout");
   appendParam(params, "payment_intent_data[metadata][partnerId]", partnerId);
   appendParam(params, "payment_intent_data[metadata][storeId]", storeId);
   appendParam(params, "payment_intent_data[metadata][saleId]", saleId);
   appendParam(params, "payment_intent_data[metadata][orderCode]", orderCode);
+  appendParam(params, "payment_intent_data[metadata][customerName]", customerData.name);
+  appendParam(params, "payment_intent_data[metadata][customerPhone]", customerData.phone);
+  appendParam(params, "payment_intent_data[metadata][customerEmail]", customerData.email);
 
   return stripeRequest(
     "/checkout/sessions",

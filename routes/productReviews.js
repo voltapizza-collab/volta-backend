@@ -16,6 +16,41 @@ const normalizeVote = (value) => {
 const mapVotesByLine = (votes = []) =>
   new Map(votes.map((vote) => [vote.lineKey, vote.vote]));
 
+const positiveInt = (value) => {
+  const parsed = Number(value);
+  return Number.isInteger(parsed) && parsed > 0 ? parsed : null;
+};
+
+const parseDateParam = (value) => {
+  const raw = String(value || "").trim();
+  if (!raw) return null;
+
+  const parsed = new Date(raw);
+  return Number.isNaN(parsed.getTime()) ? null : parsed;
+};
+
+const dateRangeWhere = (field, from, to) => {
+  const filter = {};
+  if (from) filter.gte = from;
+  if (to) filter.lte = to;
+  return Object.keys(filter).length ? { [field]: filter } : {};
+};
+
+const countRows = (rows = [], key = "status") =>
+  rows.reduce((acc, row) => {
+    acc[row[key]] = row._count?._all || 0;
+    return acc;
+  }, {});
+
+const percent = (part, total) => {
+  const safeTotal = Number(total || 0);
+  if (!safeTotal) return 0;
+  return Math.round((Number(part || 0) / safeTotal) * 100);
+};
+
+const displayName = (customer, fallback = "Cliente sin nombre") =>
+  String(customer?.name || fallback || "Cliente sin nombre").trim();
+
 export default function productReviewsRoutes(prisma) {
   const router = express.Router();
 
@@ -25,6 +60,264 @@ export default function productReviewsRoutes(prisma) {
       return res.json(result);
     } catch (error) {
       console.error("[product-reviews.worker-route] error:", error);
+      return res.status(500).json({ ok: false, error: "server" });
+    }
+  });
+
+  router.get("/analytics/summary", async (req, res) => {
+    const partnerId = positiveInt(req.query.partnerId);
+    const storeId = positiveInt(req.query.storeId);
+    const from = parseDateParam(req.query.from);
+    const to = parseDateParam(req.query.to);
+
+    if (!partnerId) {
+      return res.status(400).json({ ok: false, error: "partner_required" });
+    }
+
+    const baseWhere = {
+      partnerId,
+      ...(storeId ? { storeId } : {}),
+    };
+    const requestWhere = {
+      ...baseWhere,
+      ...dateRangeWhere("createdAt", from, to),
+    };
+    const voteWhere = {
+      ...baseWhere,
+      ...dateRangeWhere("createdAt", from, to),
+    };
+    const sentRequestWhere = {
+      ...baseWhere,
+      sentAt: { not: null, ...(from ? { gte: from } : {}), ...(to ? { lte: to } : {}) },
+    };
+    const respondedRequestWhere = {
+      ...baseWhere,
+      respondedAt: { not: null, ...(from ? { gte: from } : {}), ...(to ? { lte: to } : {}) },
+    };
+
+    try {
+      const [
+        requestStatusRows,
+        totalRequests,
+        sentMessages,
+        usedMessages,
+        voteRows,
+        productRows,
+        storeVoteRows,
+        stores,
+        recentVotes,
+        recentLikes,
+        lastLike,
+      ] = await Promise.all([
+        prisma.productReviewRequest.groupBy({
+          by: ["status"],
+          where: requestWhere,
+          _count: { _all: true },
+        }),
+        prisma.productReviewRequest.count({ where: requestWhere }),
+        prisma.productReviewRequest.count({ where: sentRequestWhere }),
+        prisma.productReviewRequest.count({ where: respondedRequestWhere }),
+        prisma.productReviewVote.groupBy({
+          by: ["vote"],
+          where: voteWhere,
+          _count: { _all: true },
+        }),
+        prisma.productReviewVote.groupBy({
+          by: ["productId", "productName", "vote"],
+          where: voteWhere,
+          _count: { _all: true },
+        }),
+        prisma.productReviewVote.groupBy({
+          by: ["storeId", "vote"],
+          where: voteWhere,
+          _count: { _all: true },
+        }),
+        prisma.store.findMany({
+          where: { partnerId },
+          select: { id: true, storeName: true, city: true, active: true },
+          orderBy: { storeName: "asc" },
+        }),
+        prisma.productReviewVote.findMany({
+          where: voteWhere,
+          take: 16,
+          orderBy: { createdAt: "desc" },
+          include: {
+            customer: { select: { id: true, name: true, phone: true, email: true } },
+            store: { select: { id: true, storeName: true, city: true } },
+            sale: { select: { id: true, code: true, date: true } },
+          },
+        }),
+        prisma.productReviewVote.findMany({
+          where: { ...voteWhere, vote: "LIKE" },
+          take: 500,
+          orderBy: { createdAt: "desc" },
+          include: {
+            customer: { select: { id: true, name: true, phone: true, email: true } },
+            store: { select: { id: true, storeName: true, city: true } },
+            request: { select: { customerPhone: true } },
+          },
+        }),
+        prisma.productReviewVote.findFirst({
+          where: { ...voteWhere, vote: "LIKE" },
+          orderBy: { createdAt: "desc" },
+          include: {
+            customer: { select: { id: true, name: true, phone: true, email: true } },
+            store: { select: { id: true, storeName: true, city: true } },
+            sale: { select: { id: true, code: true, date: true } },
+          },
+        }),
+      ]);
+
+      const requestStatus = countRows(requestStatusRows);
+      const voteCounts = countRows(voteRows, "vote");
+      const likes = voteCounts.LIKE || 0;
+      const dislikes = voteCounts.DISLIKE || 0;
+      const receivedVotes = likes + dislikes;
+
+      const productMap = new Map();
+      productRows.forEach((row) => {
+        const key = `${row.productId || "custom"}:${row.productName || ""}`;
+        const current = productMap.get(key) || {
+          productId: row.productId,
+          productName: row.productName || "Producto",
+          likes: 0,
+          dislikes: 0,
+        };
+        if (row.vote === "LIKE") current.likes += row._count?._all || 0;
+        if (row.vote === "DISLIKE") current.dislikes += row._count?._all || 0;
+        productMap.set(key, current);
+      });
+
+      const topProducts = [...productMap.values()]
+        .map((item) => ({
+          ...item,
+          total: item.likes + item.dislikes,
+          approval: percent(item.likes, item.likes + item.dislikes),
+        }))
+        .sort(
+          (left, right) =>
+            right.approval - left.approval ||
+            right.likes - left.likes ||
+            right.total - left.total ||
+            left.productName.localeCompare(right.productName)
+        )
+        .slice(0, 8);
+
+      const productsToReview = [...productMap.values()]
+        .map((item) => ({
+          ...item,
+          total: item.likes + item.dislikes,
+          approval: percent(item.likes, item.likes + item.dislikes),
+        }))
+        .filter((item) => item.dislikes > 0)
+        .sort(
+          (left, right) =>
+            right.dislikes - left.dislikes ||
+            left.approval - right.approval ||
+            right.total - left.total ||
+            left.productName.localeCompare(right.productName)
+        )
+        .slice(0, 6);
+
+      const storeMap = new Map(
+        stores.map((store) => [
+          store.id,
+          {
+            ...store,
+            likes: 0,
+            dislikes: 0,
+          },
+        ])
+      );
+      storeVoteRows.forEach((row) => {
+        const current = storeMap.get(row.storeId);
+        if (!current) return;
+        if (row.vote === "LIKE") current.likes += row._count?._all || 0;
+        if (row.vote === "DISLIKE") current.dislikes += row._count?._all || 0;
+      });
+
+      const storeBreakdown = [...storeMap.values()]
+        .map((item) => ({
+          ...item,
+          total: item.likes + item.dislikes,
+          approval: percent(item.likes, item.likes + item.dislikes),
+        }))
+        .sort((left, right) => right.total - left.total || left.storeName.localeCompare(right.storeName));
+
+      const peopleByKey = new Map();
+      recentLikes.forEach((vote) => {
+        const phone = vote.customer?.phone || vote.request?.customerPhone || "";
+        const key = vote.customerId ? `customer:${vote.customerId}` : phone ? `phone:${phone}` : `vote:${vote.id}`;
+        const current = peopleByKey.get(key) || {
+          customerId: vote.customerId,
+          name: displayName(vote.customer, phone || "Cliente sin nombre"),
+          phone,
+          email: vote.customer?.email || "",
+          likes: 0,
+          lastLikeAt: vote.createdAt,
+          lastProductName: vote.productName,
+          lastStoreName: vote.store?.storeName || "",
+        };
+
+        current.likes += 1;
+        if (new Date(vote.createdAt).getTime() >= new Date(current.lastLikeAt).getTime()) {
+          current.lastLikeAt = vote.createdAt;
+          current.lastProductName = vote.productName;
+          current.lastStoreName = vote.store?.storeName || "";
+        }
+        peopleByKey.set(key, current);
+      });
+
+      const likePeople = [...peopleByKey.values()]
+        .sort((left, right) => right.likes - left.likes || new Date(right.lastLikeAt) - new Date(left.lastLikeAt))
+        .slice(0, 12);
+
+      return res.json({
+        ok: true,
+        filters: { partnerId, storeId, from, to },
+        summary: {
+          totalRequests,
+          sentMessages,
+          usedMessages,
+          receivedVotes,
+          likes,
+          dislikes,
+          pendingMessages: requestStatus.PENDING || 0,
+          failedMessages: requestStatus.FAILED || 0,
+          skippedMessages: requestStatus.SKIPPED || 0,
+          responseRate: percent(usedMessages, sentMessages),
+          likeRate: percent(likes, receivedVotes),
+          lastLikeAt: lastLike?.createdAt || null,
+        },
+        requestStatus,
+        stores: storeBreakdown,
+        topProducts,
+        productsToReview,
+        likePeople,
+        lastLike: lastLike
+          ? {
+              id: lastLike.id,
+              productName: lastLike.productName,
+              createdAt: lastLike.createdAt,
+              customerName: displayName(lastLike.customer),
+              customerPhone: lastLike.customer?.phone || "",
+              storeName: lastLike.store?.storeName || "",
+              saleCode: lastLike.sale?.code || "",
+            }
+          : null,
+        recentVotes: recentVotes.map((vote) => ({
+          id: vote.id,
+          vote: vote.vote,
+          productName: vote.productName,
+          createdAt: vote.createdAt,
+          customerName: displayName(vote.customer),
+          customerPhone: vote.customer?.phone || "",
+          storeName: vote.store?.storeName || "",
+          saleCode: vote.sale?.code || "",
+        })),
+      });
+    } catch (error) {
+      console.error("[product-reviews.analytics] error:", error);
       return res.status(500).json({ ok: false, error: "server" });
     }
   });

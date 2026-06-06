@@ -160,6 +160,7 @@ model Partner {
     storefrontButtonConfig Json?
     storefrontMode       String?
     trackingNotificationSettings Json?
+    priceAdjustmentRules Json?
     smsCredits          Int      @default(0)
   smsRecharged        Int      @default(0)
   smsConsumed         Int      @default(0)
@@ -244,6 +245,8 @@ model MenuPizza {
   image         String?
   imagePublicId String?
   launchAt      DateTime?
+  availableUntil DateTime?
+  productTags   Json?
   status        ProductStatus         @default(ACTIVE)
   type          ProductType           @default(SELLABLE)
   createdAt     DateTime              @default(now())

@@ -895,8 +895,43 @@ const formatCouponExpiry = (value) => {
 
 const cleanSmsPart = (value) => String(value || "").replace(/\s+/g, " ").trim();
 
-const frontendBaseUrl = () =>
-  String(process.env.FRONT_BASE_URL || "http://localhost:3000").replace(/\/+$/, "");
+const COUPON_PUBLIC_FRONTEND_FALLBACK = "https://voltapizza.com";
+const LOCAL_FRONTEND_HOSTS = new Set(["localhost", "127.0.0.1", "::1"]);
+
+const cleanFrontendBaseUrl = (value) => String(value || "").trim().replace(/\/+$/, "");
+
+const isLocalFrontendBaseUrl = (value) => {
+  try {
+    const url = new URL(value);
+    return LOCAL_FRONTEND_HOSTS.has(url.hostname);
+  } catch {
+    return false;
+  }
+};
+
+export const resolveCouponFrontendBaseUrl = (env = process.env) => {
+  const candidates = [
+    env.PUBLIC_FRONTEND_URL,
+    env.STOREFRONT_URL,
+    env.FRONTEND_URL,
+    env.APP_URL,
+    env.FRONT_BASE_URL,
+  ];
+
+  return (
+    candidates
+      .map(cleanFrontendBaseUrl)
+      .find((value) => value && !isLocalFrontendBaseUrl(value)) ||
+    COUPON_PUBLIC_FRONTEND_FALLBACK
+  );
+};
+
+const frontendBaseUrl = () => resolveCouponFrontendBaseUrl();
+
+const safeCouponRedeemUrlForSms = (value) => {
+  const url = cleanFrontendBaseUrl(value);
+  return url && !isLocalFrontendBaseUrl(url) ? url : null;
+};
 
 const buildCouponRedeemUrl = async (prisma, { coupon, zipCode }) => {
   const partner = await prisma.partner.findUnique({
@@ -943,12 +978,13 @@ const buildCouponRedeemUrl = async (prisma, { coupon, zipCode }) => {
   return `${frontendBaseUrl()}/${partner.slug}/${selectedStore.slug}?${params.toString()}`;
 };
 
-const buildPrivateCouponSms = ({ partnerName, coupon, redeemUrl }) => {
+export const buildPrivateCouponSms = ({ partnerName, coupon, redeemUrl }) => {
   const brand = cleanSmsPart(partnerName || process.env.TELNYX_SMS_BRAND || "VoltaPizza");
   const title = cleanSmsPart(buildCouponTitle(coupon));
   const expiry = formatCouponExpiry(coupon.expiresAt);
   const details = `${title}${expiry ? ` valid until ${expiry}` : ""}`;
-  const link = redeemUrl ? ` Redeem: ${redeemUrl}.` : "";
+  const safeRedeemUrl = safeCouponRedeemUrlForSms(redeemUrl);
+  const link = safeRedeemUrl ? ` Redeem: ${safeRedeemUrl}.` : "";
 
   return cleanSmsPart(
     `${brand}: Your pizza offer is ready: ${details}. Code ${coupon.code}.${link} Reply STOP to opt out.`

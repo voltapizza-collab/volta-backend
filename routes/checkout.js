@@ -415,22 +415,6 @@ const extractZipCode = (value) => {
   return match ? match[1] : null;
 };
 
-const buildStripeCheckoutEmail = ({ customer, phone, saleId }) => {
-  const providedEmail = normalizeEmail(customer?.email);
-  if (providedEmail) return providedEmail;
-
-  const digits = normalizeDigits(phone || customer?.phone);
-  const fallbackDomain = String(
-    process.env.STRIPE_CHECKOUT_FALLBACK_EMAIL_DOMAIN || "mycrushpizza.test"
-  )
-    .trim()
-    .toLowerCase()
-    .replace(/^@/, "");
-  const fallbackLocal = digits || `order-${saleId || Date.now()}`;
-
-  return `${fallbackLocal}@${fallbackDomain}`;
-};
-
 const isUsableCoordinatePair = (lat, lng) => {
   const safeLat = Number(lat);
   const safeLng = Number(lng);
@@ -760,14 +744,7 @@ export default function checkoutRoutes(prisma) {
           throw error;
         }
 
-        const checkoutEmail = buildStripeCheckoutEmail({
-          customer: {
-            ...customerInput,
-            email: customer.email || customerInput.email,
-          },
-          phone: customer.phone || customerInput.phone,
-          saleId: customer.id,
-        });
+        const checkoutEmail = normalizeEmail(customer.email || customerInput.email);
 
         return tx.sale.create({
           data: {
@@ -781,7 +758,7 @@ export default function checkoutRoutes(prisma) {
               source: "storefront",
               name: customer.name || String(customerInput.name || "").trim(),
               phone: customer.phone || toE164ES(customerInput.phone),
-              email: checkoutEmail,
+              email: checkoutEmail || null,
               address_1: fullDeliveryAddress || sanitizedDelivery.address || customer.address_1 || "",
               zipCode: customer.zipCode || extractZipCode(sanitizedDelivery.address),
               customerId: customer.id,
@@ -862,6 +839,9 @@ export default function checkoutRoutes(prisma) {
 
   const markPaidFromStripeSession = async (session) => {
     const metadata = session.metadata || {};
+    const stripeEmail = normalizeEmail(
+      session.customer_details?.email || session.customer_email
+    );
 
     if (metadata.purpose !== "order_checkout") {
       const error = new Error("not_order_checkout");
@@ -894,15 +874,35 @@ export default function checkoutRoutes(prisma) {
         return { sale, shouldNotify: false };
       }
 
+      const existingCustomerData =
+        sale.customerData && typeof sale.customerData === "object" && !Array.isArray(sale.customerData)
+          ? sale.customerData
+          : {};
+      const customerData =
+        stripeEmail && !normalizeEmail(existingCustomerData.email)
+          ? { ...existingCustomerData, email: stripeEmail }
+          : existingCustomerData;
+
       const paidSale = await tx.sale.update({
         where: { id: sale.id },
         data: {
           status: "PAID",
           stripeCheckoutSessionId: session.id || sale.stripeCheckoutSessionId,
           stripePaymentIntentId: session.payment_intent || sale.stripePaymentIntentId,
+          ...(stripeEmail && !normalizeEmail(existingCustomerData.email) ? { customerData } : {}),
           ...(sale.boostActive && !sale.boostPaidAt ? { boostPaidAt: new Date() } : {}),
         },
       });
+
+      if (stripeEmail && sale.customerId) {
+        await tx.customer.updateMany({
+          where: {
+            id: sale.customerId,
+            OR: [{ email: null }, { email: "" }],
+          },
+          data: { email: stripeEmail },
+        });
+      }
 
       await createCouponRedemptionsForSale(tx, paidSale);
       return { sale: paidSale, shouldNotify: true };

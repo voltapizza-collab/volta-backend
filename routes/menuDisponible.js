@@ -80,6 +80,9 @@ export default function menuDisponibleRoutes(prisma) {
         selectSize: true,
         priceBySize: true,
         image: true,
+        launchAt: true,
+        availableUntil: true,
+        productTags: true,
         stocks: {
           where: { storeId },
           select: {
@@ -108,7 +111,9 @@ export default function menuDisponibleRoutes(prisma) {
         orderBy: { id: "asc" },
       });
 
+      const now = new Date();
       const menu = rows
+        .filter((row) => (!row.launchAt || row.launchAt <= now) && (!row.availableUntil || row.availableUntil > now))
         .map((row) => {
           const ingredientsAll = Array.isArray(row.ingredients)
             ? row.ingredients
@@ -132,6 +137,9 @@ export default function menuDisponibleRoutes(prisma) {
             selectSize: row.selectSize ?? [],
             priceBySize: row.priceBySize ?? {},
             image: row.image ?? null,
+            launchAt: row.launchAt ?? null,
+            availableUntil: row.availableUntil ?? null,
+            productTags: Array.isArray(row.productTags) ? row.productTags : [],
             stock: pizzaStock?.[0]?.stock ?? null,
             ingredients: visibleIngredients.map((rel) => ({
               id: rel.ingredient.id,
