@@ -34,15 +34,22 @@ const STOREFRONT_MODE_MIGRATION = "20260525120000_add_storefront_mode";
 const TRACKING_NOTIFICATION_SETTINGS_MIGRATION =
   "20260529123000_add_tracking_notification_settings";
 const INGREDIENT_MEDIA_MIGRATION = "20260530102000_add_ingredient_media_fields";
+const PRICE_ADJUSTMENT_RULES_MIGRATION =
+  "20260606130000_add_partner_price_adjustment_rules";
 
 const prisma = new PrismaClient();
 
-async function ensureStorefrontModeColumn() {
+async function hasColumn(tableName, columnName) {
   const rows = await prisma.$queryRawUnsafe(
-    "SHOW COLUMNS FROM `Partner` LIKE 'storefrontMode'"
+    `SHOW COLUMNS FROM \`${tableName}\` LIKE ?`,
+    columnName
   );
 
-  if (Array.isArray(rows) && rows.length > 0) return;
+  return Array.isArray(rows) && rows.length > 0;
+}
+
+async function ensureStorefrontModeColumn() {
+  if (await hasColumn("Partner", "storefrontMode")) return;
 
   try {
     await prisma.$executeRawUnsafe(
@@ -58,11 +65,7 @@ async function ensureStorefrontModeColumn() {
 }
 
 async function ensureTrackingNotificationSettingsColumn() {
-  const rows = await prisma.$queryRawUnsafe(
-    "SHOW COLUMNS FROM `Partner` LIKE 'trackingNotificationSettings'"
-  );
-
-  if (Array.isArray(rows) && rows.length > 0) return;
+  if (await hasColumn("Partner", "trackingNotificationSettings")) return;
 
   try {
     await prisma.$executeRawUnsafe(
@@ -74,6 +77,24 @@ async function ensureTrackingNotificationSettingsColumn() {
     if (!message.includes("Duplicate column name")) {
       throw error;
     }
+  }
+}
+
+async function ensurePriceAdjustmentRulesColumn() {
+  if (await hasColumn("Partner", "priceAdjustmentRules")) return true;
+
+  try {
+    await prisma.$executeRawUnsafe(
+      "ALTER TABLE `Partner` ADD COLUMN `priceAdjustmentRules` JSON NULL"
+    );
+    console.log("[db-prepare] Added Partner.priceAdjustmentRules");
+    return true;
+  } catch (error) {
+    const message = `${error?.message || ""} ${error?.meta?.message || ""}`;
+    if (!message.includes("Duplicate column name")) {
+      throw error;
+    }
+    return true;
   }
 }
 
@@ -114,12 +135,14 @@ function resolveFailedMigration(name) {
 try {
   await ensureStorefrontModeColumn();
   await ensureTrackingNotificationSettingsColumn();
+  const priceAdjustmentRulesColumnReady = await ensurePriceAdjustmentRulesColumn();
   await ensureIngredientMediaColumns(prisma);
 
   const migrationNames = [
     STOREFRONT_MODE_MIGRATION,
     TRACKING_NOTIFICATION_SETTINGS_MIGRATION,
     INGREDIENT_MEDIA_MIGRATION,
+    PRICE_ADJUSTMENT_RULES_MIGRATION,
   ];
 
   const failedMigrationNames = [];
@@ -132,6 +155,12 @@ try {
       migration.rolled_back_at == null;
 
     if (isFailed) {
+      failedMigrationNames.push(migrationName);
+    } else if (
+      migrationName === PRICE_ADJUSTMENT_RULES_MIGRATION &&
+      !migration &&
+      priceAdjustmentRulesColumnReady
+    ) {
       failedMigrationNames.push(migrationName);
     }
   }
