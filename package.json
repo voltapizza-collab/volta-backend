@@ -5,7 +5,7 @@
   "main": "index.js",
   "type": "module",
   "scripts": {
-    "start": "node scripts/prepareProductionDatabase.js && npx prisma migrate deploy && node index.js",
+    "start": "node scripts/prepareProductionDatabase.js && node scripts/deployProductionMigrations.js && node index.js",
     "test": "node --test tests/cloudinaryConfig.test.js tests/telnyx.test.js tests/trackingNotifications.test.js tests/trackingAlerts.test.js tests/storeMenuActivation.test.js tests/deliveryResolution.test.js tests/checkoutCouponOverlap.test.js tests/myordersFilters.test.js tests/couponRedeemUrls.test.js tests/stripeCheckout.test.js"
   },
   "keywords": [],
