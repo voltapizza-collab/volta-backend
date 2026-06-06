@@ -39,10 +39,14 @@ const PRICE_ADJUSTMENT_RULES_MIGRATION =
 
 const prisma = new PrismaClient();
 
+const escapeSqlIdentifier = (value) => String(value).replace(/`/g, "``");
+const escapeSqlString = (value) => String(value).replace(/'/g, "''");
+
 async function hasColumn(tableName, columnName) {
+  const safeTableName = escapeSqlIdentifier(tableName);
+  const safeColumnName = escapeSqlString(columnName);
   const rows = await prisma.$queryRawUnsafe(
-    `SHOW COLUMNS FROM \`${tableName}\` LIKE ?`,
-    columnName
+    `SHOW COLUMNS FROM \`${safeTableName}\` LIKE '${safeColumnName}'`
   );
 
   return Array.isArray(rows) && rows.length > 0;
