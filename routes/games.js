@@ -1,5 +1,5 @@
 import express from "express";
-import { normalizeE164Phone, sendTelnyxSms } from "../services/telnyx.js";
+import { estimateSmsParts, normalizeE164Phone, sendTelnyxSms } from "../services/telnyx.js";
 import {
   reserveSmsCreditForMessage,
   refundSmsCreditForMessage,
@@ -239,18 +239,22 @@ async function sendGameCouponSms(prisma, { partner, coupon, customer }) {
   const to = normalizeE164Phone(customer?.phone);
   if (!to) return { sent: false, status: "failed", error: "invalid_phone" };
 
+  const text = `${partner.name}: premio ${coupon.code}.`;
+  const smsEstimate = estimateSmsParts(text);
+
   const reservation = await reserveSmsCreditForMessage(prisma, {
     partnerId: coupon.partnerId,
     couponCode: coupon.code,
     customerId: customer.id,
     to,
+    quantity: smsEstimate.parts,
+    meta: { smsEstimate },
   });
 
   if (!reservation.ok) {
     return { sent: false, status: "skipped", error: reservation.error || "insufficient_sms_credits" };
   }
 
-  const text = `${partner.name}: premio desbloqueado. Usa tu cupon ${coupon.code} (${couponTitle(coupon)}).`;
   const result = await sendTelnyxSms({ to, text, tags: [`game-coupon:${coupon.code}`] });
 
   if (!result.ok) {
@@ -259,6 +263,8 @@ async function sendGameCouponSms(prisma, { partner, coupon, customer }) {
       couponCode: coupon.code,
       customerId: customer.id,
       reason: result.error?.title || result.status,
+      quantity: smsEstimate.parts,
+      meta: { smsEstimate },
     });
   }
 

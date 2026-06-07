@@ -1,5 +1,5 @@
 import { reserveSmsCreditForMessage, refundSmsCreditForMessage } from "./smsCredits.js";
-import { normalizeE164Phone, sendTelnyxSms } from "./telnyx.js";
+import { estimateSmsParts, normalizeE164Phone, sendTelnyxSms } from "./telnyx.js";
 
 const frontendBaseUrl = () =>
   String(
@@ -55,17 +55,16 @@ export async function sendOrderPaidTrackingSms(prisma, sale) {
 
   const trackingUrl = buildOrderTrackingUrl(sale);
   const partnerName = await resolvePartnerName(prisma, sale);
-  const text = [
-    `${partnerName}: pago confirmado, ${customerFirstName(sale)}.`,
-    `Tu pedido ${sale.code} ya entro en cocina.`,
-    `Sigue el estado aqui: ${trackingUrl}`,
-  ].join(" ");
+  const text = `${partnerName}: pago OK ${customerFirstName(sale)}. Pedido ${sale.code}. Seguimiento: ${trackingUrl}`;
+  const smsEstimate = estimateSmsParts(text);
 
   const reservation = await reserveSmsCreditForMessage(prisma, {
     partnerId: sale.partnerId,
     couponCode: sale.code,
     customerId: sale.customerId,
     to,
+    quantity: smsEstimate.parts,
+    meta: { smsEstimate },
   });
 
   if (!reservation.ok) {
@@ -84,6 +83,8 @@ export async function sendOrderPaidTrackingSms(prisma, sale) {
       couponCode: sale.code,
       customerId: sale.customerId,
       reason: result.error?.title || "order_tracking_sms_failed",
+      quantity: smsEstimate.parts,
+      meta: { smsEstimate },
     }).catch((error) => {
       console.error("[order-notifications.sms] refund error:", error);
     });
@@ -107,14 +108,17 @@ export async function sendOrderReadySms(prisma, sale) {
   const partnerName = await resolvePartnerName(prisma, sale);
   const isDelivery = sale.delivery === "COURIER";
   const text = isDelivery
-    ? `${partnerName}: tu pedido ${sale.code} va en camino desde ${storeName}. Gracias por tu compra.`
-    : `${partnerName}: tu pedido ${sale.code} esta listo para recoger en ${storeName}. Gracias por tu compra.`;
+    ? `${partnerName}: pedido ${sale.code} en camino desde ${storeName}.`
+    : `${partnerName}: pedido ${sale.code} listo para recoger en ${storeName}.`;
+  const smsEstimate = estimateSmsParts(text);
 
   const reservation = await reserveSmsCreditForMessage(prisma, {
     partnerId: sale.partnerId,
     couponCode: sale.code,
     customerId: sale.customerId,
     to,
+    quantity: smsEstimate.parts,
+    meta: { smsEstimate },
   });
 
   if (!reservation.ok) {
@@ -133,6 +137,8 @@ export async function sendOrderReadySms(prisma, sale) {
       couponCode: sale.code,
       customerId: sale.customerId,
       reason: result.error?.title || "order_ready_sms_failed",
+      quantity: smsEstimate.parts,
+      meta: { smsEstimate },
     }).catch((error) => {
       console.error("[order-notifications.ready-sms] refund error:", error);
     });
@@ -151,20 +157,23 @@ export async function sendOrderCustomerMessageSms(prisma, sale, message) {
     return { ok: false, skipped: true, reason: "missing_phone" };
   }
 
-  const cleanMessage = String(message || "").trim().replace(/\s+/g, " ").slice(0, 240);
+  const cleanMessage = String(message || "").trim().replace(/\s+/g, " ").slice(0, 70);
   if (!cleanMessage) {
     return { ok: false, skipped: true, reason: "missing_message" };
   }
 
   const trackingUrl = `${buildOrderTrackingUrl(sale)}?chat=1#chat`;
   const partnerName = await resolvePartnerName(prisma, sale);
-  const text = `${partnerName}: ${cleanMessage} Abre y responde aqui: ${trackingUrl}`;
+  const text = `${partnerName}: ${cleanMessage} Responde: ${trackingUrl}`;
+  const smsEstimate = estimateSmsParts(text);
 
   const reservation = await reserveSmsCreditForMessage(prisma, {
     partnerId: sale.partnerId,
     couponCode: sale.code,
     customerId: sale.customerId,
     to,
+    quantity: smsEstimate.parts,
+    meta: { smsEstimate },
   });
 
   if (!reservation.ok) {
@@ -183,6 +192,8 @@ export async function sendOrderCustomerMessageSms(prisma, sale, message) {
       couponCode: sale.code,
       customerId: sale.customerId,
       reason: result.error?.title || "order_chat_sms_failed",
+      quantity: smsEstimate.parts,
+      meta: { smsEstimate },
     }).catch((error) => {
       console.error("[order-notifications.chat-sms] refund error:", error);
     });

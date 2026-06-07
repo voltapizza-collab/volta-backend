@@ -1,5 +1,6 @@
 import express from "express";
-import { normalizeE164Phone, sendTelnyxSms } from "../services/telnyx.js";
+import { reserveSmsCreditForMessage, refundSmsCreditForMessage } from "../services/smsCredits.js";
+import { estimateSmsParts, normalizeE164Phone, sendTelnyxSms } from "../services/telnyx.js";
 
 const parsePositiveInt = (value) => {
   const parsed = Number(value);
@@ -94,19 +95,10 @@ const buildScheduledOrderSms = ({
   storeAddress,
   partnerName,
 }) => {
-  const place = [storeName, storeAddress].filter(Boolean).join(" - ");
+  const place = String(storeName || storeAddress || "tienda").replace(/\s+/g, " ").trim();
   const brand = String(partnerName || process.env.TELNYX_SMS_BRAND || "VoltaPizza").replace(/\s+/g, " ").trim();
 
-  return `${brand}: hola ${customerName || ""}
-
-Tu pedido programado esta confirmado.
-
-Fecha: ${formatDateES(scheduledFor)}
-Hora: ${formatTimeES(scheduledFor)}
-Lugar: ${place || "Tienda seleccionada"}
-Total: ${formatMoney(total, currency)}
-
-Te esperamos.`;
+  return `${brand}: pedido programado OK ${formatDateES(scheduledFor)} ${formatTimeES(scheduledFor)}, ${place}. Total ${formatMoney(total, currency)}.`;
 };
 
 export default function scheduledOrdersRoutes(prisma) {
@@ -166,19 +158,54 @@ export default function scheduledOrdersRoutes(prisma) {
         return { store, customer };
       });
 
-      const sms = await sendTelnyxSms({
-        to: customerPhone,
-        text: buildScheduledOrderSms({
-          customerName,
-          scheduledFor,
-          total,
-          currency,
-          storeName: store.storeName,
-          storeAddress: [store.address, store.city].filter(Boolean).join(", "),
-          partnerName: store.partner?.name,
-        }),
-        tags: [`scheduled-order:${storeId}`],
+      const text = buildScheduledOrderSms({
+        customerName,
+        scheduledFor,
+        total,
+        currency,
+        storeName: store.storeName,
+        storeAddress: [store.address, store.city].filter(Boolean).join(", "),
+        partnerName: store.partner?.name,
       });
+      const smsEstimate = estimateSmsParts(text);
+      const smsReservation = await reserveSmsCreditForMessage(prisma, {
+        partnerId,
+        reference: `scheduled-order:${storeId}:${customer?.id || "customer"}`,
+        to: customerPhone,
+        quantity: smsEstimate.parts,
+        meta: {
+          smsEstimate,
+          serviceId: "scheduledOrderConfirmation",
+          storeId,
+          customerId: customer?.id || null,
+        },
+      });
+      let sms = { ok: false, skipped: true, reason: smsReservation.error, balance: smsReservation.balance || 0 };
+
+      if (smsReservation.ok) {
+        sms = await sendTelnyxSms({
+          to: customerPhone,
+          text,
+          tags: [`scheduled-order:${storeId}`],
+        });
+
+        if (!sms.ok) {
+          await refundSmsCreditForMessage(prisma, {
+            partnerId,
+            reference: `scheduled-order:${storeId}:${customer?.id || "customer"}`,
+            quantity: smsEstimate.parts,
+            reason: sms.error?.title || sms.status || "scheduled_order_sms_failed",
+            meta: {
+              smsEstimate,
+              serviceId: "scheduledOrderConfirmation",
+              storeId,
+              customerId: customer?.id || null,
+            },
+          }).catch((refundError) => {
+            console.error("[scheduled-orders.sms] refund error:", refundError);
+          });
+        }
+      }
 
       return res.json({
         ok: true,

@@ -6,7 +6,9 @@ import {
   getSmsCreditPackages,
   providerCreditsFromAmount,
   rechargeSmsCredits,
+  SMS_PRICING_RESET_REFERENCE,
   SMS_PROVIDER_COST_EUR,
+  SMS_PROVIDER_COST_USD,
   SMS_SELL_PRICE_EUR,
 } from "../services/smsCredits.js";
 import {
@@ -76,7 +78,7 @@ const getAvailableToSell = async (prisma) => {
   const telnyxAvailableCredit = Number(String(telnyxBalance.availableCredit || "0").replace(",", "."));
   const telnyxAvailableMessages =
     telnyxBalance.ok && Number.isFinite(telnyxAvailableCredit)
-      ? providerCreditsFromAmount(telnyxAvailableCredit)
+      ? providerCreditsFromAmount(telnyxAvailableCredit, telnyxBalance.currency)
       : null;
   const availableToSell =
     telnyxAvailableMessages == null ? null : Math.max(telnyxAvailableMessages - committedMessages, 0);
@@ -86,6 +88,20 @@ const getAvailableToSell = async (prisma) => {
     telnyxAvailableMessages,
     availableToSell,
   };
+};
+
+const getVisibleSmsLedgerWhere = async (prisma, partnerId = null) => {
+  const resetLedger = await prisma.smsCreditLedger.findFirst({
+    where: {
+      reference: SMS_PRICING_RESET_REFERENCE,
+      type: "ADJUSTMENT",
+      ...(partnerId ? { partnerId } : {}),
+    },
+    orderBy: { createdAt: "desc" },
+    select: { createdAt: true },
+  });
+
+  return resetLedger ? { createdAt: { gte: resetLedger.createdAt } } : {};
 };
 
 export default function smsCreditsRoutes(prisma) {
@@ -106,11 +122,15 @@ export default function smsCreditsRoutes(prisma) {
       amount: amount || amountFromCredits(credits),
       sellPrice: Number(SMS_SELL_PRICE_EUR),
       providerCost: Number(SMS_PROVIDER_COST_EUR),
+      providerCostUsd: Number(SMS_PROVIDER_COST_USD),
+      marginPerSms: Number((Number(SMS_SELL_PRICE_EUR) - Number(SMS_PROVIDER_COST_EUR)).toFixed(4)),
+      unit: "SMS_1_PART",
     });
   });
 
   router.get("/global/summary", async (_req, res) => {
     try {
+      const visibleLedgerWhere = await getVisibleSmsLedgerWhere(prisma);
       const [partners, ledger, telnyxBalance] = await Promise.all([
         prisma.partner.findMany({
           orderBy: { name: "asc" },
@@ -125,6 +145,7 @@ export default function smsCreditsRoutes(prisma) {
           },
         }),
         prisma.smsCreditLedger.findMany({
+          where: visibleLedgerWhere,
           orderBy: { createdAt: "desc" },
           take: 30,
           include: {
@@ -148,7 +169,7 @@ export default function smsCreditsRoutes(prisma) {
       const telnyxAvailableCredit = Number(String(telnyxBalance.availableCredit || "0").replace(",", "."));
       const telnyxAvailableMessages =
         telnyxBalance.ok && Number.isFinite(telnyxAvailableCredit)
-          ? providerCreditsFromAmount(telnyxAvailableCredit)
+          ? providerCreditsFromAmount(telnyxAvailableCredit, telnyxBalance.currency)
           : null;
       const availableToSell =
         telnyxAvailableMessages == null ? null : Math.max(telnyxAvailableMessages - totals.credits, 0);
@@ -158,7 +179,10 @@ export default function smsCreditsRoutes(prisma) {
         pricing: {
           sellPrice: Number(SMS_SELL_PRICE_EUR),
           providerCost: Number(SMS_PROVIDER_COST_EUR),
+          providerCostUsd: Number(SMS_PROVIDER_COST_USD),
+          marginPerSms: Number((Number(SMS_SELL_PRICE_EUR) - Number(SMS_PROVIDER_COST_EUR)).toFixed(4)),
           messagesPer10Eur: creditsFromAmount(10),
+          unit: "SMS_1_PART",
         },
         payments: {
           stripeCheckoutEnabled: isStripeCheckoutConfigured(),
@@ -174,6 +198,11 @@ export default function smsCreditsRoutes(prisma) {
           availableMessages: telnyxAvailableMessages,
           committedMessages: totals.credits,
           availableToSell,
+          providerCostPerSms:
+            String(telnyxBalance.currency || "").toUpperCase() === "USD"
+              ? Number(SMS_PROVIDER_COST_USD)
+              : Number(SMS_PROVIDER_COST_EUR),
+          providerCostCurrency: telnyxBalance.currency || "EUR",
           error: telnyxBalance.ok ? null : telnyxBalance.error,
         },
         totals,
@@ -197,10 +226,11 @@ export default function smsCreditsRoutes(prisma) {
     }
 
     try {
+      const visibleLedgerWhere = await getVisibleSmsLedgerWhere(prisma, partnerId);
       const [balance, ledger] = await Promise.all([
         getPartnerSmsBalance(prisma, partnerId),
         prisma.smsCreditLedger.findMany({
-          where: { partnerId },
+          where: { partnerId, ...visibleLedgerWhere },
           orderBy: { createdAt: "desc" },
           take: 10,
         }),
@@ -216,7 +246,10 @@ export default function smsCreditsRoutes(prisma) {
         pricing: {
           sellPrice: Number(SMS_SELL_PRICE_EUR),
           providerCost: Number(SMS_PROVIDER_COST_EUR),
+          providerCostUsd: Number(SMS_PROVIDER_COST_USD),
+          marginPerSms: Number((Number(SMS_SELL_PRICE_EUR) - Number(SMS_PROVIDER_COST_EUR)).toFixed(4)),
           messagesPer10Eur: creditsFromAmount(10),
+          unit: "SMS_1_PART",
         },
         payments: {
           stripeCheckoutEnabled: isStripeCheckoutConfigured(),

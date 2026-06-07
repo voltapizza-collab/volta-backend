@@ -93,7 +93,7 @@ test("ingredient disabled SMS reserves credit and sends the alert", async () => 
   assert.equal(calls[0][1].reference, "ingredient-disabled:12:7");
   assert.equal(calls[0][1].to, "+34612345678");
   assert.equal(calls[1][0], "send");
-  assert.match(calls[1][1].text, /Pina fue desactivado en Plaza Diario/);
+  assert.match(calls[1][1].text, /ingrediente off\. Pina en Plaza Diario/);
   assert.match(calls[1][1].text, /Momento: \d{2}\/\d{2}\/\d{4} \d{2}:\d{2}\./);
   assert.deepEqual(calls[1][1].tags, [
     "tracking:ingredientDisabled",
@@ -141,7 +141,7 @@ test("store closed SMS reserves credit and sends the alert", async () => {
   assert.equal(result.ledgerId, 63);
   assert.equal(calls[0][1].reference, "store-status:12:closed");
   assert.equal(calls[0][1].to, "+34612345678");
-  assert.match(calls[1][1].text, /Plaza Diario fue cerrada para pedidos/);
+  assert.match(calls[1][1].text, /tienda cerrada: Plaza Diario/);
   assert.match(calls[1][1].text, /Momento: \d{2}\/\d{2}\/\d{4} \d{2}:\d{2}\./);
   assert.deepEqual(calls[1][1].tags, [
     "tracking:storeOpenClosed",
@@ -227,7 +227,7 @@ test("reservation canceled SMS reserves credit and sends the alert", async () =>
   assert.equal(result.ledgerId, 88);
   assert.equal(calls[0][1].reference, "reservation-canceled:44");
   assert.equal(calls[0][1].to, "+34612345678");
-  assert.match(calls[1][1].text, /Reserva cancelada en Plaza Diario: Luigi/);
+  assert.match(calls[1][1].text, /reserva cancelada Plaza Diario: Luigi/);
   assert.match(calls[1][1].text, /Momento: \d{2}\/\d{2}\/\d{4} \d{2}:\d{2}\./);
   assert.deepEqual(calls[1][1].tags, [
     "tracking:reservationCanceled",
@@ -285,7 +285,7 @@ test("boost purchased SMS reserves credit and sends the alert", async () => {
   assert.equal(result.ledgerId, 91);
   assert.equal(calls[0][1].reference, "boost-purchased:77");
   assert.equal(calls[0][1].to, "+34612345678");
-  assert.match(calls[1][1].text, /Boost comprado en Plaza Diario/);
+  assert.match(calls[1][1].text, /Boost WEB-BOOST-77 en Plaza Diario/);
   assert.match(calls[1][1].text, /WEB-BOOST-77/);
   assert.match(calls[1][1].text, /Momento: \d{2}\/\d{2}\/\d{4} \d{2}:\d{2}\./);
   assert.deepEqual(calls[1][1].tags, [

@@ -1,5 +1,6 @@
 import express from "express";
-import { normalizeE164Phone, sendTelnyxSms } from "../services/telnyx.js";
+import { reserveSmsCreditForMessage, refundSmsCreditForMessage } from "../services/smsCredits.js";
+import { estimateSmsParts, normalizeE164Phone, sendTelnyxSms } from "../services/telnyx.js";
 import { sendReservationCanceledTrackingSms } from "../services/trackingNotifications.js";
 
 const TZ = process.env.TIMEZONE || "Europe/Madrid";
@@ -132,22 +133,10 @@ const buildReservationSms = ({
   cancelLink,
 }) => {
   const date = formatDateES(reservationDate);
-  const place = [storeName, storeAddress].filter(Boolean).join(" - ");
+  const place = String(storeName || storeAddress || "tienda").replace(/\s+/g, " ").trim();
   const brand = String(partnerName || process.env.TELNYX_SMS_BRAND || "VoltaPizza").replace(/\s+/g, " ").trim();
 
-  return `${brand}: hola ${customerName || ""}
-
-Tu reserva esta confirmada.
-
-Fecha: ${date}
-Hora: ${reservationTime}
-Personas: ${partySize}
-Lugar: ${place || "Tienda seleccionada"}
-
-Si necesitas cancelar:
-${cancelLink}
-
-Te esperamos.`;
+  return `${brand}: reserva OK ${date} ${reservationTime}, ${partySize} pers., ${place}. Cancelar: ${cancelLink}`;
 };
 
 async function genCustomerCode(prisma) {
@@ -410,20 +399,56 @@ export default function reservationsRoutes(prisma) {
 
       if (customerPhone) {
         const cancelLink = `${publicFrontendBaseUrl()}/reservation/${reservation.id}/cancel`;
-        sms = await sendTelnyxSms({
-          to: customerPhone,
-          text: buildReservationSms({
-            customerName,
-            reservationDate,
-            reservationTime,
-            partySize,
-            storeName: storeInfo.storeName,
-            storeAddress: [storeInfo.address, storeInfo.city].filter(Boolean).join(", "),
-            partnerName: storeInfo.partner?.name,
-            cancelLink,
-          }),
-          tags: [`reservation:${reservation.id}`, `store:${storeId}`],
+        const text = buildReservationSms({
+          customerName,
+          reservationDate,
+          reservationTime,
+          partySize,
+          storeName: storeInfo.storeName,
+          storeAddress: [storeInfo.address, storeInfo.city].filter(Boolean).join(", "),
+          partnerName: storeInfo.partner?.name,
+          cancelLink,
         });
+        const smsEstimate = estimateSmsParts(text);
+        const smsReservation = await reserveSmsCreditForMessage(prisma, {
+          partnerId: storeInfo.partnerId,
+          reference: `reservation:${reservation.id}`,
+          to: customerPhone,
+          quantity: smsEstimate.parts,
+          meta: {
+            smsEstimate,
+            serviceId: "reservationConfirmation",
+            reservationId: reservation.id,
+            storeId,
+          },
+        });
+
+        if (!smsReservation.ok) {
+          sms = { ok: false, skipped: true, reason: smsReservation.error, balance: smsReservation.balance || 0 };
+        } else {
+          sms = await sendTelnyxSms({
+            to: customerPhone,
+            text,
+            tags: [`reservation:${reservation.id}`, `store:${storeId}`],
+          });
+
+          if (!sms.ok) {
+            await refundSmsCreditForMessage(prisma, {
+              partnerId: storeInfo.partnerId,
+              reference: `reservation:${reservation.id}`,
+              quantity: smsEstimate.parts,
+              reason: sms.error?.title || sms.status || "reservation_sms_failed",
+              meta: {
+                smsEstimate,
+                serviceId: "reservationConfirmation",
+                reservationId: reservation.id,
+                storeId,
+              },
+            }).catch((refundError) => {
+              console.error("[reservations.sms] refund error:", refundError);
+            });
+          }
+        }
       }
 
       return res.json({

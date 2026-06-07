@@ -5,6 +5,7 @@ import express from "express";
 import axios from "axios";
 import telnyxWebhooksRoutes from "../routes/telnyxWebhooks.js";
 import {
+  estimateSmsParts,
   normalizeE164Phone,
   getTelnyxBalanceDetails,
   sendTelnyxSms,
@@ -128,22 +129,30 @@ test("normalizeE164Phone rejects invalid recipients", () => {
   assert.equal(normalizeE164Phone("+34612345678"), "+34612345678");
 });
 
-test("SMS credits quote EUR 10 as 12500 messages", () => {
-  assert.equal(creditsFromAmount(10), 12500);
-  assert.equal(creditsFromAmount("10,00"), 12500);
-  assert.equal(providerCreditsFromAmount(10), 25000);
+test("estimateSmsParts counts multipart GSM messages", () => {
+  const result = estimateSmsParts("a".repeat(620));
+
+  assert.equal(result.encoding, "GSM-7");
+  assert.equal(result.parts, 5);
+});
+
+test("SMS credits quote packages as one-part SMS credits", () => {
+  assert.equal(creditsFromAmount(10), 101);
+  assert.equal(creditsFromAmount("10,00"), 101);
+  assert.equal(providerCreditsFromAmount(10), 161);
+  assert.equal(providerCreditsFromAmount("0.99", "USD"), 13);
   assert.deepEqual(
     getSmsCreditPackages().map((item) => [item.amount, item.credits]),
     [
-      [10, 12500],
-      [15, 18750],
-      [20, 25000],
-      [25, 31250],
-      [30, 37500],
-      [35, 43750],
-      [40, 50000],
-      [45, 56250],
-      [50, 62500],
+      [10, 101],
+      [15, 151],
+      [20, 202],
+      [25, 252],
+      [30, 303],
+      [35, 353],
+      [40, 404],
+      [45, 454],
+      [50, 505],
     ]
   );
 });
@@ -193,10 +202,10 @@ test("rechargeSmsCredits increments balance and writes ledger", async () => {
   });
 
   assert.equal(result.ok, true);
-  assert.equal(result.credits, 12500);
-  assert.equal(result.balance.smsCredits, 12500);
+  assert.equal(result.credits, 101);
+  assert.equal(result.balance.smsCredits, 101);
   assert.equal(prisma.state.ledger[0].type, "RECHARGE");
-  assert.equal(prisma.state.ledger[0].balanceAfter, 12500);
+  assert.equal(prisma.state.ledger[0].balanceAfter, 101);
 });
 
 test("reserveSmsCreditForMessage rejects empty balances before send", async () => {
@@ -212,6 +221,33 @@ test("reserveSmsCreditForMessage rejects empty balances before send", async () =
   assert.equal(result.ok, false);
   assert.equal(result.error, "insufficient_sms_credits");
   assert.equal(prisma.state.ledger.length, 0);
+});
+
+test("reserveSmsCreditForMessage can reserve multipart credit quantities", async () => {
+  const prisma = makeSmsCreditPrismaMock(10);
+
+  const result = await reserveSmsCreditForMessage(prisma, {
+    partnerId: 1,
+    couponCode: "sms-campaign-1",
+    customerId: 7,
+    to: "+34612345678",
+    quantity: 5,
+  });
+
+  assert.equal(result.ok, true);
+  assert.equal(result.balanceAfter, 5);
+  assert.equal(prisma.state.partner.smsConsumed, 5);
+  assert.equal(prisma.state.ledger[0].quantity, -5);
+  assert.equal(prisma.state.ledger[0].meta.reservedCredits, 5);
+});
+
+test("sendTelnyxSms blocks messages above the one-part limit", async () => {
+  const result = await sendTelnyxSms({ to: "+34612345678", text: "a".repeat(620) });
+
+  assert.equal(result.ok, false);
+  assert.equal(result.skipped, true);
+  assert.equal(result.error.title, "sms_too_long");
+  assert.equal(result.error.maxParts, 1);
 });
 
 test("sendTelnyxSms skips safely when env vars are missing", async () => {

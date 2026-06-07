@@ -1,5 +1,5 @@
 import express from "express";
-import { normalizeE164Phone, sendTelnyxSms } from "../services/telnyx.js";
+import { estimateSmsParts, normalizeE164Phone, sendTelnyxSms } from "../services/telnyx.js";
 import {
   reserveSmsCreditForMessage,
   refundSmsCreditForMessage,
@@ -160,7 +160,7 @@ const cleanSmsPart = (value) => String(value || "").replace(/\s+/g, " ").trim();
 
 const buildCampaignText = ({ partnerName, message }) => {
   const brand = cleanSmsPart(partnerName || process.env.TELNYX_SMS_BRAND || "VoltaPizza");
-  return cleanSmsPart(`${brand}: ${message}. Reply STOP to opt out.`);
+  return cleanSmsPart(`${brand}: ${message}. STOP`);
 };
 
 const telnyxConcurrency = () => {
@@ -230,13 +230,18 @@ const parseCampaignPayload = (body = {}) => {
   };
 };
 
-const buildPreview = (recipients) => {
+const buildPreview = (recipients, text = "") => {
   const validRecipients = recipients.filter((recipient) => normalizeE164Phone(recipient.phone));
+  const smsEstimate = estimateSmsParts(text);
 
   return {
     recipients: recipients.length,
     validPhones: validRecipients.length,
     invalidPhones: recipients.length - validRecipients.length,
+    smsPartsPerRecipient: smsEstimate.parts,
+    estimatedCreditsRequired: validRecipients.length * smsEstimate.parts,
+    smsEncoding: smsEstimate.encoding,
+    smsLength: smsEstimate.length,
     sample: recipients.slice(0, 8).map((recipient) => ({
       id: recipient.id,
       name: recipient.name,
@@ -250,6 +255,7 @@ const buildPreview = (recipients) => {
 };
 
 const sendCampaignSms = async (prisma, { partnerId, campaignId, recipients, text }) => {
+  const smsEstimate = estimateSmsParts(text);
   const items = recipients.map((recipient) => ({
     recipient,
     to: normalizeE164Phone(recipient.phone),
@@ -271,6 +277,10 @@ const sendCampaignSms = async (prisma, { partnerId, campaignId, recipients, text
       couponCode: campaignId,
       customerId: recipient.id,
       to,
+      quantity: smsEstimate.parts,
+      meta: {
+        smsEstimate,
+      },
     });
 
     if (!reservation.ok) {
@@ -298,7 +308,11 @@ const sendCampaignSms = async (prisma, { partnerId, campaignId, recipients, text
           partnerId,
           couponCode: campaignId,
           customerId: recipient.id,
+          quantity: smsEstimate.parts,
           reason: result.error?.title || result.status,
+          meta: {
+            smsEstimate,
+          },
         });
       } catch (refundError) {
         console.error("[communications.sms] refund error:", refundError);
@@ -327,11 +341,16 @@ export default function communicationsRoutes(prisma) {
 
     try {
       const targetStores = await resolveTargetStores(prisma, payload.partnerId, payload.storeIds);
+      const partnerName = await prisma.partner.findUnique({
+        where: { id: payload.partnerId },
+        select: { name: true },
+      });
+      const text = buildCampaignText({ partnerName: partnerName?.name, message: payload.message });
       const recipients = await resolveRecipients(prisma, { ...payload, targetStores });
 
       return res.json({
         ok: true,
-        ...buildPreview(recipients),
+        ...buildPreview(recipients, text),
       });
     } catch (error) {
       console.error("[communications.preview] error:", error);
@@ -345,7 +364,7 @@ export default function communicationsRoutes(prisma) {
       return res.status(400).json({ ok: false, error: "partnerId_required" });
     }
 
-    if (payload.message.length < 3 || payload.message.length > 600) {
+    if (payload.message.length < 3 || payload.message.length > 120) {
       return res.status(400).json({ ok: false, error: "bad_message" });
     }
 
@@ -367,22 +386,36 @@ export default function communicationsRoutes(prisma) {
         return res.status(400).json({ ok: false, error: "no_recipients" });
       }
 
+      const text = buildCampaignText({ partnerName: partner.name, message: payload.message });
+      const preview = buildPreview(recipients, text);
       const validRecipients = recipients.filter((recipient) => normalizeE164Phone(recipient.phone));
       if (!validRecipients.length) {
         return res.status(400).json({ ok: false, error: "no_valid_phones", recipients: recipients.length });
       }
 
-      if ((partner.smsCredits || 0) < validRecipients.length) {
+      if (preview.smsPartsPerRecipient > 1) {
+        return res.status(400).json({
+          ok: false,
+          error: "sms_too_long",
+          smsPartsPerRecipient: preview.smsPartsPerRecipient,
+          smsLength: preview.smsLength,
+          smsEncoding: preview.smsEncoding,
+          maxParts: 1,
+        });
+      }
+
+      if ((partner.smsCredits || 0) < preview.estimatedCreditsRequired) {
         return res.status(402).json({
           ok: false,
           error: "insufficient_sms_credits",
           balance: partner.smsCredits || 0,
-          required: validRecipients.length,
+          required: preview.estimatedCreditsRequired,
+          smsPartsPerRecipient: preview.smsPartsPerRecipient,
+          validPhones: preview.validPhones,
         });
       }
 
       const campaignId = `sms-campaign-${payload.partnerId}-${Date.now()}`;
-      const text = buildCampaignText({ partnerName: partner.name, message: payload.message });
       const results = await sendCampaignSms(prisma, {
         partnerId: payload.partnerId,
         campaignId,
@@ -393,7 +426,7 @@ export default function communicationsRoutes(prisma) {
       return res.json({
         ok: true,
         campaignId,
-        preview: buildPreview(recipients),
+        preview,
         delivery: summarizeDelivery(results),
       });
     } catch (error) {

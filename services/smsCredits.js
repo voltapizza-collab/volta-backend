@@ -1,8 +1,11 @@
-const SELL_PRICE_UNITS = 8; // EUR 0.0008 in ten-thousandths of one euro.
-const PROVIDER_COST_UNITS = 4; // EUR 0.0004 in ten-thousandths of one euro.
+const SELL_PRICE_UNITS = 990; // EUR 0.0990 in ten-thousandths of one euro.
+const PROVIDER_COST_UNITS = 620; // EUR 0.0620 in ten-thousandths of one euro.
+const PROVIDER_COST_USD_UNITS = 710; // USD 0.0710 in ten-thousandths of one dollar.
 
-export const SMS_SELL_PRICE_EUR = "0.0008";
-export const SMS_PROVIDER_COST_EUR = "0.0004";
+export const SMS_SELL_PRICE_EUR = "0.0990";
+export const SMS_PROVIDER_COST_EUR = "0.0620";
+export const SMS_PROVIDER_COST_USD = "0.0710";
+export const SMS_PRICING_RESET_REFERENCE = "sms-pricing-reset-2026-06-07";
 export const SMS_CREDIT_PACKAGE_AMOUNTS_EUR = [10, 15, 20, 25, 30, 35, 40, 45, 50];
 
 const parsePositiveInt = (value) => {
@@ -29,17 +32,20 @@ export const amountFromCredits = (credits) => {
   return Number(((quantity * SELL_PRICE_UNITS) / 10000).toFixed(2));
 };
 
-export const providerCreditsFromAmount = (amount) => {
+export const providerCreditsFromAmount = (amount, currency = "EUR") => {
   const cents = parseAmountCents(amount);
   if (cents == null) return null;
-  return Math.floor((cents * 100) / PROVIDER_COST_UNITS);
+  const normalizedCurrency = String(currency || "EUR").trim().toUpperCase();
+  const providerCostUnits = normalizedCurrency === "USD" ? PROVIDER_COST_USD_UNITS : PROVIDER_COST_UNITS;
+  return Math.floor((cents * 100) / providerCostUnits);
 };
 
 export const getSmsCreditPackages = () =>
   SMS_CREDIT_PACKAGE_AMOUNTS_EUR.map((amount) => ({
     amount,
     credits: creditsFromAmount(amount),
-    label: `${amount} EUR`,
+    label: `${amount} EUR - ${creditsFromAmount(amount)} SMS cortos`,
+    unit: "SMS_1_PART",
   }));
 
 export async function getPartnerSmsBalance(prisma, partnerId) {
@@ -134,21 +140,22 @@ export async function rechargeSmsCredits(prisma, { partnerId, amount, quantity, 
 
 export async function reserveSmsCreditForMessage(
   prisma,
-  { partnerId, couponCode, customerId, to, reference, meta } = {}
+  { partnerId, couponCode, customerId, to, reference, quantity = 1, meta } = {}
 ) {
   const id = parsePositiveInt(partnerId);
   if (!id) return { ok: false, error: "partnerId_required" };
+  const credits = parsePositiveInt(quantity) || 1;
   const ledgerReference = reference || couponCode || null;
 
   return prisma.$transaction(async (tx) => {
     const updated = await tx.partner.updateMany({
       where: {
         id,
-        smsCredits: { gte: 1 },
+        smsCredits: { gte: credits },
       },
       data: {
-        smsCredits: { decrement: 1 },
-        smsConsumed: { increment: 1 },
+        smsCredits: { decrement: credits },
+        smsConsumed: { increment: credits },
       },
     });
 
@@ -173,7 +180,7 @@ export async function reserveSmsCreditForMessage(
       data: {
         partnerId: id,
         type: "CONSUME",
-        quantity: -1,
+        quantity: -credits,
         balanceAfter: partner.smsCredits,
         unitPrice: SMS_SELL_PRICE_EUR,
         providerCost: SMS_PROVIDER_COST_EUR,
@@ -183,6 +190,7 @@ export async function reserveSmsCreditForMessage(
           couponCode: couponCode || null,
           customerId: customerId || null,
           to: to || null,
+          reservedCredits: credits,
           ...(meta && typeof meta === "object" ? meta : {}),
         },
       },
@@ -198,18 +206,19 @@ export async function reserveSmsCreditForMessage(
 
 export async function refundSmsCreditForMessage(
   prisma,
-  { partnerId, couponCode, customerId, reason, reference, meta } = {}
+  { partnerId, couponCode, customerId, reason, reference, quantity = 1, meta } = {}
 ) {
   const id = parsePositiveInt(partnerId);
   if (!id) return { ok: false, error: "partnerId_required" };
+  const credits = parsePositiveInt(quantity) || 1;
   const ledgerReference = reference || couponCode || null;
 
   return prisma.$transaction(async (tx) => {
     const partner = await tx.partner.update({
       where: { id },
       data: {
-        smsCredits: { increment: 1 },
-        smsConsumed: { decrement: 1 },
+        smsCredits: { increment: credits },
+        smsConsumed: { decrement: credits },
       },
       select: { smsCredits: true },
     });
@@ -218,7 +227,7 @@ export async function refundSmsCreditForMessage(
       data: {
         partnerId: id,
         type: "REFUND",
-        quantity: 1,
+        quantity: credits,
         balanceAfter: partner.smsCredits,
         unitPrice: SMS_SELL_PRICE_EUR,
         providerCost: SMS_PROVIDER_COST_EUR,
@@ -228,6 +237,7 @@ export async function refundSmsCreditForMessage(
           couponCode: couponCode || null,
           customerId: customerId || null,
           reason: reason || null,
+          refundedCredits: credits,
           ...(meta && typeof meta === "object" ? meta : {}),
         },
       },

@@ -1,6 +1,6 @@
 import crypto from "crypto";
 import { reserveSmsCreditForMessage, refundSmsCreditForMessage } from "./smsCredits.js";
-import { normalizeE164Phone, sendTelnyxSms } from "./telnyx.js";
+import { estimateSmsParts, normalizeE164Phone, sendTelnyxSms } from "./telnyx.js";
 
 const REVIEW_STATUS = {
   PENDING: "PENDING",
@@ -198,13 +198,16 @@ export async function sendProductReviewRequestSms(prisma, request) {
 
   const reviewUrl = buildProductReviewUrl(loaded);
   const partnerName = cleanName(sale?.partner?.name || "VoltaPizza");
-  const text = `${partnerName}: ${getCustomerName(sale)}, cuentanos que tal estuvo tu pedido ${sale.code}. Valora tus pizzas aqui: ${reviewUrl}`;
+  const text = `${partnerName}: valora tu pedido ${sale.code}: ${reviewUrl}`;
+  const smsEstimate = estimateSmsParts(text);
 
   const reservation = await reserveSmsCreditForMessage(prisma, {
     partnerId: loaded.partnerId,
     couponCode: `review:${sale.code}`,
     customerId: loaded.customerId,
     to,
+    quantity: smsEstimate.parts,
+    meta: { smsEstimate },
   });
 
   if (!reservation.ok) {
@@ -230,6 +233,8 @@ export async function sendProductReviewRequestSms(prisma, request) {
       couponCode: `review:${sale.code}`,
       customerId: loaded.customerId,
       reason: result.error?.title || "product_review_sms_failed",
+      quantity: smsEstimate.parts,
+      meta: { smsEstimate },
     }).catch((error) => {
       console.error("[product-reviews.sms] refund error:", error);
     });

@@ -56,8 +56,5 @@ test("private coupon SMS keeps public redeem URLs", () => {
     redeemUrl: "https://voltapizza.com/mycrushpizza/plaza-diario?coupon=VOL-RC47FGMV",
   });
 
-  assert.equal(
-    text.includes("Redeem: https://voltapizza.com/mycrushpizza/plaza-diario?coupon=VOL-RC47FGMV."),
-    true
-  );
+  assert.equal(text.includes("https://voltapizza.com/mycrushpizza/plaza-diario?coupon=VOL-RC47FGMV"), true);
 });

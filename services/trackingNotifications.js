@@ -1,5 +1,5 @@
 import { reserveSmsCreditForMessage, refundSmsCreditForMessage } from "./smsCredits.js";
-import { normalizeE164Phone, sendTelnyxSms } from "./telnyx.js";
+import { estimateSmsParts, normalizeE164Phone, sendTelnyxSms } from "./telnyx.js";
 
 const parseMaybeJson = (value, fallback) => {
   if (value == null) return fallback;
@@ -38,6 +38,7 @@ const cleanSmsPart = (value) =>
   String(value || "")
     .replace(/\s+/g, " ")
     .trim();
+const shortSmsPart = (value, max = 28) => cleanSmsPart(value).slice(0, max);
 
 const trackingTimeZone = () => process.env.TIMEZONE || "Europe/Madrid";
 
@@ -65,15 +66,15 @@ const smsBrand = (partnerName) => cleanSmsPart(partnerName || process.env.TELNYX
 
 const buildIngredientDisabledText = ({ partnerName, storeName, ingredientName, occurredAt }) => {
   const brand = smsBrand(partnerName);
-  const ingredient = cleanSmsPart(ingredientName || "Ingrediente");
-  const store = cleanSmsPart(storeName || "la tienda");
-  return withTimestamp(`${brand}: alerta de inventario. ${ingredient} fue desactivado en ${store}.`, occurredAt);
+  const ingredient = shortSmsPart(ingredientName || "Ingrediente");
+  const store = shortSmsPart(storeName || "tienda");
+  return withTimestamp(`${brand}: ingrediente off. ${ingredient} en ${store}.`, occurredAt);
 };
 
 const buildStoreStatusText = ({ partnerName, storeName, active, occurredAt }) => {
   const brand = smsBrand(partnerName);
-  const store = cleanSmsPart(storeName || "la tienda");
-  return withTimestamp(`${brand}: alerta de tienda. ${store} fue ${active ? "abierta" : "cerrada"} para pedidos.`, occurredAt);
+  const store = shortSmsPart(storeName || "tienda");
+  return withTimestamp(`${brand}: tienda ${active ? "abierta" : "cerrada"}: ${store}.`, occurredAt);
 };
 
 const formatDateES = (date) => {
@@ -89,13 +90,13 @@ const formatDateES = (date) => {
 
 const buildReservationCanceledText = ({ partnerName, storeName, customerName, reservationDate, reservationTime, partySize, occurredAt }) => {
   const brand = smsBrand(partnerName);
-  const customer = cleanSmsPart(customerName || "Cliente");
-  const store = cleanSmsPart(storeName || "la tienda");
+  const customer = shortSmsPart(customerName || "Cliente", 24);
+  const store = shortSmsPart(storeName || "tienda", 24);
   const date = formatDateES(reservationDate);
   const time = cleanSmsPart(reservationTime);
   const people = Number(partySize || 0);
   const details = [date, time, people > 0 ? `${people} pers.` : ""].filter(Boolean).join(" ");
-  return withTimestamp(`${brand}: alerta de reservas. Reserva cancelada en ${store}: ${customer}${details ? ` (${details})` : ""}.`, occurredAt);
+  return withTimestamp(`${brand}: reserva cancelada ${store}: ${customer}${details ? ` (${details})` : ""}.`, occurredAt);
 };
 
 const getSaleCustomerName = (sale) => {
@@ -105,7 +106,7 @@ const getSaleCustomerName = (sale) => {
 
 const buildBoostPurchasedText = ({ partnerName, storeName, sale, occurredAt }) => {
   const brand = smsBrand(partnerName);
-  const store = cleanSmsPart(storeName || "la tienda");
+  const store = shortSmsPart(storeName || "tienda", 24);
   const code = cleanSmsPart(sale?.code || "pedido");
   const amount = Number(sale?.boostAmount || 0);
   const currency = cleanSmsPart(sale?.currency || "EUR");
@@ -114,7 +115,7 @@ const buildBoostPurchasedText = ({ partnerName, storeName, sale, occurredAt }) =
   const amountText = amount > 0 ? ` por ${amount.toFixed(2)} ${currency}` : "";
   const positionText = target > 0 ? ` prioridad #${target}` : "";
   const jumpText = queueCredit > 0 ? `, salto ${queueCredit}` : "";
-  return withTimestamp(`${brand}: Boost comprado en ${store}. Pedido ${code} de ${getSaleCustomerName(sale)}${amountText}${positionText}${jumpText}.`, occurredAt);
+  return withTimestamp(`${brand}: Boost ${code} en ${store}${amountText}${positionText}${jumpText}.`, occurredAt);
 };
 
 const sendPartnerTrackingSms = async (
@@ -147,12 +148,17 @@ const sendPartnerTrackingSms = async (
   const reserve = deps.reserveSmsCreditForMessage || reserveSmsCreditForMessage;
   const refund = deps.refundSmsCreditForMessage || refundSmsCreditForMessage;
   const sendSms = deps.sendTelnyxSms || sendTelnyxSms;
+  const smsEstimate = estimateSmsParts(text);
 
   const reservation = await reserve(prisma, {
     partnerId,
     reference,
     to,
-    meta,
+    quantity: smsEstimate.parts,
+    meta: {
+      ...(meta && typeof meta === "object" ? meta : {}),
+      smsEstimate,
+    },
   });
 
   if (!reservation.ok) {
@@ -170,7 +176,11 @@ const sendPartnerTrackingSms = async (
       partnerId,
       reference,
       reason: result.error?.title || "tracking_sms_failed",
-      meta,
+      quantity: smsEstimate.parts,
+      meta: {
+        ...(meta && typeof meta === "object" ? meta : {}),
+        smsEstimate,
+      },
     }).catch((error) => {
       console.error(`[tracking-notifications.${serviceId}] refund error:`, error);
     });

@@ -92,7 +92,7 @@ export const createSmsCreditsCheckoutSession = async ({
   appendParam(params, "line_items[0][quantity]", 1);
   appendParam(params, "line_items[0][price_data][currency]", "eur");
   appendParam(params, "line_items[0][price_data][unit_amount]", amountCents);
-  appendParam(params, "line_items[0][price_data][product_data][name]", `Paquete ${CHECKOUT_DISPLAY_NAME} SMS - ${creditsLabel} mensajes`);
+  appendParam(params, "line_items[0][price_data][product_data][name]", `Paquete ${CHECKOUT_DISPLAY_NAME} SMS - ${creditsLabel} SMS cortos`);
   appendParam(params, "line_items[0][price_data][product_data][description]", partner.name);
   appendParam(params, "metadata[purpose]", "sms_credit_purchase");
   appendParam(params, "metadata[partnerId]", partnerId);

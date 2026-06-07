@@ -1640,7 +1640,7 @@ export default function myordersRoutes(prisma) {
 
   router.post("/:id/messages", async (req, res) => {
     const id = parsePositiveInt(req.params.id);
-    const text = cleanChatText(req.body?.text).slice(0, 600);
+    const text = cleanChatText(req.body?.text).slice(0, 70);
 
     if (!id) {
       return res.status(400).json({ ok: false, error: "valid_order_id_required" });

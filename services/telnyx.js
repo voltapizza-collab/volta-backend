@@ -5,8 +5,19 @@ const TELNYX_MESSAGES_URL = "https://api.telnyx.com/v2/messages";
 const TELNYX_BALANCE_URL = "https://api.telnyx.com/v2/balance";
 const ED25519_SPKI_PREFIX = Buffer.from("302a300506032b6570032100", "hex");
 const WEBHOOK_TOLERANCE_SECONDS = 5 * 60;
+const GSM_BASIC =
+  "@£$¥èéùìòÇ\nØø\rÅåΔ_ΦΓΛΩΠΨΣΘΞ" +
+  " !\"#¤%&'()*+,-./0123456789:;<=>?" +
+  "¡ABCDEFGHIJKLMNOPQRSTUVWXYZÄÖÑÜ`¿abcdefghijklmnopqrstuvwxyzäöñüà";
+const GSM_EXTENDED = "^{}\\[~]|€";
 
 const cleanEnv = (value) => String(value || "").trim();
+const SMS_MAX_PARTS = 1;
+const OBSERVED_SMS_PART_COST_EUR = "0.0620";
+const SMS_GSM_BASIC =
+  "\n\r !\"#$%&'()*+,-./0123456789:;<=>?" +
+  "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
+const SMS_GSM_EXTENDED = "^{}\\[~]|";
 
 const telnyxConfig = () => ({
   apiKey: cleanEnv(process.env.TELNYX_API_KEY),
@@ -105,6 +116,33 @@ export const normalizeE164Phone = (value = "") => {
   return null;
 };
 
+export function estimateSmsParts(text = "") {
+  const value = String(text || "");
+  const isGsm = [...value].every((char) => SMS_GSM_BASIC.includes(char) || SMS_GSM_EXTENDED.includes(char));
+  const length = [...value].reduce((total, char) => total + (SMS_GSM_EXTENDED.includes(char) ? 2 : 1), 0);
+  const singleLimit = isGsm ? 160 : 70;
+  const multipartLimit = isGsm ? 153 : 67;
+  const parts = length <= singleLimit ? 1 : Math.ceil(length / multipartLimit);
+
+  return {
+    encoding: isGsm ? "GSM-7" : "UCS-2",
+    length,
+    parts: Math.max(parts || 1, 1),
+    singleLimit,
+    multipartLimit,
+  };
+}
+
+export function validateOnePartSms(text = "") {
+  const estimate = estimateSmsParts(text);
+  return {
+    ok: estimate.parts <= SMS_MAX_PARTS,
+    maxParts: SMS_MAX_PARTS,
+    observedPartCostEur: Number(OBSERVED_SMS_PART_COST_EUR),
+    ...estimate,
+  };
+}
+
 const normalizeTelnyxError = (error) => {
   const response = error?.response;
   const firstError = Array.isArray(response?.data?.errors) ? response.data.errors[0] : null;
@@ -120,6 +158,23 @@ const normalizeTelnyxError = (error) => {
 export async function sendTelnyxSms({ to, text, tags = [] }) {
   const config = telnyxConfig();
   const status = getTelnyxStatus();
+  const smsLimit = validateOnePartSms(text);
+
+  if (!smsLimit.ok) {
+    return {
+      ok: false,
+      status: "failed",
+      skipped: true,
+      error: {
+        title: "sms_too_long",
+        detail: "SMS text exceeds the 1-part limit.",
+        parts: smsLimit.parts,
+        maxParts: smsLimit.maxParts,
+        length: smsLimit.length,
+        encoding: smsLimit.encoding,
+      },
+    };
+  }
 
   if (!status.enabled) {
     return {
@@ -176,6 +231,8 @@ export async function sendTelnyxSms({ to, text, tags = [] }) {
       to: toPhone,
       parts: data.parts || null,
       cost: data.cost || null,
+      estimatedParts: smsLimit.parts,
+      estimatedCostEur: Number(OBSERVED_SMS_PART_COST_EUR),
       sentAt: data.sent_at || data.received_at || new Date().toISOString(),
     };
   } catch (error) {
