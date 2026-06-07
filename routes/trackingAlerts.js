@@ -1,4 +1,5 @@
 import express from "express";
+import { normalizeSmsNotificationSettings } from "../services/smsNotificationSettings.js";
 
 const parsePositiveInt = (value) => {
   const parsed = Number(value);
@@ -71,24 +72,7 @@ const getSaleProductSummary = (sale) => {
   return products.join(", ");
 };
 
-const normalizeTrackingSettings = (value) => {
-  const source = asObject(value);
-  const services = asObject(source.services);
-
-  return {
-    enabled: Boolean(source.enabled),
-    delayedOrderThresholdMinutes: Number(source.delayedOrderThresholdMinutes || 3),
-    services: {
-      pendingOrderUnaccepted: services.pendingOrderUnaccepted !== false,
-      couponRedeemed: services.couponRedeemed !== false,
-      highAverageTicketSale: services.highAverageTicketSale !== false,
-      storeOpenClosed: services.storeOpenClosed !== false,
-      ingredientDisabled: services.ingredientDisabled !== false,
-      reservationCanceled: services.reservationCanceled !== false,
-      boostPurchased: services.boostPurchased !== false,
-    },
-  };
-};
+const normalizeTrackingSettings = normalizeSmsNotificationSettings;
 
 const isServiceEnabled = (settings, serviceId) =>
   Boolean(settings.enabled && settings.services?.[serviceId]);

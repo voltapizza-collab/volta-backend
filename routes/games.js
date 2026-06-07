@@ -4,6 +4,7 @@ import {
   reserveSmsCreditForMessage,
   refundSmsCreditForMessage,
 } from "../services/smsCredits.js";
+import { isPartnerSmsServiceEnabled } from "../services/smsNotificationSettings.js";
 
 const router = express.Router();
 const TZ = process.env.TIMEZONE || "Europe/Madrid";
@@ -28,6 +29,7 @@ const BUILT_IN_GAMES = [
 ];
 
 const normalizePhone = (value = "") => String(value).replace(/[^\d]/g, "");
+const cleanSmsPart = (value = "") => String(value || "").replace(/\s+/g, " ").trim();
 
 const toE164ES = (value = "") => {
   const digits = normalizePhone(value);
@@ -235,11 +237,21 @@ function evaluatePlay(game, body = {}) {
   };
 }
 
+export const buildGameCouponSms = ({ partnerName, couponCode }) =>
+  cleanSmsPart(`${partnerName || process.env.TELNYX_SMS_BRAND || "VoltaPizza"}: premio ${couponCode}. STOP`);
+
 async function sendGameCouponSms(prisma, { partner, coupon, customer }) {
   const to = normalizeE164Phone(customer?.phone);
   if (!to) return { sent: false, status: "failed", error: "invalid_phone" };
 
-  const text = `${partner.name}: premio ${coupon.code}.`;
+  const serviceEnabled = await isPartnerSmsServiceEnabled(prisma, {
+    partnerId: coupon.partnerId,
+    storeId: coupon.storeId,
+    serviceId: "gameCouponDelivery",
+  });
+  if (!serviceEnabled) return { sent: false, status: "skipped", error: "sms_service_disabled" };
+
+  const text = buildGameCouponSms({ partnerName: partner.name, couponCode: coupon.code });
   const smsEstimate = estimateSmsParts(text);
 
   const reservation = await reserveSmsCreditForMessage(prisma, {

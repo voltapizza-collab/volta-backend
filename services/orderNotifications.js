@@ -1,4 +1,5 @@
 import { reserveSmsCreditForMessage, refundSmsCreditForMessage } from "./smsCredits.js";
+import { isPartnerSmsServiceEnabled } from "./smsNotificationSettings.js";
 import { estimateSmsParts, normalizeE164Phone, sendTelnyxSms } from "./telnyx.js";
 
 const frontendBaseUrl = () =>
@@ -47,6 +48,15 @@ const resolvePartnerName = async (prisma, sale) => {
 };
 
 export async function sendOrderPaidTrackingSms(prisma, sale) {
+  const serviceEnabled = await isPartnerSmsServiceEnabled(prisma, {
+    partnerId: sale.partnerId,
+    storeId: sale.storeId,
+    serviceId: "customerPaymentSuccess",
+  });
+  if (!serviceEnabled) {
+    return { ok: false, skipped: true, reason: "sms_service_disabled" };
+  }
+
   const data = readCustomerData(sale);
   const to = normalizeE164Phone(data.phone || sale?.customer?.phone);
   if (!to) {
@@ -98,6 +108,15 @@ export async function sendOrderPaidTrackingSms(prisma, sale) {
 }
 
 export async function sendOrderReadySms(prisma, sale) {
+  const serviceEnabled = await isPartnerSmsServiceEnabled(prisma, {
+    partnerId: sale.partnerId,
+    storeId: sale.storeId,
+    serviceId: "customerOrderReady",
+  });
+  if (!serviceEnabled) {
+    return { ok: false, skipped: true, reason: "sms_service_disabled" };
+  }
+
   const data = readCustomerData(sale);
   const to = normalizeE164Phone(data.phone || sale?.customer?.phone);
   if (!to) {
@@ -151,6 +170,15 @@ export async function sendOrderReadySms(prisma, sale) {
 }
 
 export async function sendOrderCustomerMessageSms(prisma, sale, message) {
+  const serviceEnabled = await isPartnerSmsServiceEnabled(prisma, {
+    partnerId: sale.partnerId,
+    storeId: sale.storeId,
+    serviceId: "customerOrderChatMessage",
+  });
+  if (!serviceEnabled) {
+    return { ok: false, skipped: true, reason: "sms_service_disabled" };
+  }
+
   const data = readCustomerData(sale);
   const to = normalizeE164Phone(data.phone || sale?.customer?.phone);
   if (!to) {

@@ -4,6 +4,7 @@ import {
   reserveSmsCreditForMessage,
   refundSmsCreditForMessage,
 } from "../services/smsCredits.js";
+import { isPartnerSmsServiceEnabled } from "../services/smsNotificationSettings.js";
 
 const VALID_SEGMENTS = ["S1", "S2", "S3", "S4", "S5"];
 const VALID_ACTIVITIES = ["HOT", "COLD"];
@@ -379,6 +380,14 @@ export default function communicationsRoutes(prisma) {
 
       if (!partner) {
         return res.status(404).json({ ok: false, error: "partner_not_found" });
+      }
+
+      const campaignSmsEnabled = await isPartnerSmsServiceEnabled(prisma, {
+        partnerId: payload.partnerId,
+        serviceId: "smsCampaignDelivery",
+      });
+      if (!campaignSmsEnabled) {
+        return res.status(403).json({ ok: false, error: "sms_service_disabled" });
       }
 
       const recipients = await resolveRecipients(prisma, { ...payload, targetStores });

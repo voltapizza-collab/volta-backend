@@ -1,6 +1,8 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import { buildPrivateCouponSms, resolveCouponFrontendBaseUrl } from "../routes/coupons.js";
+import { buildGameCouponSms } from "../routes/games.js";
+import { estimateSmsParts } from "../services/telnyx.js";
 
 test("coupon redeem URLs prefer the configured public storefront over local dev URLs", () => {
   const baseUrl = resolveCouponFrontendBaseUrl({
@@ -44,6 +46,24 @@ test("private coupon SMS never includes a local redeem URL", () => {
   assert.equal(text.includes("VOL-RC47FGMV"), true);
 });
 
+test("private coupon SMS keeps partner name and STOP inside one SMS part", () => {
+  const text = buildPrivateCouponSms({
+    partnerName: "MyCrushPizza",
+    coupon: {
+      code: "VOL-RC47FGMV",
+      kind: "PERCENT",
+      percent: 15,
+      expiresAt: null,
+    },
+    redeemUrl: null,
+  });
+  const estimate = estimateSmsParts(text);
+
+  assert.equal(text.startsWith("MyCrushPizza:"), true);
+  assert.match(text, /\bSTOP$/);
+  assert.equal(estimate.parts, 1);
+});
+
 test("private coupon SMS keeps public redeem URLs", () => {
   const text = buildPrivateCouponSms({
     partnerName: "MyCrushPizza",
@@ -57,4 +77,15 @@ test("private coupon SMS keeps public redeem URLs", () => {
   });
 
   assert.equal(text.includes("https://voltapizza.com/mycrushpizza/plaza-diario?coupon=VOL-RC47FGMV"), true);
+});
+
+test("game coupon SMS keeps partner name and STOP inside one SMS part", () => {
+  const text = buildGameCouponSms({
+    partnerName: "MyCrushPizza",
+    couponCode: "VOL-GAME77",
+  });
+  const estimate = estimateSmsParts(text);
+
+  assert.equal(text, "MyCrushPizza: premio VOL-GAME77. STOP");
+  assert.equal(estimate.parts, 1);
 });

@@ -1,5 +1,6 @@
 import express from "express";
 import { reserveSmsCreditForMessage, refundSmsCreditForMessage } from "../services/smsCredits.js";
+import { isPartnerSmsServiceEnabled } from "../services/smsNotificationSettings.js";
 import { estimateSmsParts, normalizeE164Phone, sendTelnyxSms } from "../services/telnyx.js";
 
 const parsePositiveInt = (value) => {
@@ -157,6 +158,19 @@ export default function scheduledOrdersRoutes(prisma) {
 
         return { store, customer };
       });
+
+      const serviceEnabled = await isPartnerSmsServiceEnabled(prisma, {
+        partnerId,
+        storeId,
+        serviceId: "customerScheduledOrderConfirmation",
+      });
+      if (!serviceEnabled) {
+        return res.json({
+          ok: true,
+          customerId: customer?.id || null,
+          sms: { ok: false, skipped: true, reason: "sms_service_disabled" },
+        });
+      }
 
       const text = buildScheduledOrderSms({
         customerName,

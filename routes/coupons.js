@@ -4,6 +4,7 @@ import {
   reserveSmsCreditForMessage,
   refundSmsCreditForMessage,
 } from "../services/smsCredits.js";
+import { isPartnerSmsServiceEnabled } from "../services/smsNotificationSettings.js";
 
 const router = express.Router();
 
@@ -1065,6 +1066,42 @@ async function sendCouponSms(prisma, { coupon, recipient, partnerName }) {
   let smsEstimate = null;
 
   try {
+    const serviceEnabled = await isPartnerSmsServiceEnabled(prisma, {
+      partnerId: coupon.partnerId,
+      storeId: coupon.storeId,
+      serviceId: "privateCouponDelivery",
+    });
+    if (!serviceEnabled) {
+      const result = {
+        ok: false,
+        status: "skipped",
+        skipped: true,
+        error: { title: "sms_service_disabled" },
+      };
+      const meta = readCouponMeta(coupon);
+      const message = buildMessageMeta({ result, phone: recipient?.phone });
+
+      await prisma.coupon.update({
+        where: { code: coupon.code },
+        data: {
+          meta: {
+            ...meta,
+            messageStatus: result.status,
+            message,
+          },
+        },
+      });
+
+      return {
+        code: coupon.code,
+        customerId: recipient?.id || null,
+        ok: false,
+        status: result.status,
+        skipped: true,
+        error: result.error,
+      };
+    }
+
     const redeemUrl = await buildCouponRedeemUrl(prisma, {
       coupon,
       zipCode: readCouponMeta(coupon).claimedFromZipCode,

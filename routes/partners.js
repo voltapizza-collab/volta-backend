@@ -8,6 +8,10 @@ import {
   ensureBackofficeDemoSession,
   isBackofficeDemoCredential,
 } from "../services/backofficeDemoSession.js";
+import {
+  SMS_NOTIFICATION_SERVICE_IDS,
+  normalizeSmsNotificationSettings,
+} from "../services/smsNotificationSettings.js";
 
 const prisma = new PrismaClient();
 const router = express.Router();
@@ -27,15 +31,7 @@ const STOREFRONT_BUTTON_IDS = [
   "boost",
 ];
 
-const TRACKING_NOTIFICATION_SERVICE_IDS = [
-  "pendingOrderUnaccepted",
-  "couponRedeemed",
-  "highAverageTicketSale",
-  "storeOpenClosed",
-  "ingredientDisabled",
-  "reservationCanceled",
-  "boostPurchased",
-];
+const TRACKING_NOTIFICATION_SERVICE_IDS = SMS_NOTIFICATION_SERVICE_IDS;
 
 const PRICE_ADJUSTMENT_TARGET_TYPES = ["ALL", "CATEGORY", "PRODUCT"];
 const PRICE_ADJUSTMENT_STATUSES = ["ACTIVE", "PAUSED"];
@@ -625,36 +621,7 @@ const normalizeStorefrontButtonConfig = (value) => {
   }, {});
 };
 
-const normalizeTrackingNotificationSettings = (value = {}) => {
-  const source =
-    value && typeof value === "object" && !Array.isArray(value) ? value : {};
-  const sourceServices =
-    source.services && typeof source.services === "object" && !Array.isArray(source.services)
-      ? source.services
-      : {};
-  const rawThreshold = Number(source.delayedOrderThresholdMinutes);
-  const rawRecipientPhone = String(source.recipientPhone || "")
-    .replace(/[^\d+]/g, "")
-    .slice(0, 24);
-
-  return {
-    enabled: Boolean(source.enabled),
-    channel: "SMS",
-    recipientPhone: rawRecipientPhone,
-    contactPhoneConfirmed: Boolean(source.contactPhoneConfirmed),
-    contactPhoneConfirmedAt: source.contactPhoneConfirmed
-      ? String(source.contactPhoneConfirmedAt || new Date().toISOString())
-      : null,
-    delayedOrderThresholdMinutes: Number.isInteger(rawThreshold) && rawThreshold >= 1 && rawThreshold <= 180
-      ? rawThreshold
-      : 3,
-    services: TRACKING_NOTIFICATION_SERVICE_IDS.reduce((services, serviceId) => {
-      const rawValue = sourceServices[serviceId];
-      services[serviceId] = Boolean(rawValue);
-      return services;
-    }, {}),
-  };
-};
+const normalizeTrackingNotificationSettings = normalizeSmsNotificationSettings;
 
 const toPositiveIntegerOrNull = (value) => {
   if (value === "" || value == null) return null;

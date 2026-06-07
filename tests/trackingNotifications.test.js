@@ -29,17 +29,17 @@ const makeContext = (settings) => ({
   },
 });
 
-test("tracking settings keep ingredient disabled on by default when services are missing", () => {
+test("tracking settings keep SMS services off by default when services are missing", () => {
   const settings = normalizeTrackingNotificationSettings({
     enabled: true,
     recipientPhone: "612345678",
     contactPhoneConfirmed: true,
   });
 
-  assert.equal(settings.enabled, true);
-  assert.equal(settings.services.ingredientDisabled, true);
-  assert.equal(settings.services.reservationCanceled, true);
-  assert.equal(settings.services.boostPurchased, true);
+  assert.equal(settings.enabled, false);
+  assert.equal(settings.services.ingredientDisabled, false);
+  assert.equal(settings.services.reservationCanceled, false);
+  assert.equal(settings.services.boostPurchased, false);
 });
 
 test("ingredient disabled SMS skips when tracking is disabled", async () => {
@@ -47,6 +47,7 @@ test("ingredient disabled SMS skips when tracking is disabled", async () => {
   const result = await sendIngredientDisabledTrackingSms(
     {},
     makeContext({
+      schemaVersion: 2,
       enabled: false,
       recipientPhone: "612345678",
       contactPhoneConfirmed: true,
@@ -69,6 +70,7 @@ test("ingredient disabled SMS reserves credit and sends the alert", async () => 
   const result = await sendIngredientDisabledTrackingSms(
     {},
     makeContext({
+      schemaVersion: 2,
       enabled: true,
       recipientPhone: "612345678",
       contactPhoneConfirmed: true,
@@ -117,6 +119,7 @@ test("store closed SMS reserves credit and sends the alert", async () => {
           id: 3,
           name: "Volta Partner",
           trackingNotificationSettings: {
+            schemaVersion: 2,
             enabled: true,
             recipientPhone: "612345678",
             contactPhoneConfirmed: true,
@@ -155,6 +158,7 @@ test("ingredient disabled SMS refunds credit when provider send fails", async ()
   const result = await sendIngredientDisabledTrackingSms(
     {},
     makeContext({
+      schemaVersion: 2,
       enabled: true,
       recipientPhone: "612345678",
       contactPhoneConfirmed: true,
@@ -202,6 +206,7 @@ test("reservation canceled SMS reserves credit and sends the alert", async () =>
             id: 3,
             name: "Volta Partner",
             trackingNotificationSettings: {
+              schemaVersion: 2,
               enabled: true,
               recipientPhone: "612345678",
               contactPhoneConfirmed: true,
@@ -260,6 +265,7 @@ test("boost purchased SMS reserves credit and sends the alert", async () => {
             id: 3,
             name: "Volta Partner",
             trackingNotificationSettings: {
+              schemaVersion: 2,
               enabled: true,
               recipientPhone: "612345678",
               contactPhoneConfirmed: true,

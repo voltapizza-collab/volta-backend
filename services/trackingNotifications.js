@@ -1,5 +1,10 @@
 import { reserveSmsCreditForMessage, refundSmsCreditForMessage } from "./smsCredits.js";
 import { estimateSmsParts, normalizeE164Phone, sendTelnyxSms } from "./telnyx.js";
+import {
+  getSmsNotificationRecipients,
+  isSmsNotificationServiceEnabled,
+  normalizeSmsNotificationSettings,
+} from "./smsNotificationSettings.js";
 
 const parseMaybeJson = (value, fallback) => {
   if (value == null) return fallback;
@@ -17,22 +22,7 @@ const asObject = (value) => {
   return parsed && typeof parsed === "object" && !Array.isArray(parsed) ? parsed : {};
 };
 
-export const normalizeTrackingNotificationSettings = (value) => {
-  const source = asObject(value);
-  const services = asObject(source.services);
-
-  return {
-    enabled: Boolean(source.enabled),
-    recipientPhone: String(source.recipientPhone || ""),
-    contactPhoneConfirmed: Boolean(source.contactPhoneConfirmed),
-    services: {
-      storeOpenClosed: services.storeOpenClosed !== false,
-      ingredientDisabled: services.ingredientDisabled !== false,
-      reservationCanceled: services.reservationCanceled !== false,
-      boostPurchased: services.boostPurchased !== false,
-    },
-  };
-};
+export const normalizeTrackingNotificationSettings = normalizeSmsNotificationSettings;
 
 const cleanSmsPart = (value) =>
   String(value || "")
@@ -128,20 +118,24 @@ const sendPartnerTrackingSms = async (
     text,
     tags,
     meta,
+    storeId,
   },
   deps = {}
 ) => {
   const settings = normalizeTrackingNotificationSettings(partner?.trackingNotificationSettings);
-  if (!settings.enabled || !settings.services[serviceId]) {
+  if (!isSmsNotificationServiceEnabled(settings, serviceId, { storeId })) {
     return { ok: false, skipped: true, reason: "tracking_disabled" };
   }
+
+  const recipients = getSmsNotificationRecipients(settings)
+    .map(normalizeE164Phone)
+    .filter(Boolean);
 
   if (!settings.contactPhoneConfirmed) {
     return { ok: false, skipped: true, reason: "phone_not_confirmed" };
   }
 
-  const to = normalizeE164Phone(settings.recipientPhone);
-  if (!to) {
+  if (!recipients.length) {
     return { ok: false, skipped: true, reason: "missing_phone" };
   }
 
@@ -150,46 +144,65 @@ const sendPartnerTrackingSms = async (
   const sendSms = deps.sendTelnyxSms || sendTelnyxSms;
   const smsEstimate = estimateSmsParts(text);
 
-  const reservation = await reserve(prisma, {
-    partnerId,
-    reference,
-    to,
-    quantity: smsEstimate.parts,
-    meta: {
-      ...(meta && typeof meta === "object" ? meta : {}),
-      smsEstimate,
-    },
-  });
+  const results = [];
 
-  if (!reservation.ok) {
-    return { ok: false, skipped: true, reason: reservation.error, reference };
-  }
-
-  const result = await sendSms({
-    to,
-    text,
-    tags,
-  });
-
-  if (!result.ok) {
-    await refund(prisma, {
+  for (const [index, to] of recipients.entries()) {
+    const recipientReference = recipients.length > 1 ? `${reference}:phone-${index + 1}` : reference;
+    const reservation = await reserve(prisma, {
       partnerId,
-      reference,
-      reason: result.error?.title || "tracking_sms_failed",
+      reference: recipientReference,
+      to,
       quantity: smsEstimate.parts,
       meta: {
         ...(meta && typeof meta === "object" ? meta : {}),
         smsEstimate,
+        recipientIndex: index + 1,
+        recipientCount: recipients.length,
       },
-    }).catch((error) => {
-      console.error(`[tracking-notifications.${serviceId}] refund error:`, error);
+    });
+
+    if (!reservation.ok) {
+      results.push({ ok: false, skipped: true, reason: reservation.error, reference: recipientReference, to });
+      continue;
+    }
+
+    const result = await sendSms({
+      to,
+      text,
+      tags,
+    });
+
+    if (!result.ok) {
+      await refund(prisma, {
+        partnerId,
+        reference: recipientReference,
+        reason: result.error?.title || "tracking_sms_failed",
+        quantity: smsEstimate.parts,
+        meta: {
+          ...(meta && typeof meta === "object" ? meta : {}),
+          smsEstimate,
+          recipientIndex: index + 1,
+          recipientCount: recipients.length,
+        },
+      }).catch((error) => {
+        console.error(`[tracking-notifications.${serviceId}] refund error:`, error);
+      });
+    }
+
+    results.push({
+      ...result,
+      reference: recipientReference,
+      ledgerId: reservation.ledgerId,
+      to,
     });
   }
 
+  const firstSent = results.find((result) => result.ok) || results[0];
   return {
-    ...result,
+    ...firstSent,
     reference,
-    ledgerId: reservation.ledgerId,
+    results,
+    sentCount: results.filter((result) => result.ok).length,
   };
 };
 
@@ -226,6 +239,7 @@ export async function sendIngredientDisabledTrackingSms(
       serviceId: "ingredientDisabled",
       reference,
       meta,
+      storeId,
       text: buildIngredientDisabledText({
         partnerName: partner?.name,
         storeName: store?.storeName,
@@ -275,6 +289,7 @@ export async function sendStoreStatusTrackingSms(
       serviceId: "storeOpenClosed",
       reference,
       meta,
+      storeId,
       text: buildStoreStatusText({
         partnerName: partner?.name,
         storeName: store?.storeName,
@@ -328,6 +343,7 @@ export async function sendReservationCanceledTrackingSms(
       serviceId: "reservationCanceled",
       reference,
       meta,
+      storeId,
       text: buildReservationCanceledText({
         partnerName: partner?.name,
         storeName: store?.storeName,
@@ -386,6 +402,7 @@ export async function sendBoostPurchasedTrackingSms(
       serviceId: "boostPurchased",
       reference,
       meta,
+      storeId,
       text: buildBoostPurchasedText({
         partnerName: partner?.name,
         storeName: store?.storeName,

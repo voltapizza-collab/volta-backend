@@ -1,5 +1,6 @@
 import express from "express";
 import { reserveSmsCreditForMessage, refundSmsCreditForMessage } from "../services/smsCredits.js";
+import { isPartnerSmsServiceEnabled } from "../services/smsNotificationSettings.js";
 import { estimateSmsParts, normalizeE164Phone, sendTelnyxSms } from "../services/telnyx.js";
 import { sendReservationCanceledTrackingSms } from "../services/trackingNotifications.js";
 
@@ -397,7 +398,15 @@ export default function reservationsRoutes(prisma) {
       const reservation = result.reservation;
       const storeInfo = result.store;
 
-      if (customerPhone) {
+      const reservationSmsEnabled = customerPhone
+        ? await isPartnerSmsServiceEnabled(prisma, {
+            partnerId: storeInfo.partnerId,
+            storeId,
+            serviceId: "customerReservationConfirmation",
+          })
+        : false;
+
+      if (customerPhone && reservationSmsEnabled) {
         const cancelLink = `${publicFrontendBaseUrl()}/reservation/${reservation.id}/cancel`;
         const text = buildReservationSms({
           customerName,
@@ -449,6 +458,8 @@ export default function reservationsRoutes(prisma) {
             });
           }
         }
+      } else if (customerPhone) {
+        sms = { ok: false, skipped: true, reason: "sms_service_disabled" };
       }
 
       return res.json({

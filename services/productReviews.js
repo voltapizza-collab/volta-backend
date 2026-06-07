@@ -1,5 +1,6 @@
 import crypto from "crypto";
 import { reserveSmsCreditForMessage, refundSmsCreditForMessage } from "./smsCredits.js";
+import { isPartnerSmsServiceEnabled } from "./smsNotificationSettings.js";
 import { estimateSmsParts, normalizeE164Phone, sendTelnyxSms } from "./telnyx.js";
 
 const REVIEW_STATUS = {
@@ -187,6 +188,19 @@ export async function sendProductReviewRequestSms(prisma, request) {
   }
 
   const sale = loaded.sale;
+  const serviceEnabled = await isPartnerSmsServiceEnabled(prisma, {
+    partnerId: loaded.partnerId,
+    storeId: sale?.storeId,
+    serviceId: "customerReviewRequest",
+  });
+  if (!serviceEnabled) {
+    await prisma.productReviewRequest.update({
+      where: { id: loaded.id },
+      data: { status: REVIEW_STATUS.SKIPPED, messageStatus: "sms_service_disabled" },
+    });
+    return { ok: false, skipped: true, reason: "sms_service_disabled" };
+  }
+
   const to = loaded.customerPhone || getCustomerPhone(sale);
   if (!to) {
     await prisma.productReviewRequest.update({
