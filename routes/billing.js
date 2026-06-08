@@ -6,6 +6,28 @@ const parsePositiveInt = (value) => {
   return Number.isInteger(parsed) && parsed > 0 ? parsed : null;
 };
 
+const parseMaybeJson = (value, fallback) => {
+  if (value == null) return fallback;
+  if (typeof value !== "string") return value;
+
+  try {
+    return JSON.parse(value);
+  } catch {
+    return fallback;
+  }
+};
+
+const asObject = (value) => {
+  const parsed = parseMaybeJson(value, {});
+  return parsed && typeof parsed === "object" && !Array.isArray(parsed) ? parsed : {};
+};
+
+const asArray = (value) => {
+  const first = parseMaybeJson(value, []);
+  const second = parseMaybeJson(first, []);
+  return Array.isArray(second) ? second : [];
+};
+
 const toRate = (value, fallback) => {
   const parsed = Number(value);
   return Number.isFinite(parsed) && parsed >= 0 ? parsed : fallback;
@@ -65,6 +87,34 @@ const quoteInstantCashout = (amount, policy) => {
   };
 };
 
+const formatBillingSale = (sale, partnerCurrency = "EUR") => {
+  const customerData = asObject(sale.customerData);
+  const customerName = customerData.name || sale.customer?.name || "";
+
+  return {
+    id: sale.id,
+    code: sale.code,
+    date: sale.date,
+    status: sale.status,
+    storeId: sale.store?.id || null,
+    storeName: sale.store?.storeName || "Sin tienda",
+    customerId: sale.customerId || null,
+    customerName,
+    customerData: {
+      name: customerName,
+      phone: customerData.phone || sale.customer?.phone || "",
+      email: customerData.email || sale.customer?.email || "",
+      address_1: customerData.address_1 || sale.address_1 || sale.customer?.address_1 || "",
+      code: sale.customer?.code || customerData.customerCode || "",
+    },
+    products: asArray(sale.products),
+    extras: asArray(sale.extras),
+    notes: sale.notes || "",
+    total: sale.total,
+    currency: sale.currency || partnerCurrency || "EUR",
+  };
+};
+
 export default function billingRoutes(prisma) {
   const router = express.Router();
 
@@ -109,9 +159,15 @@ export default function billingRoutes(prisma) {
           id: true,
           code: true,
           date: true,
+          customerId: true,
           status: true,
           total: true,
           currency: true,
+          customerData: true,
+          products: true,
+          extras: true,
+          notes: true,
+          address_1: true,
           boostActive: true,
           boostAmount: true,
           boostMeta: true,
@@ -119,6 +175,16 @@ export default function billingRoutes(prisma) {
             select: {
               id: true,
               storeName: true,
+            },
+          },
+          customer: {
+            select: {
+              id: true,
+              code: true,
+              name: true,
+              phone: true,
+              email: true,
+              address_1: true,
             },
           },
         },
@@ -222,15 +288,9 @@ export default function billingRoutes(prisma) {
         },
         instantQuote,
         stores: [...stores.values()].sort((left, right) => right.gross - left.gross),
-        recentSales: safeSales.slice(0, 8).map((sale) => ({
-          id: sale.id,
-          code: sale.code,
-          date: sale.date,
-          status: sale.status,
-          storeName: sale.store?.storeName || "Sin tienda",
-          total: sale.total,
-          currency: sale.currency || partner.currency || "EUR",
-        })),
+        recentSales: safeSales
+          .slice(0, 8)
+          .map((sale) => formatBillingSale(sale, partner.currency || "EUR")),
         updatedAt: new Date().toISOString(),
       });
     } catch (error) {
