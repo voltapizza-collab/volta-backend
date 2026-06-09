@@ -1,8 +1,8 @@
-const SELL_PRICE_UNITS = 990; // EUR 0.0990 in ten-thousandths of one euro.
+const SELL_PRICE_UNITS = 750; // EUR 0.0750 in ten-thousandths of one euro.
 const PROVIDER_COST_UNITS = 620; // EUR 0.0620 in ten-thousandths of one euro.
 const PROVIDER_COST_USD_UNITS = 710; // USD 0.0710 in ten-thousandths of one dollar.
 
-export const SMS_SELL_PRICE_EUR = "0.0990";
+export const SMS_SELL_PRICE_EUR = "0.0750";
 export const SMS_PROVIDER_COST_EUR = "0.0620";
 export const SMS_PROVIDER_COST_USD = "0.0710";
 export const SMS_PRICING_RESET_REFERENCE = "sms-pricing-reset-2026-06-07";

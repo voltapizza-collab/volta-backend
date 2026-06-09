@@ -56,13 +56,89 @@ const cleanName = (value) => String(value || "").trim().replace(/\s+/g, " ").sli
 
 const getLineQty = (line) => Math.max(1, Math.trunc(Number(line?.quantity || line?.qty || 1)));
 
+const NON_REVIEWABLE_SOURCES = new Set([
+  "coupon",
+  "discount",
+  "direct_discount",
+  "direct-discount",
+  "top_deal",
+  "topdeal",
+  "offer",
+  "queue_boost",
+  "incentive_reward",
+  "delivery",
+  "shipping",
+  "service",
+]);
+
+const NON_REVIEWABLE_TYPES = new Set([
+  "COUPON",
+  "DISCOUNT",
+  "DIRECT_DISCOUNT",
+  "TOP_DEAL",
+  "OFFER",
+  "QUEUE_BOOST",
+  "BOOST",
+  "INCENTIVE_REWARD",
+  "DELIVERY",
+  "SHIPPING",
+  "SERVICE",
+  "DRINK",
+  "BEBIDA",
+]);
+
+const NON_REVIEWABLE_NAME_PATTERNS = [
+  /^cupon\b/i,
+  /^cup[oó]n\b/i,
+  /^coupon\b/i,
+  /^descuento\b/i,
+  /^discount\b/i,
+  /\bbebida\b/i,
+  /\bdrink\b/i,
+  /\brefresco\b/i,
+  /\bcoca[-\s]?cola\b/i,
+  /\baquarius\b/i,
+  /\bfanta\b/i,
+  /\bwater\b/i,
+  /\bagua\b/i,
+  /\bcerveza\b/i,
+];
+
+const lineAmount = (line) => {
+  const candidates = [line?.subtotal, line?.lineTotal, line?.total, line?.price, line?.unitPrice];
+  for (const candidate of candidates) {
+    const parsed = Number(candidate);
+    if (Number.isFinite(parsed)) return parsed;
+  }
+  return null;
+};
+
+export const isReviewableProductLine = (line = {}) => {
+  const source = String(line?.source || "").trim().toLowerCase();
+  const type = String(line?.type || line?.categoryType || "").trim().toUpperCase();
+  const name = cleanName(line?.name || line?.pizzaName || line?.title);
+
+  if (!name) return false;
+  if (NON_REVIEWABLE_SOURCES.has(source)) return false;
+  if (NON_REVIEWABLE_TYPES.has(type)) return false;
+  if (line?.couponId || line?.couponCode || line?.coupon) return false;
+  if (line?.boost || line?.discount || line?.directDiscount) return false;
+  if (NON_REVIEWABLE_NAME_PATTERNS.some((pattern) => pattern.test(name))) return false;
+
+  const amount = lineAmount(line);
+  if (amount != null && amount <= 0) return false;
+
+  return true;
+};
+
+export const isReviewableProductName = (name = "") =>
+  Boolean(cleanName(name)) && !NON_REVIEWABLE_NAME_PATTERNS.some((pattern) => pattern.test(cleanName(name)));
+
 const pushReviewItem = (items, line, lineIndex, nestedIndex = null) => {
   const productId = positiveInt(line?.pizzaId ?? line?.productId ?? line?.id ?? line?.rewardPizzaId);
   const name = cleanName(line?.name || line?.pizzaName || line?.title);
 
-  if (!name) return;
-  if (String(line?.source || "").toLowerCase() === "queue_boost") return;
-  if (String(line?.type || "").toUpperCase() === "BOOST") return;
+  if (!isReviewableProductLine(line)) return;
 
   const size = String(line?.size || line?.selectedSize || "").trim();
   const keyParts = [

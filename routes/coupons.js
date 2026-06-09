@@ -403,12 +403,12 @@ const buildCouponTitle = (coupon) => {
   const percentMax = toNum(coupon.percentMax);
   const amount = toNum(coupon.amount);
 
-  if (coupon.kind === "PERCENT" && coupon.variant === "RANGE" && percentMin != null && percentMax != null) {
-    return `${percentMin}-${percentMax}%`;
-  }
-
   if (coupon.kind === "PERCENT" && percent != null) {
     return `${percent}%`;
+  }
+
+  if (coupon.kind === "PERCENT" && coupon.variant === "RANGE" && percentMin != null && percentMax != null) {
+    return `${percentMin}-${percentMax}%`;
   }
 
   if (coupon.kind === "AMOUNT" && amount != null) {
@@ -972,7 +972,6 @@ const buildCouponRedeemUrl = async (prisma, { coupon, zipCode }) => {
 
   const params = new URLSearchParams({
     coupon: coupon.code,
-    couponSource: "direct",
     openCoupon: "1",
   });
 
@@ -982,9 +981,23 @@ const buildCouponRedeemUrl = async (prisma, { coupon, zipCode }) => {
 export const buildPrivateCouponSms = ({ partnerName, coupon, redeemUrl }) => {
   const brand = cleanSmsPart(partnerName || process.env.TELNYX_SMS_BRAND || "VoltaPizza");
   const safeRedeemUrl = safeCouponRedeemUrlForSms(redeemUrl);
-  const link = safeRedeemUrl ? ` ${safeRedeemUrl}` : "";
+  const code = coupon.code;
+  const compactBrand = brand.length > 28 ? brand.slice(0, 28).trim() : brand;
 
-  return cleanSmsPart(`${brand}: cupon ${coupon.code}.${link} STOP`);
+  const candidates = safeRedeemUrl
+    ? [
+        `${brand}: Para Ti ${code}. Canjealo: ${safeRedeemUrl} STOP`,
+        `${brand}: Disfruta de ${code}. Canjealo: ${safeRedeemUrl} STOP`,
+        `${compactBrand}: Para Ti ${code}. Canjealo: ${safeRedeemUrl} STOP`,
+        `Para Ti ${code}. Canjealo: ${safeRedeemUrl} STOP`,
+        `${code}. Canjealo: ${safeRedeemUrl} STOP`,
+        `${code}: ${safeRedeemUrl} STOP`,
+      ]
+    : [`${brand}: Para Ti ${code}. STOP`, `${brand}: Disfruta de ${code}. STOP`, `${brand}: cupon ${code}. STOP`];
+
+  return candidates
+    .map(cleanSmsPart)
+    .find((candidate) => estimateSmsParts(candidate).parts <= 1) || cleanSmsPart(`${code}: ${safeRedeemUrl || ""} STOP`);
 };
 
 const telnyxConcurrency = () => {
@@ -1280,6 +1293,36 @@ async function sendPrivateCouponSmsBatch(prisma, { coupons, recipients, partnerN
 }
 
 export default function couponsRoutes(prisma) {
+  router.get("/resolve-link/:code", async (req, res) => {
+    const code = normalizeCouponInputCode(req.params.code);
+
+    if (!code) {
+      return res.status(400).json({ ok: false, error: "coupon required" });
+    }
+
+    try {
+      const coupon = await findCouponByInputCode(prisma, code);
+
+      if (!coupon) {
+        return res.status(404).json({ ok: false, error: "coupon_not_found" });
+      }
+
+      const redeemUrl = await buildCouponRedeemUrl(prisma, {
+        coupon,
+        zipCode: readCouponMeta(coupon).claimedFromZipCode,
+      });
+
+      if (!redeemUrl) {
+        return res.status(404).json({ ok: false, error: "redeem_url_unavailable" });
+      }
+
+      return res.json({ ok: true, code: coupon.code, redeemUrl });
+    } catch (error) {
+      console.error("[coupons.resolve-link] error:", error);
+      return res.status(500).json({ ok: false, error: "server" });
+    }
+  });
+
   router.post("/validate", async (req, res) => {
     const partnerId = parsePositiveInt(req.body.partnerId);
     const storeId = parsePositiveInt(req.body.storeId);
@@ -1967,6 +2010,7 @@ export default function couponsRoutes(prisma) {
           id: true,
           name: true,
           phone: true,
+          zipCode: true,
           segment: true,
           activity: true,
           isRestricted: true,
@@ -1981,14 +2025,49 @@ export default function couponsRoutes(prisma) {
         return res.status(409).json({ ok: false, error: "customer_restricted" });
       }
 
+      if (!normalizeE164Phone(customer.phone)) {
+        return res.status(400).json({ ok: false, error: "invalid_recipient_phone" });
+      }
+
       const code = await genCouponCode(prisma, PREFIX[type]);
       const { kind, variant, percent, percentMin, percentMax, amount, surprise } = definition;
+      const randomPercent =
+        type === "RANDOM_PERCENT"
+          ? Math.floor(Math.random() * (percentMax - percentMin + 1)) + percentMin
+          : null;
       const surpriseAssignment =
         type === "SURPRISE_AMOUNT" ? buildSurpriseAmountAssignments(1, surprise)[0] : null;
       const partner = await prisma.partner.findUnique({
         where: { id: partnerId },
         select: { name: true, smsCredits: true },
       });
+      const stores = await prisma.store.findMany({
+        where: {
+          partnerId,
+          active: true,
+          acceptingOrders: true,
+        },
+        select: {
+          id: true,
+          storeName: true,
+          city: true,
+          zipCode: true,
+        },
+        orderBy: { id: "asc" },
+      });
+      const customerZipCode = normalizeZipCode(customer.zipCode);
+      const customerAreaKey = postalAreaKey(customerZipCode);
+      const targetStore =
+        stores.find((store) => normalizeZipCode(store.zipCode) === customerZipCode) ||
+        stores.find((store) => customerAreaKey && postalAreaKey(store.zipCode) === customerAreaKey) ||
+        stores[0] ||
+        null;
+      const targeting = {
+        segments: [customer.segment].filter(Boolean),
+        activities: [customer.activity].filter(Boolean),
+        storeIds: targetStore?.id ? [targetStore.id] : [],
+        zipCodes: customerZipCode ? [customerZipCode] : [],
+      };
 
       if ((partner?.smsCredits || 0) < 1) {
         return res.status(402).json({
@@ -2008,7 +2087,7 @@ export default function couponsRoutes(prisma) {
           code,
           kind,
           variant,
-          percent,
+          percent: type === "RANDOM_PERCENT" ? randomPercent : percent,
           percentMin,
           percentMax,
           amount:
@@ -2030,11 +2109,24 @@ export default function couponsRoutes(prisma) {
           expiresAt: new Date(req.body.expiresAt),
           segments: [customer.segment, customer.activity].filter(Boolean),
           meta: {
-            ...(req.body.notes ? { notes: String(req.body.notes) } : {}),
+            targeting,
+            ...(targetStore
+              ? {
+                  targetStores: [
+                    {
+                      id: targetStore.id,
+                      storeName: targetStore.storeName,
+                      city: targetStore.city,
+                      zipCode: targetStore.zipCode,
+                    },
+                  ],
+                }
+              : {}),
             targetCustomerId: customer.id,
             targetCustomerName: customer.name || null,
             targetCustomerSegment: customer.segment || null,
             targetCustomerActivity: customer.activity || null,
+            targetCustomerZipCode: customerZipCode || null,
             messageStatus: "pending",
             ...(surprise
               ? {

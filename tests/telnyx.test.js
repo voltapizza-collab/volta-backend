@@ -127,6 +127,7 @@ test("normalizeE164Phone rejects invalid recipients", () => {
   assert.equal(normalizeE164Phone("not-a-phone"), null);
   assert.equal(normalizeE164Phone("612345678"), "+34612345678");
   assert.equal(normalizeE164Phone("+34612345678"), "+34612345678");
+  assert.equal(normalizeE164Phone("+3462323049"), null);
 });
 
 test("estimateSmsParts counts multipart GSM messages", () => {
@@ -137,22 +138,22 @@ test("estimateSmsParts counts multipart GSM messages", () => {
 });
 
 test("SMS credits quote packages as one-part SMS credits", () => {
-  assert.equal(creditsFromAmount(10), 101);
-  assert.equal(creditsFromAmount("10,00"), 101);
+  assert.equal(creditsFromAmount(10), 133);
+  assert.equal(creditsFromAmount("10,00"), 133);
   assert.equal(providerCreditsFromAmount(10), 161);
   assert.equal(providerCreditsFromAmount("0.99", "USD"), 13);
   assert.deepEqual(
     getSmsCreditPackages().map((item) => [item.amount, item.credits]),
     [
-      [10, 101],
-      [15, 151],
-      [20, 202],
-      [25, 252],
-      [30, 303],
-      [35, 353],
-      [40, 404],
-      [45, 454],
-      [50, 505],
+      [10, 133],
+      [15, 200],
+      [20, 266],
+      [25, 333],
+      [30, 400],
+      [35, 466],
+      [40, 533],
+      [45, 600],
+      [50, 666],
     ]
   );
 });
@@ -202,10 +203,10 @@ test("rechargeSmsCredits increments balance and writes ledger", async () => {
   });
 
   assert.equal(result.ok, true);
-  assert.equal(result.credits, 101);
-  assert.equal(result.balance.smsCredits, 101);
+  assert.equal(result.credits, 133);
+  assert.equal(result.balance.smsCredits, 133);
   assert.equal(prisma.state.ledger[0].type, "RECHARGE");
-  assert.equal(prisma.state.ledger[0].balanceAfter, 101);
+  assert.equal(prisma.state.ledger[0].balanceAfter, 133);
 });
 
 test("reserveSmsCreditForMessage rejects empty balances before send", async () => {

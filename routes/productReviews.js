@@ -1,6 +1,7 @@
 import express from "express";
 import {
   getReviewItemsFromSale,
+  isReviewableProductName,
   processDueProductReviewRequests,
   sendProductReviewRequestSms,
   REVIEW_STATUS,
@@ -175,7 +176,7 @@ export default function productReviewsRoutes(prisma) {
       const receivedVotes = likes + dislikes;
 
       const productMap = new Map();
-      productRows.forEach((row) => {
+      productRows.filter((row) => isReviewableProductName(row.productName)).forEach((row) => {
         const key = `${row.productId || "custom"}:${row.productName || ""}`;
         const current = productMap.get(key) || {
           productId: row.productId,
@@ -245,7 +246,7 @@ export default function productReviewsRoutes(prisma) {
         .sort((left, right) => right.total - left.total || left.storeName.localeCompare(right.storeName));
 
       const peopleByKey = new Map();
-      recentLikes.forEach((vote) => {
+      recentLikes.filter((vote) => isReviewableProductName(vote.productName)).forEach((vote) => {
         const phone = vote.customer?.phone || vote.request?.customerPhone || "";
         const key = vote.customerId ? `customer:${vote.customerId}` : phone ? `phone:${phone}` : `vote:${vote.id}`;
         const current = peopleByKey.get(key) || {
@@ -294,7 +295,7 @@ export default function productReviewsRoutes(prisma) {
         topProducts,
         productsToReview,
         likePeople,
-        lastLike: lastLike
+        lastLike: lastLike && isReviewableProductName(lastLike.productName)
           ? {
               id: lastLike.id,
               productName: lastLike.productName,
@@ -305,16 +306,18 @@ export default function productReviewsRoutes(prisma) {
               saleCode: lastLike.sale?.code || "",
             }
           : null,
-        recentVotes: recentVotes.map((vote) => ({
-          id: vote.id,
-          vote: vote.vote,
-          productName: vote.productName,
-          createdAt: vote.createdAt,
-          customerName: displayName(vote.customer),
-          customerPhone: vote.customer?.phone || "",
-          storeName: vote.store?.storeName || "",
-          saleCode: vote.sale?.code || "",
-        })),
+        recentVotes: recentVotes
+          .filter((vote) => isReviewableProductName(vote.productName))
+          .map((vote) => ({
+            id: vote.id,
+            vote: vote.vote,
+            productName: vote.productName,
+            createdAt: vote.createdAt,
+            customerName: displayName(vote.customer),
+            customerPhone: vote.customer?.phone || "",
+            storeName: vote.store?.storeName || "",
+            saleCode: vote.sale?.code || "",
+          })),
       });
     } catch (error) {
       console.error("[product-reviews.analytics] error:", error);

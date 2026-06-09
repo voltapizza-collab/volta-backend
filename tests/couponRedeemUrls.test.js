@@ -76,7 +76,27 @@ test("private coupon SMS keeps public redeem URLs", () => {
     redeemUrl: "https://voltapizza.com/mycrushpizza/plaza-diario?coupon=VOL-RC47FGMV",
   });
 
+  assert.equal(text.startsWith("MyCrushPizza: Para Ti VOL-RC47FGMV."), true);
   assert.equal(text.includes("https://voltapizza.com/mycrushpizza/plaza-diario?coupon=VOL-RC47FGMV"), true);
+  assert.equal(estimateSmsParts(text).parts, 1);
+});
+
+test("private coupon SMS keeps the link while falling back to shorter copy", () => {
+  const text = buildPrivateCouponSms({
+    partnerName: "MyCrushPizzaWithAVeryLongOperationalBrandName",
+    coupon: {
+      code: "VOL-RC47FGMV",
+      kind: "PERCENT",
+      percent: 15,
+      expiresAt: null,
+    },
+    redeemUrl:
+      "https://voltapizza.com/c/VOL-RC47FGMV",
+  });
+
+  assert.equal(text.includes("https://voltapizza.com/c/VOL-RC47FGMV"), true);
+  assert.equal(text.includes("VOL-RC47FGMV"), true);
+  assert.equal(estimateSmsParts(text).parts, 1);
 });
 
 test("game coupon SMS keeps partner name and STOP inside one SMS part", () => {

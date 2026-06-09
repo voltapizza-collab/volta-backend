@@ -102,6 +102,7 @@ export const normalizeE164Phone = (value = "") => {
 
   if (raw.startsWith("+")) {
     const digits = raw.replace(/[^\d]/g, "");
+    if (digits.startsWith("34") && digits.length !== 11) return null;
     return digits.length >= 8 && digits.length <= 15 ? `+${digits}` : null;
   }
 

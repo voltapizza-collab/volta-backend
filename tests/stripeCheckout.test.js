@@ -56,3 +56,50 @@ test("order checkout sends only card/email-facing Stripe fields and keeps custom
     globalThis.fetch = previousFetch;
   }
 });
+
+test("order checkout lets Stripe collect email when customer email is missing", async () => {
+  const previousSecret = process.env.STRIPE_SECRET_KEY;
+  const previousFetch = globalThis.fetch;
+  const requests = [];
+
+  try {
+    process.env.STRIPE_SECRET_KEY = "sk_test_unit";
+    globalThis.fetch = async (url, options) => {
+      requests.push({ url, options });
+      return {
+        ok: true,
+        text: async () => JSON.stringify({ id: "cs_test_unit", url: "https://checkout.stripe.test/session" }),
+      };
+    };
+
+    await createOrderCheckoutSession({
+      sale: {
+        id: 78,
+        code: "VLT-78",
+        customerData: {
+          name: "Luigi",
+          phone: "+34600111222",
+          email: null,
+        },
+      },
+      partner: { id: 3 },
+      store: { id: 4, storeName: "Volta Centro" },
+      amountCents: 1490,
+      successUrl: "https://example.test/success",
+      cancelUrl: "https://example.test/cancel",
+    });
+
+    assert.equal(requests.length, 1);
+    const body = new URLSearchParams(String(requests[0].options.body));
+
+    assert.equal(body.has("customer_email"), false);
+    assert.equal(body.get("customer_creation"), "if_required");
+    assert.equal(body.get("metadata[customerName]"), "Luigi");
+    assert.equal(body.get("metadata[customerPhone]"), "+34600111222");
+    assert.equal(body.has("metadata[customerEmail]"), false);
+  } finally {
+    if (previousSecret == null) delete process.env.STRIPE_SECRET_KEY;
+    else process.env.STRIPE_SECRET_KEY = previousSecret;
+    globalThis.fetch = previousFetch;
+  }
+});
