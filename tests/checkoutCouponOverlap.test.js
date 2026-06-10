@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { getEligibleCouponSubtotal } from "../routes/checkout.js";
+import { calculateCouponDiscount, getEligibleCouponSubtotal } from "../routes/checkout.js";
 
 test("coupon subtotal excludes promos, top deals, boosts and rewards", () => {
   const lines = [
@@ -53,4 +53,17 @@ test("coupon subtotal excludes active category top deals by category id or name"
   ];
 
   assert.equal(getEligibleCouponSubtotal(lines, { activeTopDeals, storeId: 3 }), 13);
+});
+
+test("delivery free coupon discounts the delivery fee", () => {
+  const coupon = {
+    kind: "AMOUNT",
+    variant: "FIXED",
+    amount: "0.00",
+    campaign: "DELIVERY_FREE",
+    meta: { deliveryFree: true },
+  };
+
+  assert.equal(calculateCouponDiscount(coupon, 0, { deliveryFee: 2.5 }), 2.5);
+  assert.equal(calculateCouponDiscount(coupon, 30, { deliveryFee: 0 }), 0);
 });

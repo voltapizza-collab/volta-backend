@@ -15,9 +15,11 @@ const PREFIX = {
   FIXED_PERCENT: "VOL-PF",
   FIXED_AMOUNT: "VOL-CD",
   SURPRISE_AMOUNT: "VOL-CS",
+  DELIVERY_FREE: "VOL-DF",
 };
 const SURPRISE_AMOUNT_CAMPAIGN = "SURPRISE_AMOUNT";
 const SURPRISE_AMOUNT_CAMPAIGNS = [SURPRISE_AMOUNT_CAMPAIGN, "PIZZA_GRATIS_QR"];
+const DELIVERY_FREE_CAMPAIGN = "DELIVERY_FREE";
 const SURPRISE_DISTRIBUTION = [
   { key: "min", weight: 75 },
   { key: "mid", weight: 15 },
@@ -26,7 +28,7 @@ const SURPRISE_DISTRIBUTION = [
 const VALID_SEGMENTS = ["S1", "S2", "S3", "S4", "S5"];
 const VALID_ACTIVITIES = ["HOT", "COLD"];
 const VALID_TARGET_TAGS = [...VALID_SEGMENTS, ...VALID_ACTIVITIES];
-const VALID_TYPES = ["RANDOM_PERCENT", "FIXED_PERCENT", "FIXED_AMOUNT", "SURPRISE_AMOUNT"];
+const VALID_TYPES = ["RANDOM_PERCENT", "FIXED_PERCENT", "FIXED_AMOUNT", "SURPRISE_AMOUNT", "DELIVERY_FREE"];
 const COLD_DAYS_THRESHOLD = 15;
 const BUILT_IN_GAMES = [
   {
@@ -216,9 +218,23 @@ const postalAreaKey = (postalCode) => {
 };
 
 const readCouponMeta = (coupon) => {
-  if (!coupon?.meta || typeof coupon.meta !== "object" || Array.isArray(coupon.meta)) {
+  if (!coupon?.meta) {
     return {};
   }
+
+  if (typeof coupon.meta === "string") {
+    try {
+      const parsed = JSON.parse(coupon.meta);
+      return parsed && typeof parsed === "object" && !Array.isArray(parsed) ? parsed : {};
+    } catch {
+      return {};
+    }
+  }
+
+  if (typeof coupon.meta !== "object" || Array.isArray(coupon.meta)) {
+    return {};
+  }
+
   return coupon.meta;
 };
 
@@ -226,6 +242,19 @@ const isSurpriseAmountCoupon = (coupon) => {
   const campaign = String(coupon?.campaign || "").toUpperCase();
   const meta = readCouponMeta(coupon);
   return SURPRISE_AMOUNT_CAMPAIGNS.includes(campaign) || Boolean(meta.surpriseAmount);
+};
+
+const isDeliveryFreeCoupon = (coupon) => {
+  const campaign = String(coupon?.campaign || "").toUpperCase();
+  const code = String(coupon?.code || "").toUpperCase();
+  const meta = readCouponMeta(coupon);
+  const amount = toNum(coupon?.amount);
+  return (
+    campaign === DELIVERY_FREE_CAMPAIGN ||
+    code.startsWith(PREFIX.DELIVERY_FREE) ||
+    Boolean(meta.deliveryFree) ||
+    (coupon?.kind === "AMOUNT" && coupon?.variant === "FIXED" && amount === 0)
+  );
 };
 
 const readSurpriseAmountMeta = (coupon) => {
@@ -396,6 +425,7 @@ const isWithinWindow = (coupon, reference = nowInTZ()) => {
 };
 
 const buildCouponTitle = (coupon) => {
+  if (isDeliveryFreeCoupon(coupon)) return "Delivery Free";
   if (isSurpriseAmountCoupon(coupon)) return "Cupon sorpresa";
 
   const percent = toNum(coupon.percent);
@@ -419,6 +449,7 @@ const buildCouponTitle = (coupon) => {
 };
 
 const buildCouponType = (coupon) => {
+  if (isDeliveryFreeCoupon(coupon)) return "DELIVERY_FREE";
   if (isSurpriseAmountCoupon(coupon)) return "SURPRISE_AMOUNT";
   if (coupon.kind === "PERCENT" && coupon.variant === "RANGE") return "RANDOM_PERCENT";
   if (coupon.kind === "PERCENT" && coupon.variant === "FIXED") return "FIXED_PERCENT";
@@ -440,6 +471,8 @@ const haversineKm = (leftLat, leftLng, rightLat, rightLng) => {
 };
 
 const buildCouponKey = (coupon) => {
+  if (isDeliveryFreeCoupon(coupon)) return "DELIVERY_FREE";
+
   if (isSurpriseAmountCoupon(coupon)) {
     const { minAmount, midAmount, maxAmount } = readSurpriseAmountMeta(coupon);
     if (minAmount != null && midAmount != null && maxAmount != null) {
@@ -473,7 +506,11 @@ const couponAmountNumber = (value) => {
   return parsed == null ? 0 : parsed;
 };
 
-const calculateCouponDiscount = (coupon, subtotal) => {
+const calculateCouponDiscount = (coupon, subtotal, { deliveryFee = 0 } = {}) => {
+  if (isDeliveryFreeCoupon(coupon)) {
+    return numberFromCents(Math.max(0, Math.round(Number(deliveryFee || 0) * 100)));
+  }
+
   const base = Math.max(0, Number(subtotal || 0));
   if (base <= 0) return 0;
 
@@ -496,6 +533,7 @@ const serializeCouponValidation = (coupon) => ({
   id: coupon.id,
   code: coupon.code,
   title: buildCouponTitle(coupon),
+  type: buildCouponType(coupon),
   kind: coupon.kind,
   variant: coupon.variant,
   percent: toNum(coupon.percent),
@@ -512,6 +550,126 @@ const serializeCouponValidation = (coupon) => ({
   channel: coupon.channel,
   campaign: coupon.campaign,
 });
+
+const buildGalleryPoolCards = (rows, now = nowInTZ()) => {
+  const groups = new Map();
+
+  rows.forEach((coupon) => {
+    const type = buildCouponType(coupon);
+    const key = buildCouponKey(coupon);
+    const meta = readCouponMeta(coupon);
+    const rawGalleryOrder = Number(meta.galleryOrder);
+    const galleryOrder = Number.isFinite(rawGalleryOrder) ? rawGalleryOrder : null;
+    const gameScoped = coupon.acquisition === "GAME" || coupon.channel === "GAME" || coupon.gameId;
+    const mapKey = `${gameScoped ? `GAME:${coupon.gameId || "unknown"}:` : ""}${type}:${key}`;
+    const usedCount = toNum(coupon.usedCount) ?? 0;
+    const usageLimit = toNum(coupon.usageLimit);
+    const available =
+      coupon.assignedToId == null &&
+      isActiveByDate(coupon, now) &&
+      isWithinWindow(coupon, now) &&
+      (usageLimit == null || usageLimit > usedCount);
+
+    const current = groups.get(mapKey) || {
+      type,
+      key,
+      title: type === "RANDOM_PERCENT" ? `${key}%` : buildCouponTitle(coupon),
+      subtitle:
+        type === "DELIVERY_FREE"
+          ? "Envio Gratis"
+          : type === "RANDOM_PERCENT"
+            ? "Descuento aleatorio"
+          : type === "FIXED_AMOUNT" || type === "SURPRISE_AMOUNT"
+            ? "Canjea y descubre"
+            : "Descuento para tu pedido",
+      cta: "Canjear",
+      remaining: 0,
+      total: 0,
+      active: 0,
+      gameId: coupon.gameId || null,
+      sample: coupon,
+      galleryOrder,
+    };
+
+    if (galleryOrder != null) {
+      current.galleryOrder = current.galleryOrder == null ? galleryOrder : Math.min(current.galleryOrder, galleryOrder);
+    }
+
+    current.total += 1;
+    if (coupon.status === "ACTIVE") current.active += 1;
+
+    if (available) {
+      if (usageLimit == null) current.remaining = null;
+      else if (current.remaining !== null) current.remaining += Math.max(0, usageLimit - usedCount);
+    }
+
+    if (!current.sample || new Date(coupon.createdAt) > new Date(current.sample.createdAt)) {
+      current.sample = coupon;
+    }
+
+    groups.set(mapKey, current);
+  });
+
+  return Array.from(groups.values())
+    .map((group) => {
+      const targeting = readCouponTargeting(group.sample);
+      return {
+        type: group.type,
+        key: group.key,
+        title: group.title,
+        subtitle: group.subtitle,
+        cta: group.cta,
+        remaining: group.remaining,
+        total: group.total,
+        active: group.active,
+        galleryOrder: group.galleryOrder,
+        sampleCode: group.sample.code,
+        constraints: {
+          daysActive: normalizeDaysActive(group.sample.daysActive),
+          windowStart: group.sample.windowStart,
+          windowEnd: group.sample.windowEnd,
+        },
+        lifetime: {
+          activeFrom: group.sample.activeFrom,
+          expiresAt: group.sample.expiresAt,
+        },
+        territory: {
+          storeIds: targeting.storeIds,
+          zipCodes: targeting.zipCodes,
+        },
+        visibility: group.sample.visibility,
+        acquisition: group.sample.acquisition,
+        channel: group.sample.channel,
+        gameId: group.gameId,
+        game: group.sample.game
+          ? {
+              id: group.sample.game.id,
+              name: group.sample.game.name,
+              slug: group.sample.game.slug,
+              description: group.sample.game.description,
+              image: group.sample.game.image,
+            }
+          : null,
+        campaign: group.sample.campaign,
+        meta: readCouponMeta(group.sample),
+        isSegmented: hasSegmentTargeting(group.sample),
+      };
+    })
+    .sort((left, right) => {
+      const leftOrder = Number(left.galleryOrder);
+      const rightOrder = Number(right.galleryOrder);
+      const leftHasOrder = Number.isFinite(leftOrder);
+      const rightHasOrder = Number.isFinite(rightOrder);
+      if (leftHasOrder || rightHasOrder) {
+        if (leftHasOrder !== rightHasOrder) return leftHasOrder ? -1 : 1;
+        if (leftOrder !== rightOrder) return leftOrder - rightOrder;
+      }
+      const leftGame = left.acquisition === "GAME" || left.channel === "GAME" || left.gameId;
+      const rightGame = right.acquisition === "GAME" || right.channel === "GAME" || right.gameId;
+      if (leftGame !== rightGame) return leftGame ? -1 : 1;
+      return String(left.title).localeCompare(String(right.title), "es");
+    });
+};
 
 const normalizeCouponInputCode = (value = "") =>
   String(value || "").trim().toUpperCase().replace(/\s+/g, "");
@@ -544,6 +702,10 @@ const findCouponByInputCode = async (prisma, code) => {
 const buildTypeWhere = (type, key) => {
   if (type === "SURPRISE_AMOUNT" || key === "SURPRISE") {
     return { campaign: { in: SURPRISE_AMOUNT_CAMPAIGNS }, kind: "AMOUNT", variant: "FIXED" };
+  }
+
+  if (type === "DELIVERY_FREE" || key === "DELIVERY_FREE") {
+    return { campaign: DELIVERY_FREE_CAMPAIGN, kind: "AMOUNT", variant: "FIXED" };
   }
 
   if (type === "FIXED_PERCENT") {
@@ -657,6 +819,10 @@ const parseCouponDefinition = (type, source) => {
       midAmount: numberFromCents(midCents),
       maxAmount: numberFromCents(maxCents),
     };
+  } else if (type === "DELIVERY_FREE") {
+    kind = "AMOUNT";
+    variant = "FIXED";
+    amount = 0;
   } else {
     return { error: "bad_type" };
   }
@@ -1328,6 +1494,7 @@ export default function couponsRoutes(prisma) {
     const storeId = parsePositiveInt(req.body.storeId);
     const code = normalizeCouponInputCode(req.body.code);
     const subtotal = Math.max(0, Number(req.body.subtotal || 0));
+    const deliveryFee = Math.max(0, Number(req.body.deliveryFee || 0));
 
     if (!code) {
       return res.json({
@@ -1373,6 +1540,7 @@ export default function couponsRoutes(prisma) {
       const usageLimit = toNum(coupon.usageLimit);
       const usedCount = toNum(coupon.usedCount) || 0;
       const minAmount = toNum(coupon.minAmount) || 0;
+      const deliveryFree = isDeliveryFreeCoupon(coupon);
       let store = null;
 
       if (storeId) {
@@ -1411,7 +1579,10 @@ export default function couponsRoutes(prisma) {
       ) {
         status = "wrong_area";
         message = "Este cupon no esta disponible para esta tienda.";
-      } else if (subtotal <= 0) {
+      } else if (deliveryFree && deliveryFee <= 0) {
+        status = "no_delivery_fee";
+        message = "Este cupon elimina el envio cuando hay tarifa de delivery.";
+      } else if (!deliveryFree && subtotal <= 0) {
         status = "empty_cart";
         message = "Agrega productos sin promocion ni Top Deal para aplicar el cupon.";
       } else if (minAmount > 0 && subtotal < minAmount) {
@@ -1435,7 +1606,7 @@ export default function couponsRoutes(prisma) {
       }
 
       const valid = status === "valid";
-      const discount = valid ? calculateCouponDiscount(coupon, subtotal) : 0;
+      const discount = valid ? calculateCouponDiscount(coupon, subtotal, { deliveryFee }) : 0;
 
       return res.json({
         ok: true,
@@ -1529,85 +1700,7 @@ export default function couponsRoutes(prisma) {
         (coupon) => !hasSegmentTargeting(coupon) && matchesCouponTerritory(coupon, zipCode)
       );
 
-      const groups = new Map();
-
-      scopedRows.forEach((coupon) => {
-        const type = buildCouponType(coupon);
-        const key = buildCouponKey(coupon);
-        const isGameCoupon = coupon.acquisition === "GAME" || coupon.channel === "GAME" || coupon.gameId;
-        const mapKey = `${isGameCoupon ? `GAME:${coupon.gameId || "unknown"}:` : ""}${type}:${key}`;
-        const usedCount = toNum(coupon.usedCount) ?? 0;
-        const usageLimit = toNum(coupon.usageLimit);
-        const available =
-          coupon.assignedToId == null &&
-          isActiveByDate(coupon, now) &&
-          isWithinWindow(coupon, now) &&
-          (usageLimit == null || usageLimit > usedCount);
-
-        const current = groups.get(mapKey) || {
-          type,
-          key,
-          title: buildCouponTitle(coupon),
-          subtitle:
-            type === "FIXED_AMOUNT" || type === "SURPRISE_AMOUNT"
-              ? "Canjea y descubre"
-              : "Descuento para tu pedido",
-          cta: "Canjear",
-          remaining: 0,
-          sample: coupon,
-        };
-
-        if (available) {
-          if (usageLimit == null) current.remaining = null;
-          else if (current.remaining !== null) current.remaining += Math.max(0, usageLimit - usedCount);
-        }
-
-        if (!current.sample || new Date(coupon.createdAt) > new Date(current.sample.createdAt)) {
-          current.sample = coupon;
-        }
-
-        groups.set(mapKey, current);
-      });
-
-      const cards = Array.from(groups.values())
-        .map((group) => ({
-          type: group.type,
-          key: group.key,
-          title: group.title,
-          subtitle: group.subtitle,
-          cta: group.cta,
-          remaining: group.remaining,
-          constraints: {
-            daysActive: normalizeDaysActive(group.sample.daysActive),
-            windowStart: group.sample.windowStart,
-            windowEnd: group.sample.windowEnd,
-          },
-          lifetime: {
-            activeFrom: group.sample.activeFrom,
-            expiresAt: group.sample.expiresAt,
-          },
-          visibility: group.sample.visibility,
-          acquisition: group.sample.acquisition,
-          channel: group.sample.channel,
-          gameId: group.sample.gameId,
-          game: group.sample.game
-            ? {
-                id: group.sample.game.id,
-                name: group.sample.game.name,
-                slug: group.sample.game.slug,
-                description: group.sample.game.description,
-                image: group.sample.game.image,
-              }
-            : null,
-          campaign: group.sample.campaign,
-          isSegmented: hasSegmentTargeting(group.sample),
-        }))
-        .sort((left, right) => {
-          const leftGame = left.acquisition === "GAME" || left.channel === "GAME" || left.gameId;
-          const rightGame = right.acquisition === "GAME" || right.channel === "GAME" || right.gameId;
-          if (leftGame !== rightGame) return leftGame ? -1 : 1;
-          return String(left.title).localeCompare(String(right.title), "es");
-        });
+      const cards = buildGalleryPoolCards(scopedRows, now);
 
       return res.json({
         ok: true,
@@ -1617,6 +1710,190 @@ export default function couponsRoutes(prisma) {
       });
     } catch (error) {
       console.error("[coupons.gallery] error:", error);
+      return res.status(500).json({ ok: false, error: "server" });
+    }
+  });
+
+  router.get("/gallery-pools", async (req, res) => {
+    const partnerId = parsePositiveInt(req.query.partnerId);
+
+    if (!partnerId) {
+      return res.status(400).json({ ok: false, error: "partnerId required" });
+    }
+
+    try {
+      const rows = await prisma.coupon.findMany({
+        where: {
+          partnerId,
+          status: "ACTIVE",
+          visibility: "PUBLIC",
+        },
+        include: {
+          game: {
+            select: {
+              id: true,
+              name: true,
+              slug: true,
+              description: true,
+              image: true,
+            },
+          },
+        },
+        orderBy: { createdAt: "desc" },
+      });
+
+      return res.json({
+        ok: true,
+        partnerId,
+        cards: buildGalleryPoolCards(rows, nowInTZ()),
+      });
+    } catch (error) {
+      console.error("[coupons.gallery-pools] error:", error);
+      return res.status(500).json({ ok: false, error: "server" });
+    }
+  });
+
+  router.put("/gallery-pools/order", async (req, res) => {
+    const partnerId = parsePositiveInt(req.body.partnerId);
+    const items = Array.isArray(req.body.items) ? req.body.items : [];
+
+    if (!partnerId || !items.length) {
+      return res.status(400).json({ ok: false, error: "bad_gallery_order_payload" });
+    }
+
+    try {
+      const rows = await prisma.coupon.findMany({
+        where: {
+          partnerId,
+          status: "ACTIVE",
+          visibility: "PUBLIC",
+        },
+        select: {
+          id: true,
+          code: true,
+          kind: true,
+          variant: true,
+          amount: true,
+          percent: true,
+          percentMin: true,
+          percentMax: true,
+          campaign: true,
+          meta: true,
+          acquisition: true,
+          channel: true,
+          gameId: true,
+          createdAt: true,
+        },
+      });
+
+      const updates = [];
+
+      items.forEach((item, index) => {
+        const type = String(item?.type || "").trim().toUpperCase();
+        const key = String(item?.key || "").trim();
+        const gameId = item?.gameId ? parsePositiveInt(item.gameId) : null;
+        const galleryOrder = Number.isFinite(Number(item?.galleryOrder)) ? Number(item.galleryOrder) : index;
+
+        if (!type || !key) return;
+
+        rows
+          .filter((coupon) => {
+            if (buildCouponType(coupon) !== type) return false;
+            if (buildCouponKey(coupon) !== key) return false;
+            if (gameId && Number(coupon.gameId || 0) !== gameId) return false;
+            if (!gameId && coupon.gameId) return false;
+            return true;
+          })
+          .forEach((coupon) => {
+            const meta = readCouponMeta(coupon);
+            updates.push(
+              prisma.coupon.update({
+                where: { id: coupon.id },
+                data: {
+                  meta: {
+                    ...meta,
+                    galleryOrder,
+                    galleryOrderUpdatedAt: new Date().toISOString(),
+                  },
+                },
+              })
+            );
+          });
+      });
+
+      await Promise.all(updates);
+
+      return res.json({
+        ok: true,
+        partnerId,
+        updated: updates.length,
+      });
+    } catch (error) {
+      console.error("[coupons.gallery-pools.order] error:", error);
+      return res.status(500).json({ ok: false, error: "server" });
+    }
+  });
+
+  router.delete("/gallery-pools", async (req, res) => {
+    const partnerId = parsePositiveInt(req.query.partnerId);
+    const type = String(req.query.type || "").trim().toUpperCase();
+    const key = String(req.query.key || "").trim();
+    const gameId = req.query.gameId ? parsePositiveInt(req.query.gameId) : null;
+
+    if (!partnerId || !type || !key) {
+      return res.status(400).json({ ok: false, error: "bad_gallery_pool_payload" });
+    }
+
+    try {
+      const rows = await prisma.coupon.findMany({
+        where: {
+          partnerId,
+          status: "ACTIVE",
+          visibility: "PUBLIC",
+        },
+        select: {
+          id: true,
+          code: true,
+          kind: true,
+          variant: true,
+          amount: true,
+          percent: true,
+          percentMin: true,
+          percentMax: true,
+          campaign: true,
+          meta: true,
+          acquisition: true,
+          channel: true,
+          gameId: true,
+          createdAt: true,
+        },
+      });
+
+      const ids = rows
+        .filter((coupon) => {
+          if (buildCouponType(coupon) !== type) return false;
+          if (buildCouponKey(coupon) !== key) return false;
+          if (gameId && Number(coupon.gameId || 0) !== gameId) return false;
+          return true;
+        })
+        .map((coupon) => coupon.id);
+
+      if (!ids.length) {
+        return res.status(404).json({ ok: false, error: "gallery_pool_not_found" });
+      }
+
+      const result = await prisma.coupon.updateMany({
+        where: { id: { in: ids } },
+        data: { status: "EXPIRED" },
+      });
+
+      return res.json({
+        ok: true,
+        partnerId,
+        removed: result.count || ids.length,
+      });
+    } catch (error) {
+      console.error("[coupons.gallery-pools.delete] error:", error);
       return res.status(500).json({ ok: false, error: "server" });
     }
   });
@@ -1889,6 +2166,11 @@ export default function couponsRoutes(prisma) {
                 },
               }
             : {}),
+          ...(type === "DELIVERY_FREE"
+            ? {
+                deliveryFree: true,
+              }
+            : {}),
           ...(!isVisible ? { messageStatus: "pending" } : {}),
         };
 
@@ -1918,7 +2200,12 @@ export default function couponsRoutes(prisma) {
           windowEnd,
           usageLimit,
           status: "ACTIVE",
-          campaign: type === "SURPRISE_AMOUNT" ? SURPRISE_AMOUNT_CAMPAIGN : req.body.campaign || null,
+          campaign:
+            type === "DELIVERY_FREE"
+              ? DELIVERY_FREE_CAMPAIGN
+              : type === "SURPRISE_AMOUNT"
+                ? SURPRISE_AMOUNT_CAMPAIGN
+                : req.body.campaign || null,
           channel: req.body.channel ? String(req.body.channel).toUpperCase() : isVisible ? null : "SMS",
           acquisition: req.body.acquisition
             ? String(req.body.acquisition).toUpperCase()
@@ -2103,7 +2390,12 @@ export default function couponsRoutes(prisma) {
           status: "ACTIVE",
           acquisition: "DIRECT",
           channel: "SMS",
-          campaign: type === "SURPRISE_AMOUNT" ? SURPRISE_AMOUNT_CAMPAIGN : null,
+          campaign:
+            type === "DELIVERY_FREE"
+              ? DELIVERY_FREE_CAMPAIGN
+              : type === "SURPRISE_AMOUNT"
+                ? SURPRISE_AMOUNT_CAMPAIGN
+                : null,
           usageLimit: 1,
           usedCount: 0,
           expiresAt: new Date(req.body.expiresAt),
@@ -2143,6 +2435,11 @@ export default function couponsRoutes(prisma) {
                     assignedAmount:
                       surpriseAssignment?.cents != null ? numberFromCents(surpriseAssignment.cents) : null,
                   },
+                }
+              : {}),
+            ...(type === "DELIVERY_FREE"
+              ? {
+                  deliveryFree: true,
                 }
               : {}),
           },

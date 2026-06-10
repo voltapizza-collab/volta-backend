@@ -161,6 +161,7 @@ model Partner {
     storefrontMode       String?
     trackingNotificationSettings Json?
     priceAdjustmentRules Json?
+    paymentPolicySettings Json?
     smsCredits          Int      @default(0)
   smsRecharged        Int      @default(0)
   smsConsumed         Int      @default(0)

@@ -1,6 +1,50 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
+import { computeCheckoutDeliveryFee } from "../routes/checkout.js";
 import { createOrderCheckoutSession } from "../services/stripe.js";
+
+test("checkout delivery fee uses fixed courier pricing", () => {
+  assert.equal(
+    computeCheckoutDeliveryFee(
+      { deliveryPricingMode: "FIXED", deliveryFeeFixed: 2.5 },
+      { method: "COURIER", deliveryFee: 99 }
+    ),
+    2.5
+  );
+});
+
+test("checkout delivery fee uses variable pricing when distance is available", () => {
+  assert.equal(
+    computeCheckoutDeliveryFee(
+      {
+        deliveryPricingMode: "VARIABLE",
+        deliveryFeeBase: 3,
+        deliveryBaseKm: 2,
+        deliveryExtraPerKm: 1.25,
+      },
+      { method: "COURIER", distanceKm: 4.1 }
+    ),
+    6.75
+  );
+});
+
+test("checkout delivery fee falls back to resolved fee for manual delivery coverage", () => {
+  assert.equal(
+    computeCheckoutDeliveryFee(
+      { deliveryPricingMode: "VARIABLE", deliveryFeeBase: 3 },
+      { method: "COURIER", deliveryFee: 4.5 }
+    ),
+    4.5
+  );
+
+  assert.equal(
+    computeCheckoutDeliveryFee(
+      { deliveryPricingMode: "FIXED", deliveryFeeFixed: 2.5 },
+      { method: "PICKUP", deliveryFee: 2.5 }
+    ),
+    0
+  );
+});
 
 test("order checkout sends only card/email-facing Stripe fields and keeps customer data in metadata", async () => {
   const previousSecret = process.env.STRIPE_SECRET_KEY;

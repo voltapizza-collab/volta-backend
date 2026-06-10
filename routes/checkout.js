@@ -34,16 +34,23 @@ const isPrismaConnectivityError = (error) => {
   );
 };
 
-const ensurePartnerMinimumPaymentColumn = async (prisma) => {
-  try {
-    await prisma.$executeRawUnsafe(
-      "ALTER TABLE `Partner` ADD COLUMN `minimumPaymentAmount` DOUBLE NULL DEFAULT 0"
-    );
-  } catch (error) {
-    const message = String(error?.message || "");
-    const metaMessage = String(error?.meta?.message || "");
-    if (!message.includes("Duplicate column name") && !metaMessage.includes("Duplicate column name")) {
-      throw error;
+const ensurePartnerCheckoutPolicyColumns = async (prisma) => {
+  const columns = [
+    ["minimumPaymentAmount", "DOUBLE NULL DEFAULT 0"],
+    ["paymentPolicySettings", "JSON NULL"],
+  ];
+
+  for (const [columnName, definition] of columns) {
+    try {
+      await prisma.$executeRawUnsafe(
+        `ALTER TABLE \`Partner\` ADD COLUMN \`${columnName}\` ${definition}`
+      );
+    } catch (error) {
+      const message = String(error?.message || "");
+      const metaMessage = String(error?.meta?.message || "");
+      if (!message.includes("Duplicate column name") && !metaMessage.includes("Duplicate column name")) {
+        throw error;
+      }
     }
   }
 };
@@ -64,6 +71,55 @@ const normalizeDigits = (value) => String(value || "").replace(/\D/g, "");
 const normalizeEmail = (value) => {
   const email = String(value || "").trim().toLowerCase();
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) ? email : "";
+};
+
+const parseMaybeJson = (value, fallback) => {
+  if (value == null || value === "") return fallback;
+  if (typeof value !== "string") return value;
+
+  try {
+    return JSON.parse(value);
+  } catch {
+    return fallback;
+  }
+};
+
+const normalizePositiveIds = (value) => {
+  const parsed = parseMaybeJson(value, value);
+  const list = Array.isArray(parsed) ? parsed : parsed == null || parsed === "" ? [] : [parsed];
+
+  return [
+    ...new Set(
+      list
+        .map((item) => Number(item))
+        .filter((item) => Number.isInteger(item) && item > 0)
+    ),
+  ];
+};
+
+const normalizePaymentPolicySettings = (value) => {
+  const parsed = parseMaybeJson(parseMaybeJson(value, {}), {});
+  const source = parsed && typeof parsed === "object" && !Array.isArray(parsed) ? parsed : {};
+
+  return {
+    card: true,
+    cash: Boolean(source.cash),
+    cashStoreIds: normalizePositiveIds(source.cashStoreIds),
+    paypal: Boolean(source.paypal),
+    paypalStoreIds: normalizePositiveIds(source.paypalStoreIds),
+    crypto: Boolean(source.crypto),
+    cryptoStoreIds: normalizePositiveIds(source.cryptoStoreIds),
+  };
+};
+
+const paymentStoreKey = (methodId) => `${methodId}StoreIds`;
+
+const isPaymentMethodAllowedForStore = (settings, methodId, storeId) => {
+  if (!settings?.[methodId]) return false;
+  const storeIds = normalizePositiveIds(settings[paymentStoreKey(methodId)]);
+  const numericStoreId = Number(storeId);
+
+  return !storeIds.length || storeIds.includes(numericStoreId);
 };
 
 const esBase9 = (phone) => {
@@ -358,7 +414,20 @@ export const getEligibleCouponSubtotal = (lines, { activeTopDeals = [], storeId 
     })
     .reduce((sum, line) => sum + Math.max(0, getLineTotal(line)), 0);
 
-const calculateCouponDiscount = (coupon, eligibleSubtotal) => {
+const isDeliveryFreeCoupon = (coupon) => {
+  const campaign = String(coupon?.campaign || "").toUpperCase();
+  const meta =
+    coupon?.meta && typeof coupon.meta === "object" && !Array.isArray(coupon.meta)
+      ? coupon.meta
+      : {};
+  return campaign === "DELIVERY_FREE" || Boolean(meta.deliveryFree);
+};
+
+export const calculateCouponDiscount = (coupon, eligibleSubtotal, { deliveryFee = 0 } = {}) => {
+  if (isDeliveryFreeCoupon(coupon)) {
+    return roundMoney(Math.max(0, Number(deliveryFee || 0)));
+  }
+
   const base = Math.max(0, roundMoney(eligibleSubtotal));
   if (base <= 0) return 0;
 
@@ -408,6 +477,30 @@ const resolveDeliveryMethod = (value) => {
   const method = String(value || "").trim().toUpperCase();
   if (["PICKUP", "COURIER", "MARKETPLACE", "OTHER"].includes(method)) return method;
   return "PICKUP";
+};
+
+const parseNonNegativeMoney = (value) => {
+  const amount = Number(value);
+  return Number.isFinite(amount) && amount > 0 ? roundMoney(amount) : 0;
+};
+
+export const computeCheckoutDeliveryFee = (partner, delivery) => {
+  if (delivery?.method !== "COURIER") return 0;
+
+  if (partner.deliveryPricingMode === "FIXED") {
+    return parseNonNegativeMoney(partner.deliveryFeeFixed);
+  }
+
+  const distanceKm = Number(delivery?.distanceKm);
+  if (Number.isFinite(distanceKm) && distanceKm >= 0) {
+    const base = Number(partner.deliveryFeeBase || 0);
+    const baseKm = Number(partner.deliveryBaseKm || 0);
+    const extraPerKm = Number(partner.deliveryExtraPerKm || 0);
+    const extraDistance = Math.max(0, distanceKm - baseKm);
+    return roundMoney(base + Math.ceil(extraDistance) * extraPerKm);
+  }
+
+  return parseNonNegativeMoney(delivery?.deliveryFee || partner.deliveryFeeBase);
 };
 
 const extractZipCode = (value) => {
@@ -576,23 +669,29 @@ export default function checkoutRoutes(prisma) {
     const storeId = parsePositiveInt(req.body.storeId);
     const rawLines = asArray(req.body.cart);
     const currency = String(req.body.currency || "EUR").trim().toUpperCase();
+    const paymentMode = String(req.body.paymentMode || "card").trim().toLowerCase() === "cash" ? "cash" : "card";
 
     if (!partnerId || !storeId || !rawLines.length) {
       return res.status(400).json({ ok: false, error: "bad_checkout_payload" });
     }
 
-    if (!isStripeCheckoutConfigured()) {
+    if (paymentMode === "card" && !isStripeCheckoutConfigured()) {
       return res.status(503).json({ ok: false, error: "stripe_not_configured" });
     }
 
     try {
-      await ensurePartnerMinimumPaymentColumn(prisma);
+      await ensurePartnerCheckoutPolicyColumns(prisma);
 
       const [partner, store] = await Promise.all([
-        prisma.partner.findUnique({
-          where: { id: partnerId },
-          select: { id: true, name: true, slug: true, currency: true, minimumPaymentAmount: true },
-        }),
+        prisma.$queryRawUnsafe(
+          `SELECT id, name, slug, currency, minimumPaymentAmount,
+                  deliveryPricingMode, deliveryFeeFixed, deliveryFeeBase,
+                  deliveryBaseKm, deliveryExtraPerKm, paymentPolicySettings
+             FROM Partner
+            WHERE id = ?
+            LIMIT 1`,
+          partnerId
+        ).then((rows) => rows?.[0] || null),
         prisma.store.findFirst({
           where: { id: storeId, partnerId, active: true },
           select: {
@@ -610,6 +709,12 @@ export default function checkoutRoutes(prisma) {
 
       if (!partner || !store) {
         return res.status(404).json({ ok: false, error: "store_not_found" });
+      }
+
+      const paymentPolicySettings = normalizePaymentPolicySettings(partner.paymentPolicySettings);
+
+      if (paymentMode === "cash" && !isPaymentMethodAllowedForStore(paymentPolicySettings, "cash", storeId)) {
+        return res.status(403).json({ ok: false, error: "cash_payment_not_allowed" });
       }
 
       let lines = rawLines.map(sanitizeLine);
@@ -651,6 +756,27 @@ export default function checkoutRoutes(prisma) {
         })
       ).filter((discount) => isDirectDiscountActive(discount, nowInTZ()));
 
+      const delivery = req.body.delivery && typeof req.body.delivery === "object" ? req.body.delivery : {};
+      const rawDeliveryAddress = delivery.address ? String(delivery.address).trim() : "";
+      const rawDeliveryAddressLine2 = delivery.addressLine2 ? String(delivery.addressLine2).trim() : "";
+      const requestedDeliveryMethod = resolveDeliveryMethod(delivery.method);
+      const sanitizedDelivery = {
+        method: requestedDeliveryMethod === "PICKUP" && rawDeliveryAddress ? "COURIER" : requestedDeliveryMethod,
+        address: rawDeliveryAddress,
+        addressLine2: rawDeliveryAddressLine2,
+        lat: Number.isFinite(Number(delivery.lat)) ? Number(delivery.lat) : null,
+        lng: Number.isFinite(Number(delivery.lng)) ? Number(delivery.lng) : null,
+        distanceKm: Number.isFinite(Number(delivery.distanceKm)) ? Number(delivery.distanceKm) : null,
+      };
+      const deliveryFee = computeCheckoutDeliveryFee(partner, {
+        ...sanitizedDelivery,
+        deliveryFee: delivery.deliveryFee,
+      });
+      sanitizedDelivery.deliveryFee = deliveryFee;
+      const fullDeliveryAddress = [sanitizedDelivery.address, sanitizedDelivery.addressLine2]
+        .filter(Boolean)
+        .join(", ");
+
       const couponLine = lines.find(isCouponLine);
       const eligibleSubtotal = getEligibleCouponSubtotal(lines, { activeTopDeals, storeId });
 
@@ -667,7 +793,7 @@ export default function checkoutRoutes(prisma) {
           return res.status(409).json({ ok: false, error: "coupon_not_available" });
         }
 
-        const expectedDiscount = calculateCouponDiscount(coupon, eligibleSubtotal);
+        const expectedDiscount = calculateCouponDiscount(coupon, eligibleSubtotal, { deliveryFee });
         if (expectedDiscount <= 0) {
           return res.status(409).json({ ok: false, error: "coupon_not_applicable" });
         }
@@ -697,7 +823,8 @@ export default function checkoutRoutes(prisma) {
           .filter(isCouponLine)
           .reduce((sum, line) => sum + Math.abs(getLineTotal(line)), 0)
       );
-      const total = roundMoney(Math.max(0, totalProducts - discounts));
+
+      const total = roundMoney(Math.max(0, totalProducts - discounts) + deliveryFee);
       const amountCents = toCents(total);
       const minimumPaymentAmount = Math.max(0, Number(partner.minimumPaymentAmount || 0));
 
@@ -714,17 +841,6 @@ export default function checkoutRoutes(prisma) {
         return res.status(400).json({ ok: false, error: "amount_too_low" });
       }
 
-      const delivery = req.body.delivery && typeof req.body.delivery === "object" ? req.body.delivery : {};
-      const sanitizedDelivery = {
-        method: resolveDeliveryMethod(delivery.method),
-        address: delivery.address ? String(delivery.address).trim() : "",
-        addressLine2: delivery.addressLine2 ? String(delivery.addressLine2).trim() : "",
-        lat: Number.isFinite(Number(delivery.lat)) ? Number(delivery.lat) : null,
-        lng: Number.isFinite(Number(delivery.lng)) ? Number(delivery.lng) : null,
-      };
-      const fullDeliveryAddress = [sanitizedDelivery.address, sanitizedDelivery.addressLine2]
-        .filter(Boolean)
-        .join(", ");
       const scheduledFor = req.body.scheduledFor ? new Date(req.body.scheduledFor) : null;
       const customerInput = req.body.customer && typeof req.body.customer === "object" ? req.body.customer : {};
       const sale = await prisma.$transaction(async (tx) => {
@@ -746,7 +862,7 @@ export default function checkoutRoutes(prisma) {
 
         const checkoutEmail = normalizeEmail(customer.email || customerInput.email);
 
-        return tx.sale.create({
+        const createdSale = await tx.sale.create({
           data: {
             code: await genSaleCode(tx),
             partnerId,
@@ -764,6 +880,8 @@ export default function checkoutRoutes(prisma) {
               customerId: customer.id,
               customerCode: customer.code,
               delivery: sanitizedDelivery,
+              paymentMode,
+              paymentStatus: paymentMode === "cash" ? "cash_pending" : "awaiting_card_payment",
               scheduledFor: scheduledFor && !Number.isNaN(scheduledFor.getTime()) ? scheduledFor.toISOString() : null,
             },
             products: lines,
@@ -771,7 +889,7 @@ export default function checkoutRoutes(prisma) {
             totalProducts,
             discounts,
             total,
-            status: "AWAITING_PAYMENT",
+            status: paymentMode === "cash" ? "PAID" : "AWAITING_PAYMENT",
             channel: "WEB",
             currency,
             address_1: fullDeliveryAddress || sanitizedDelivery.address || customer.address_1 || null,
@@ -789,7 +907,26 @@ export default function checkoutRoutes(prisma) {
             boostMeta: lines.find((line) => line.source === "queue_boost")?.boost || null,
           },
         });
+
+        if (paymentMode === "cash") {
+          await createCouponRedemptionsForSale(tx, createdSale);
+        }
+
+        return createdSale;
       });
+
+      if (paymentMode === "cash") {
+        return res.json({
+          ok: true,
+          saleId: sale.id,
+          customerId: sale.customerId,
+          orderCode: sale.code,
+          paymentMode,
+          paymentStatus: "cash_pending",
+          total,
+          currency,
+        });
+      }
 
       const session = await createOrderCheckoutSession({
         sale,
@@ -822,6 +959,7 @@ export default function checkoutRoutes(prisma) {
         orderCode: sale.code,
         sessionId: session.id,
         url: session.url,
+        paymentMode,
         total,
         currency,
       });

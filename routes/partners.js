@@ -162,6 +162,7 @@ async function ensurePartnerSettingsColumns() {
     ["storefrontMode", "VARCHAR(64) NULL"],
     ["trackingNotificationSettings", "JSON NULL"],
     ["priceAdjustmentRules", "JSON NULL"],
+    ["paymentPolicySettings", "JSON NULL"],
   ];
 
   let existingColumns = new Set();
@@ -207,7 +208,7 @@ async function getPartnerPolicyById(partnerId) {
             deliveryBaseKm, deliveryExtraPerKm, brandPrimary, brandSecondary,
             brandAccent, brandSurface, brandTextColor, brandFontFamily, brandOfferButtonStyle,
             brandLogoUrl, brandLogoPublicId, minimumPaymentAmount, storefrontButtonConfig,
-            storefrontMode, trackingNotificationSettings, priceAdjustmentRules
+            storefrontMode, trackingNotificationSettings, priceAdjustmentRules, paymentPolicySettings
        FROM Partner
       WHERE id = ?`,
     partnerId
@@ -224,7 +225,7 @@ async function getPartnerPolicyBySlug(slug) {
             deliveryBaseKm, deliveryExtraPerKm, brandPrimary, brandSecondary,
             brandAccent, brandSurface, brandTextColor, brandFontFamily, brandOfferButtonStyle,
             brandLogoUrl, brandLogoPublicId, minimumPaymentAmount, storefrontButtonConfig,
-            storefrontMode, trackingNotificationSettings, priceAdjustmentRules
+            storefrontMode, trackingNotificationSettings, priceAdjustmentRules, paymentPolicySettings
        FROM Partner
       WHERE slug = ?`,
     slug
@@ -478,6 +479,22 @@ const parseMaybeJson = (value, fallback) => {
   } catch {
     return fallback;
   }
+};
+
+const normalizePaymentPolicySettings = (value) => {
+  const parsed = parseMaybeJson(parseMaybeJson(value, {}), {});
+  const source = parsed && typeof parsed === "object" && !Array.isArray(parsed) ? parsed : {};
+
+  return {
+    schemaVersion: 1,
+    card: true,
+    cash: Boolean(source.cash),
+    cashStoreIds: normalizePositiveIds(source.cashStoreIds),
+    paypal: Boolean(source.paypal),
+    paypalStoreIds: normalizePositiveIds(source.paypalStoreIds),
+    crypto: Boolean(source.crypto),
+    cryptoStoreIds: normalizePositiveIds(source.cryptoStoreIds),
+  };
 };
 
 const normalizePositiveIds = (value) => {
@@ -1107,9 +1124,11 @@ router.patch("/by-id/:partnerId/policies", async (req, res) => {
 
     await prisma.$executeRawUnsafe(
       `UPDATE Partner
-          SET minimumPaymentAmount = ?
+          SET minimumPaymentAmount = ?,
+              paymentPolicySettings = CAST(? AS JSON)
         WHERE id = ?`,
       toNonNegativeNumber(req.body?.minimumPaymentAmount, 0),
+      JSON.stringify(normalizePaymentPolicySettings(req.body?.paymentPolicySettings)),
       partnerId
     );
 
