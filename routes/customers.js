@@ -1,5 +1,12 @@
 import express from "express";
 import axios from "axios";
+import {
+  createCustomerSegmentCounts,
+  CUSTOMER_SEGMENTS,
+  DEFAULT_CUSTOMER_SEGMENT,
+  normalizeCustomerSegment,
+  VIP_CUSTOMER_SEGMENT,
+} from "../services/customerSegments.js";
 
 const COLD_DAYS_THRESHOLD = 15;
 const postalGeocodeCache = new Map();
@@ -217,7 +224,7 @@ const serializeCustomerWithTerritory = (customer, stores = [], summaryOptions = 
   const territory = resolveCustomerTerritory(customer, stores);
   const { sales, redemptions, assignedCoupons, ...rest } = customer;
   const summary = summarizeCustomerSales(sales || [], new Date(), summaryOptions);
-  const topProducts = summarizeCustomerProducts(sales || [], summaryOptions.pizzaNameById);
+  const topProducts = summarizeCustomerProducts(sales || [], summaryOptions.pizzaMetaById);
 
   return {
     ...rest,
@@ -256,7 +263,6 @@ const postalAreaKey = (postalCode) => {
   return digits.length >= 3 ? digits.slice(0, 3) : "";
 };
 
-const CUSTOMER_SEGMENTS = ["S1", "S2", "S3", "S4", "S5"];
 const QUALIFYING_SALE_STATUS = "PAID";
 
 const parseMaybeJson = (value, fallback = null) => {
@@ -279,6 +285,67 @@ const getSaleLineQty = (item) => {
   return Number.isFinite(parsed) && parsed > 0 ? parsed : 1;
 };
 
+const SALE_COUPON_LINE_TYPES = new Set(["COUPON"]);
+const SALE_COUPON_LINE_SOURCES = new Set(["coupon"]);
+const SALE_PROMO_LINE_TYPES = new Set(["PROMO"]);
+const SALE_PROMO_LINE_SOURCES = new Set(["promo"]);
+const SALE_TOP_DEAL_LINE_TYPES = new Set(["DISCOUNT", "DIRECT_DISCOUNT", "DIRECT-DISCOUNT", "TOP_DEAL", "TOPDEAL", "OFFER"]);
+const SALE_TOP_DEAL_LINE_SOURCES = new Set(["discount", "direct_discount", "direct-discount", "top_deal", "topdeal", "offer"]);
+const SALE_REWARD_LINE_TYPES = new Set(["INCENTIVE_REWARD"]);
+const SALE_REWARD_LINE_SOURCES = new Set(["incentive_reward"]);
+const NON_PIZZA_CATEGORY_WORDS = [
+  "bebida",
+  "bebidas",
+  "drink",
+  "drinks",
+  "complemento",
+  "complementos",
+  "entrante",
+  "entrantes",
+  "postre",
+  "postres",
+  "dessert",
+  "desserts",
+];
+
+const isSaleCouponLine = (item) => {
+  const type = String(item?.type || "").trim().toUpperCase();
+  const source = String(item?.source || "").trim().toLowerCase();
+  return Boolean(item?.couponId || item?.couponCode || item?.coupon) || SALE_COUPON_LINE_TYPES.has(type) || SALE_COUPON_LINE_SOURCES.has(source);
+};
+
+const isSalePromoLine = (item) => {
+  const type = String(item?.type || "").trim().toUpperCase();
+  const source = String(item?.source || "").trim().toLowerCase();
+  const cartLineId = String(item?.cartLineId || "").trim().toLowerCase();
+  return Boolean(item?.promoId) || asArray(item?.promoItems).length > 0 || SALE_PROMO_LINE_TYPES.has(type) || SALE_PROMO_LINE_SOURCES.has(source) || cartLineId.startsWith("promo-");
+};
+
+const isSaleTopDealLine = (item) => {
+  const type = String(item?.type || "").trim().toUpperCase();
+  const source = String(item?.source || "").trim().toLowerCase();
+  return Boolean(item?.directDiscount) || SALE_TOP_DEAL_LINE_TYPES.has(type) || SALE_TOP_DEAL_LINE_SOURCES.has(source);
+};
+
+const isSaleRewardLine = (item) => {
+  const type = String(item?.type || "").trim().toUpperCase();
+  const source = String(item?.source || "").trim().toLowerCase();
+  return SALE_REWARD_LINE_TYPES.has(type) || SALE_REWARD_LINE_SOURCES.has(source);
+};
+
+const isSaleBoostLine = (item) => {
+  const type = String(item?.type || "").trim().toLowerCase();
+  const source = String(item?.source || "").trim().toLowerCase();
+  return type === "queue_boost" || source === "queue_boost" || Boolean(item?.boost);
+};
+
+const isCommercialLine = (item) =>
+  isSaleCouponLine(item) ||
+  isSalePromoLine(item) ||
+  isSaleTopDealLine(item) ||
+  isSaleRewardLine(item) ||
+  isSaleBoostLine(item);
+
 const getSaleLinePizzaId = (item) => {
   const parsed = Number(item?.pizzaId ?? item?.menuPizzaId ?? item?.productId ?? item?.legacyPizzaId);
   return Number.isInteger(parsed) && parsed > 0 ? parsed : null;
@@ -290,10 +357,10 @@ const normalizeSaleLineName = (value) =>
     .replace(/^demo\s+/i, "")
     .replace(/\s+/g, " ");
 
-const getSaleLineName = (item, pizzaNameById = new Map(), salePartnerId = null) => {
+const getSaleLineName = (item, pizzaMetaById = new Map(), salePartnerId = null) => {
   const pizzaId = getSaleLinePizzaId(item);
   const scopedKey = salePartnerId && pizzaId ? `${salePartnerId}:${pizzaId}` : "";
-  const mappedName = normalizeSaleLineName(scopedKey ? pizzaNameById.get(scopedKey) : "");
+  const mappedName = normalizeSaleLineName(scopedKey ? pizzaMetaById.get(scopedKey)?.name : "");
   const type = String(item?.type || "").toUpperCase();
   const customBaseName =
     item?.customMeta?.baseProductName ||
@@ -317,6 +384,7 @@ const collectSalePizzaIds = (sales = []) => {
 
   sales.forEach((sale) => {
     asArray(sale.products).forEach((item) => {
+      if (isCommercialLine(item)) return;
       const pizzaId = getSaleLinePizzaId(item);
       if (pizzaId) ids.add(pizzaId);
     });
@@ -325,7 +393,17 @@ const collectSalePizzaIds = (sales = []) => {
   return [...ids];
 };
 
-const getPizzaNameById = async (prisma, sales = []) => {
+const isPizzaCatalogProduct = (pizza) => {
+  if (!pizza) return false;
+  if (String(pizza.type || "").toUpperCase() !== "SELLABLE") return false;
+
+  const categoryName = normalizeComparableText(pizza.category || pizza.categoryRef?.name || "");
+  if (NON_PIZZA_CATEGORY_WORDS.some((word) => categoryName.includes(word))) return false;
+
+  return true;
+};
+
+const getPizzaMetaById = async (prisma, sales = []) => {
   const ids = collectSalePizzaIds(sales);
   if (!ids.length) return new Map();
   const partnerIds = [
@@ -337,10 +415,27 @@ const getPizzaNameById = async (prisma, sales = []) => {
       id: { in: ids },
       ...(partnerIds.length ? { partnerId: { in: partnerIds } } : {}),
     },
-    select: { id: true, partnerId: true, name: true },
+    select: {
+      id: true,
+      partnerId: true,
+      name: true,
+      category: true,
+      type: true,
+      categoryRef: {
+        select: {
+          name: true,
+          customizable: true,
+          halfAndHalf: true,
+        },
+      },
+    },
   });
 
-  return new Map(pizzas.map((pizza) => [`${pizza.partnerId}:${pizza.id}`, pizza.name]));
+  return new Map(
+    pizzas
+      .filter(isPizzaCatalogProduct)
+      .map((pizza) => [`${pizza.partnerId}:${pizza.id}`, pizza])
+  );
 };
 
 const getCustomerActivity = (daysOff, orders = 0) => {
@@ -365,21 +460,27 @@ const getCustomerTrend = ({ orders, avgTicket, lastTicket }) => {
 };
 
 const getCustomerSegment = ({ orders, daysOff, avgTicket, storeAverageTicket }) => {
-  if (orders === 0) return "S1";
-  if (orders === 1) return "S2";
-  if (orders > 5 && Number(storeAverageTicket || 0) > 0 && avgTicket > storeAverageTicket) return "S5";
-  if (orders > 1 && Number(daysOff || 0) > 30) return "S3";
-  return "S4";
+  if (orders === 0) return DEFAULT_CUSTOMER_SEGMENT;
+  if (orders === 1) return "nuevo";
+  if (orders > 5 && Number(storeAverageTicket || 0) > 0 && avgTicket > storeAverageTicket) return VIP_CUSTOMER_SEGMENT;
+  if (orders > 1 && Number(daysOff || 0) > 30) return "dormido";
+  return "activo";
 };
 
-const summarizeCustomerProducts = (sales = [], pizzaNameById = new Map()) => {
+const summarizeCustomerProducts = (sales = [], pizzaMetaById = new Map()) => {
   const productCounts = new Map();
 
   sales
     .filter((row) => String(row.status || "").toUpperCase() === QUALIFYING_SALE_STATUS)
     .forEach((sale) => {
       asArray(sale.products).forEach((item) => {
-        const name = getSaleLineName(item, pizzaNameById, sale.partnerId);
+        if (isCommercialLine(item)) return;
+
+        const pizzaId = getSaleLinePizzaId(item);
+        const scopedKey = sale.partnerId && pizzaId ? `${sale.partnerId}:${pizzaId}` : "";
+        if (!scopedKey || !pizzaMetaById.has(scopedKey)) return;
+
+        const name = getSaleLineName(item, pizzaMetaById, sale.partnerId);
         if (!name) return;
         productCounts.set(name, (productCounts.get(name) || 0) + getSaleLineQty(item));
       });
@@ -504,8 +605,9 @@ async function buildCustomerWhere(prisma, filters) {
     });
   }
 
-  if (segment && CUSTOMER_SEGMENTS.includes(segment)) {
-    extraWhere.segment = segment;
+  const normalizedSegment = normalizeCustomerSegment(segment);
+  if (normalizedSegment && CUSTOMER_SEGMENTS.includes(normalizedSegment)) {
+    extraWhere.segment = normalizedSegment;
   }
 
   if (temperature === "COLD") {
@@ -731,7 +833,7 @@ export default function customersRoutes(prisma) {
         reviewStatsByCustomerId.set(row.customerId, current);
       });
 
-      const pizzaNameById = await getPizzaNameById(
+      const pizzaMetaById = await getPizzaMetaById(
         prisma,
         list.flatMap((customer) => customer.sales || [])
       );
@@ -740,7 +842,7 @@ export default function customersRoutes(prisma) {
         list.map(async (customer) => {
           const row = serializeCustomerWithTerritory(customer, territoryStores, {
             storeAverageByStoreId,
-            pizzaNameById,
+            pizzaMetaById,
           });
           const reviewStats = reviewStatsByCustomerId.get(customer.id) || {
             reviewLikes: 0,
@@ -781,7 +883,7 @@ export default function customersRoutes(prisma) {
     const zip = String(req.query.zip || "").trim();
     const storeId = parsePositiveInt(req.query.storeId);
     const country = String(req.query.country || "").trim().toUpperCase();
-    const segment = String(req.query.segment || "").trim().toUpperCase();
+    const segment = normalizeCustomerSegment(req.query.segment);
     const temperature = String(req.query.temperature || "").trim().toUpperCase();
     const takeAll = String(req.query.take || "").trim().toLowerCase() === "all";
     const take = takeAll ? null : Math.min(parsePositiveInt(req.query.take) || 50, 5000);
@@ -920,14 +1022,14 @@ export default function customersRoutes(prisma) {
         getStoreAverageTickets(prisma, partnerId),
       ]);
 
-      const pizzaNameById = await getPizzaNameById(
+      const pizzaMetaById = await getPizzaMetaById(
         prisma,
         items.flatMap((customer) => customer.sales || [])
       );
 
       const computedItems = items.map((customer) => {
         const { sales, ...rest } = customer;
-        const topProducts = summarizeCustomerProducts(sales, pizzaNameById);
+        const topProducts = summarizeCustomerProducts(sales, pizzaMetaById);
         return {
           ...rest,
           ...summarizeCustomerSales(sales, new Date(), {
@@ -1082,7 +1184,7 @@ export default function customersRoutes(prisma) {
         getStoreAverageTickets(prisma, partnerId),
       ]);
 
-      const counts = { S1: 0, S2: 0, S3: 0, S4: 0, S5: 0 };
+      const counts = createCustomerSegmentCounts();
       const zipCodes = [...new Set(
         zipRows
           .map((row) => resolveCustomerTerritory(row, territoryStores).zipCode)
@@ -1191,7 +1293,7 @@ export default function customersRoutes(prisma) {
       ]);
 
       const updates = [];
-      const counts = { S1: 0, S2: 0, S3: 0, S4: 0, S5: 0 };
+      const counts = createCustomerSegmentCounts();
       let changed = 0;
       const now = new Date();
 

@@ -5,10 +5,12 @@ import {
   refundSmsCreditForMessage,
 } from "../services/smsCredits.js";
 import { isPartnerSmsServiceEnabled } from "../services/smsNotificationSettings.js";
+import {
+  CUSTOMER_SEGMENTS,
+  normalizeCustomerSegment,
+} from "../services/customerSegments.js";
 
-const VALID_SEGMENTS = ["S1", "S2", "S3", "S4", "S5"];
 const VALID_ACTIVITIES = ["HOT", "COLD"];
-const VALID_TARGET_TAGS = [...VALID_SEGMENTS, ...VALID_ACTIVITIES];
 
 const parsePositiveInt = (value) => {
   const parsed = Number(value);
@@ -24,15 +26,20 @@ const normalizeArray = (value) => {
 const normalizeTargetTags = (value) => [
   ...new Set(
     normalizeArray(value)
-      .map((item) => String(item || "").trim().toUpperCase())
-      .filter((item) => VALID_TARGET_TAGS.includes(item))
+      .map((item) => {
+        const segment = normalizeCustomerSegment(item);
+        if (segment) return segment;
+        const activity = String(item || "").trim().toUpperCase();
+        return VALID_ACTIVITIES.includes(activity) ? activity : "";
+      })
+      .filter(Boolean)
   ),
 ];
 
 const splitTargetTags = (value) => {
   const tags = normalizeTargetTags(value);
   return {
-    segments: tags.filter((item) => VALID_SEGMENTS.includes(item)),
+    segments: tags.filter((item) => CUSTOMER_SEGMENTS.includes(item)),
     activities: tags.filter((item) => VALID_ACTIVITIES.includes(item)),
   };
 };

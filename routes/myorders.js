@@ -3,9 +3,47 @@ import { getBoostSettings } from "../services/boostSettings.js";
 import { sendOrderCustomerMessageSms, sendOrderReadySms } from "../services/orderNotifications.js";
 import { createProductReviewRequestForSale } from "../services/productReviews.js";
 import { createBoostCheckoutSession, isStripeCheckoutConfigured } from "../services/stripe.js";
+import {
+  normalizeCustomerSegment,
+  VIP_CUSTOMER_SEGMENT,
+} from "../services/customerSegments.js";
+import { createTtlCache } from "../services/responseCache.js";
 
 const TZ = process.env.TIMEZONE || "Europe/Madrid";
 const WEEKDAY_LABELS = ["domingo", "lunes", "martes", "miercoles", "jueves", "viernes", "sabado"];
+const boundedInt = (value, fallback, min, max) => {
+  const parsed = Number(value);
+  const safeValue = Number.isInteger(parsed) ? parsed : fallback;
+  return Math.max(min, Math.min(safeValue, max));
+};
+const CUSTOMER_RECENT_SALES_TAKE = boundedInt(
+  process.env.MYORDERS_CUSTOMER_RECENT_SALES_TAKE,
+  20,
+  1,
+  100
+);
+const SUMMARY_HISTORY_DAYS = boundedInt(
+  process.env.MYORDERS_SUMMARY_HISTORY_DAYS,
+  180,
+  30,
+  730
+);
+const SUMMARY_HISTORY_MAX_ROWS = boundedInt(
+  process.env.MYORDERS_SUMMARY_HISTORY_MAX_ROWS,
+  5000,
+  500,
+  50_000
+);
+const pendingOrdersCache = createTtlCache({
+  name: "myorders-pending",
+  ttlMs: Number(process.env.MYORDERS_PENDING_CACHE_MS || 2_000),
+  maxEntries: Number(process.env.MYORDERS_PENDING_CACHE_MAX || 500),
+});
+const summaryCache = createTtlCache({
+  name: "myorders-summary",
+  ttlMs: Number(process.env.MYORDERS_SUMMARY_CACHE_MS || 15_000),
+  maxEntries: Number(process.env.MYORDERS_SUMMARY_CACHE_MAX || 500),
+});
 
 const parsePositiveInt = (value) => {
   const parsed = Number(value);
@@ -79,6 +117,8 @@ const addDays = (date, days) => {
   next.setDate(next.getDate() + days);
   return next;
 };
+
+const subtractDays = (date, days) => addDays(date, -days);
 
 const startOfLocalWeek = (date) => {
   const day = date.getDay();
@@ -691,8 +731,8 @@ const formatSale = (sale) => {
   const scheduledFor = getScheduledFor(sale);
   const customerSales = Array.isArray(sale.customer?.sales) ? sale.customer.sales : [];
   const orderCount = Number(sale.customer?._count?.sales || customerSales.length || 0);
-  const averageTicket = orderCount
-    ? customerSales.reduce((sum, row) => sum + Number(row.total || 0), 0) / orderCount
+  const averageTicket = customerSales.length
+    ? customerSales.reduce((sum, row) => sum + Number(row.total || 0), 0) / customerSales.length
     : 0;
   const lastTicket = Number(customerSales[0]?.total || 0);
   const trend =
@@ -745,7 +785,7 @@ const formatSale = (sale) => {
       portal: customerData.portal || sale.customer?.portal || "",
       observations: customerData.observations || sale.customer?.observations || "",
       code: sale.customer?.code || "",
-      segment: sale.customer?.segment || "",
+      segment: normalizeCustomerSegment(sale.customer?.segment, sale.customer?.segment || ""),
       activity: sale.customer?.activity || "",
       daysOff: sale.customer?.daysOff ?? null,
       zipCode: sale.customer?.zipCode || "",
@@ -868,6 +908,7 @@ const findRepeatSales = async (
           sales: {
             select: { total: true, createdAt: true },
             orderBy: { createdAt: "desc" },
+            take: CUSTOMER_RECENT_SALES_TAKE,
           },
         },
       },
@@ -905,9 +946,7 @@ const compareQueueAge = (left, right) => {
 
 const isVipSale = (row) => {
   const customerData = asObject(row.customerData);
-  return String(row.customer?.segment || customerData.segment || "")
-    .trim()
-    .toUpperCase() === "S5";
+  return normalizeCustomerSegment(row.customer?.segment || customerData.segment) === VIP_CUSTOMER_SEGMENT;
 };
 
 const compareBoosts = (left, right) => {
@@ -1009,6 +1048,7 @@ const findBoostableSale = async (prisma, { orderId, orderCode }) => {
           sales: {
             select: { total: true, createdAt: true },
             orderBy: { createdAt: "desc" },
+            take: CUSTOMER_RECENT_SALES_TAKE,
           },
         },
       },
@@ -1222,6 +1262,13 @@ export default function myordersRoutes(prisma) {
     const partnerId = parsePositiveInt(req.query.partnerId);
     const storeId = parsePositiveInt(req.query.storeId);
     const take = Math.min(parsePositiveInt(req.query.take) || 80, 200);
+    const cacheKey = req.originalUrl;
+    const cachedPayload = pendingOrdersCache.get(cacheKey);
+
+    if (cachedPayload) {
+      res.set("X-Volta-Cache", "HIT myorders-pending");
+      return res.json(cachedPayload);
+    }
 
     try {
       const where = pendingOrderWhere({ partnerId, storeId, activeStoresOnly: false });
@@ -1251,6 +1298,7 @@ export default function myordersRoutes(prisma) {
                 sales: {
                   select: { total: true, createdAt: true },
                   orderBy: { createdAt: "desc" },
+                  take: CUSTOMER_RECENT_SALES_TAKE,
                 },
               },
             },
@@ -1263,14 +1311,18 @@ export default function myordersRoutes(prisma) {
 
       const orderedRows = applyPriorityQueueOrder(rows).slice(0, take);
 
-      return res.json({
+      const payload = {
         items: orderedRows.map((row, index) => ({
           ...formatSale(row),
           queuePosition: index + 1,
         })),
         queueSize,
         updatedAt: new Date().toISOString(),
-      });
+      };
+
+      pendingOrdersCache.set(cacheKey, payload);
+      res.set("X-Volta-Cache", "MISS myorders-pending");
+      return res.json(payload);
     } catch (error) {
       console.error("[myorders.pending] error:", error);
       return res.status(500).json({ error: "Error loading pending orders" });
@@ -1282,7 +1334,15 @@ export default function myordersRoutes(prisma) {
     const storeId = parsePositiveInt(req.query.storeId);
     const period = String(req.query.period || "today").toLowerCase() === "week" ? "week" : "today";
     const { from, to, label } = getPeriodRange(period);
+    const historyFrom = subtractDays(nowInTZ(), SUMMARY_HISTORY_DAYS);
     const scope = orderScopeWhere({ partnerId, storeId, activeStoresOnly: false });
+    const cacheKey = req.originalUrl;
+    const cachedPayload = summaryCache.get(cacheKey);
+
+    if (cachedPayload) {
+      res.set("X-Volta-Cache", "HIT myorders-summary");
+      return res.json(cachedPayload);
+    }
 
     try {
       const [
@@ -1311,6 +1371,7 @@ export default function myordersRoutes(prisma) {
           where: {
             ...scope,
             ...completedOrderWhere({ partnerId, storeId, activeStoresOnly: false }),
+            date: { gte: historyFrom },
           },
           select: {
             id: true,
@@ -1320,7 +1381,8 @@ export default function myordersRoutes(prisma) {
             total: true,
             products: true,
           },
-          orderBy: { date: "asc" },
+          orderBy: [{ date: "desc" }, { createdAt: "desc" }],
+          take: SUMMARY_HISTORY_MAX_ROWS,
         }),
         prisma.sale.count({
           where: pendingOrderWhere({ partnerId, storeId, activeStoresOnly: false }),
@@ -1442,7 +1504,7 @@ export default function myordersRoutes(prisma) {
       const calendarIndicators = buildCalendarIndicators(historicalSales);
       const trafficHeatmap = buildTrafficHeatmap(historicalSales, calendarIndicators, storeHours);
 
-      return res.json({
+      const payload = {
         period,
         periodLabel: label,
         from,
@@ -1465,6 +1527,12 @@ export default function myordersRoutes(prisma) {
         },
         calendarIndicators,
         trafficHeatmap,
+        analyticsWindow: {
+          from: historyFrom,
+          days: SUMMARY_HISTORY_DAYS,
+          maxRows: SUMMARY_HISTORY_MAX_ROWS,
+          sampleOrders: historicalSales.length,
+        },
         availableStores: availableStores.map((store) => ({
           storeId: store.id,
           storeName: store.storeName,
@@ -1480,7 +1548,11 @@ export default function myordersRoutes(prisma) {
         topProducts,
         orders: safeSales.map(formatSale),
         updatedAt: new Date().toISOString(),
-      });
+      };
+
+      summaryCache.set(cacheKey, payload);
+      res.set("X-Volta-Cache", "MISS myorders-summary");
+      return res.json(payload);
     } catch (error) {
       console.error("[myorders.summary] error:", error);
       return res.status(500).json({ error: "Error building MyOrders summary" });
@@ -1546,6 +1618,7 @@ export default function myordersRoutes(prisma) {
               sales: {
                 select: { total: true, createdAt: true },
                 orderBy: { createdAt: "desc" },
+                take: CUSTOMER_RECENT_SALES_TAKE,
               },
             },
           },

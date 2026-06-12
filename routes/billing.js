@@ -1,5 +1,6 @@
 import express from "express";
 import { getBoostSettings } from "../services/boostSettings.js";
+import { normalizeCustomerSegment } from "../services/customerSegments.js";
 
 const parsePositiveInt = (value) => {
   const parsed = Number(value);
@@ -106,6 +107,7 @@ const formatBillingSale = (sale, partnerCurrency = "EUR") => {
       email: customerData.email || sale.customer?.email || "",
       address_1: customerData.address_1 || sale.address_1 || sale.customer?.address_1 || "",
       code: sale.customer?.code || customerData.customerCode || "",
+      segment: normalizeCustomerSegment(sale.customer?.segment || customerData.segment, ""),
     },
     products: asArray(sale.products),
     extras: asArray(sale.extras),
@@ -185,6 +187,7 @@ export default function billingRoutes(prisma) {
               phone: true,
               email: true,
               address_1: true,
+              segment: true,
             },
           },
         },

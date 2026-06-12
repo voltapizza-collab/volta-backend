@@ -2,6 +2,10 @@ import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
 import { PrismaClient } from "@prisma/client";
+import {
+  DEFAULT_CUSTOMER_SEGMENT,
+  normalizeCustomerSegment,
+} from "../services/customerSegments.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -21,7 +25,6 @@ const execute = args.has("execute");
 const clean = args.has("clean");
 
 const validOrigins = new Set(["PHONE", "WALKIN", "MARKETPLACE", "QR", "OTHER"]);
-const validSegments = new Set(["S1", "S2", "S3", "S4", "S5"]);
 
 function parseCsv(text) {
   const rows = [];
@@ -114,7 +117,7 @@ function normalizeCustomer(row) {
   const code = cleanText(row.code);
   const phone = cleanText(row.phone);
   const origin = validOrigins.has(row.origin) ? row.origin : "OTHER";
-  const segment = validSegments.has(row.segment) ? row.segment : "S1";
+  const segment = normalizeCustomerSegment(row.segment, DEFAULT_CUSTOMER_SEGMENT);
   const createdAt = parseDate(row.createdAt);
   const updatedAt = parseDate(row.updatedAt);
   const segmentUpdatedAt = parseDate(row.segmentUpdatedAt);

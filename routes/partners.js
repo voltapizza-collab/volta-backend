@@ -1,5 +1,4 @@
 import express from "express";
-import { PrismaClient } from "@prisma/client";
 import axios from "axios";
 import multer from "multer";
 import { v2 as cloudinary } from "cloudinary";
@@ -12,8 +11,8 @@ import {
   SMS_NOTIFICATION_SERVICE_IDS,
   normalizeSmsNotificationSettings,
 } from "../services/smsNotificationSettings.js";
+import prisma from "../services/prisma.js";
 
-const prisma = new PrismaClient();
 const router = express.Router();
 const upload = multer({ storage: multer.memoryStorage() });
 
@@ -39,21 +38,6 @@ const PRICE_ADJUSTMENT_STATUSES = ["ACTIVE", "PAUSED"];
 const isPrismaConnectionClosed = (error) =>
   error?.code === "P1017" ||
   String(error?.message || "").includes("Server has closed the connection");
-
-prisma.$use(async (params, next) => {
-  try {
-    return await next(params);
-  } catch (error) {
-    if (!isPrismaConnectionClosed(error)) {
-      throw error;
-    }
-
-    console.warn("[partners.prisma] connection closed; reconnecting and retrying once");
-    await prisma.$disconnect().catch(() => {});
-    await prisma.$connect();
-    return next(params);
-  }
-});
 
 const GOOGLE_GEOCODING_URL =
   "https://maps.googleapis.com/maps/api/geocode/json";

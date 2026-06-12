@@ -99,11 +99,11 @@ enum SmsCreditLedgerType {
   ADJUSTMENT
 }
 enum CustomerSegment {
-  S1 // Potencial: 0 compras
-  S2 // Nuevo: 1 compra
-  S3 // Dormido: 2+ compras y mas de 30 dias sin compra
-  S4 // Activo: 2+ compras y no dormido
-  S5 // VIP: 5+ compras y ticket promedio sobre la media de tienda
+  potencial // 0 compras
+  nuevo // 1 compra
+  dormido // 2+ compras y mas de 30 dias sin compra
+  activo // 2+ compras y no dormido
+  vip // 5+ compras y ticket promedio sobre la media de tienda
 }
 enum CustomerActivity {
   HOT
@@ -379,6 +379,8 @@ model Sale {
   @@index([date])
   @@index([partnerId])
   @@index([storeId, processed, status, boostActive])
+  @@index([partnerId, status, processed, date])
+  @@index([storeId, status, processed, date])
 }
 model IngredientExtra {
   id           Int        @id @default(autoincrement())
@@ -456,7 +458,7 @@ model Customer {
   restrictedAt      DateTime?
   restrictionReason String?
 
-  segment           CustomerSegment     @default(S1)
+  segment           CustomerSegment     @default(potencial)
   segmentUpdatedAt  DateTime?
 
   assignedCoupons   Coupon[]            @relation("CustomerAssignedCoupons")

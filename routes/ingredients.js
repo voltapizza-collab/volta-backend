@@ -1,11 +1,10 @@
 import express from "express";
-import { PrismaClient } from "@prisma/client";
 import multer from "multer";
 import { v2 as cloudinary } from "cloudinary";
 import { ensureIngredientMediaColumns } from "../services/ingredientMediaColumns.js";
 import { assertCloudinaryConfigured } from "../services/cloudinaryConfig.js";
+import prisma from "../services/prisma.js";
 
-const prisma = new PrismaClient();
 const router = express.Router();
 const upload = multer({ storage: multer.memoryStorage() });
 const DEMO_INGREDIENT_NAMES = new Set([

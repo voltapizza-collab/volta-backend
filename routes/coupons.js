@@ -5,6 +5,10 @@ import {
   refundSmsCreditForMessage,
 } from "../services/smsCredits.js";
 import { isPartnerSmsServiceEnabled } from "../services/smsNotificationSettings.js";
+import {
+  CUSTOMER_SEGMENTS,
+  normalizeCustomerSegment,
+} from "../services/customerSegments.js";
 
 const router = express.Router();
 
@@ -25,9 +29,7 @@ const SURPRISE_DISTRIBUTION = [
   { key: "mid", weight: 15 },
   { key: "max", weight: 10 },
 ];
-const VALID_SEGMENTS = ["S1", "S2", "S3", "S4", "S5"];
 const VALID_ACTIVITIES = ["HOT", "COLD"];
-const VALID_TARGET_TAGS = [...VALID_SEGMENTS, ...VALID_ACTIVITIES];
 const VALID_TYPES = ["RANDOM_PERCENT", "FIXED_PERCENT", "FIXED_AMOUNT", "SURPRISE_AMOUNT", "DELIVERY_FREE"];
 const COLD_DAYS_THRESHOLD = 15;
 const BUILT_IN_GAMES = [
@@ -173,15 +175,20 @@ const normalizeTargetTags = (value) => {
   if (!Array.isArray(value)) return [];
   return [...new Set(
     value
-      .map((item) => String(item || "").trim().toUpperCase())
-      .filter((item) => VALID_TARGET_TAGS.includes(item))
+      .map((item) => {
+        const segment = normalizeCustomerSegment(item);
+        if (segment) return segment;
+        const activity = String(item || "").trim().toUpperCase();
+        return VALID_ACTIVITIES.includes(activity) ? activity : "";
+      })
+      .filter(Boolean)
   )];
 };
 
 const splitTargetTags = (value) => {
   const tags = normalizeTargetTags(value);
   return {
-    segments: tags.filter((item) => VALID_SEGMENTS.includes(item)),
+    segments: tags.filter((item) => CUSTOMER_SEGMENTS.includes(item)),
     activities: tags.filter((item) => VALID_ACTIVITIES.includes(item)),
   };
 };
@@ -738,11 +745,11 @@ const customerMatchesCouponTargetTags = (customer, coupon) => {
   const tags = normalizeTargetTags(Array.isArray(coupon?.segments) ? coupon.segments : []);
   if (!tags.length) return true;
 
-  const requiredSegments = tags.filter((tag) => VALID_SEGMENTS.includes(tag));
+  const requiredSegments = tags.filter((tag) => CUSTOMER_SEGMENTS.includes(tag));
   const requiredActivities = tags.filter((tag) => VALID_ACTIVITIES.includes(tag));
 
   if (requiredSegments.length) {
-    const customerSegment = String(customer?.segment || "").trim().toUpperCase();
+    const customerSegment = normalizeCustomerSegment(customer?.segment);
     if (!requiredSegments.includes(customerSegment)) return false;
   }
 
@@ -2483,7 +2490,7 @@ export default function couponsRoutes(prisma) {
     const partnerId = parsePositiveInt(req.query.partnerId);
     const from = req.query.from ? new Date(req.query.from) : new Date(Date.now() - 30 * 864e5);
     const to = req.query.to ? new Date(req.query.to) : new Date();
-    const segment = req.query.segment ? String(req.query.segment).toUpperCase() : "";
+    const segment = normalizeCustomerSegment(req.query.segment);
 
     if (!partnerId) {
       return res.status(400).json({ ok: false, error: "partnerId required" });

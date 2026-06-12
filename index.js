@@ -1,6 +1,5 @@
 import express from "express";
 import cors from "cors";
-import { PrismaClient } from "@prisma/client";
 import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
@@ -39,6 +38,7 @@ import trackingAlertsRoutes from "./routes/trackingAlerts.js";
 import productReviewsRoutes from "./routes/productReviews.js";
 import { startProductReviewWorker } from "./services/productReviews.js";
 import { validateTelnyxEnv } from "./services/telnyx.js";
+import prisma, { withRequestMetrics } from "./services/prisma.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -70,6 +70,8 @@ const hostRedirects = {
   "juego.mycrushpizza.com": "https://voltapizza.com/mycrushpizza/coupons",
 };
 
+app.use(withRequestMetrics);
+
 app.use((req, res, next) => {
   const hostname = String(req.hostname || "").toLowerCase();
   const destination = hostRedirects[hostname];
@@ -89,8 +91,6 @@ if (!telnyxEnvStatus.enabled) {
   console.warn("[telnyx] Missing env vars:", telnyxEnvStatus.missing.join(", "));
 }
 telnyxEnvStatus.warnings.forEach((warning) => console.warn("[telnyx]", warning));
-
-const prisma = new PrismaClient();
 
 const storesRouter = storesRoutes(prisma);
 const stockRouter = stockRoutes(prisma);

@@ -1,9 +1,8 @@
 import express from "express";
-import { PrismaClient } from "@prisma/client";
 import { sendIngredientDisabledTrackingSms } from "../services/trackingNotifications.js";
 import { ensureIngredientMediaColumns } from "../services/ingredientMediaColumns.js";
+import prisma from "../services/prisma.js";
 
-const prisma = new PrismaClient();
 const router = express.Router({ mergeParams: true });
 const DEMO_PARTNER_SLUG = "volta-demo";
 const DEMO_INGREDIENT_NAMES = new Set([

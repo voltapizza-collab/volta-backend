@@ -1,9 +1,15 @@
 import express from "express";
 import { getBoostSettings } from "../services/boostSettings.js";
 import { sendStoreStatusTrackingSms } from "../services/trackingNotifications.js";
+import { createTtlCache } from "../services/responseCache.js";
 
 const TZ = process.env.TIMEZONE || "Europe/Madrid";
 const TRENDING_PRICE_BAND = 0.5;
+const publicMenuCache = createTtlCache({
+  name: "public-store-menu",
+  ttlMs: Number(process.env.PUBLIC_MENU_CACHE_MS || 30_000),
+  maxEntries: Number(process.env.PUBLIC_MENU_CACHE_MAX || 500),
+});
 
 const roundMoney = (value) => Math.round(Number(value || 0) * 100) / 100;
 
@@ -557,6 +563,13 @@ const attachStorePublicMenu = (router, prisma) => {
   router.get("/:partnerSlug/:storeSlug/menu", async (req, res) => {
     try {
       const { partnerSlug, storeSlug } = req.params;
+      const cacheKey = `${partnerSlug}:${storeSlug}`;
+      const cachedPayload = publicMenuCache.get(cacheKey);
+
+      if (cachedPayload) {
+        res.set("X-Volta-Cache", "HIT public-store-menu");
+        return res.json(cachedPayload);
+      }
 
       const partner = await prisma.partner.findUnique({
         where: { slug: partnerSlug },
@@ -880,7 +893,7 @@ const attachStorePublicMenu = (router, prisma) => {
         _avg: { total: true },
       });
 
-      return res.json({
+      const payload = {
         store: {
           id: store.id,
           partnerId: store.partnerId,
@@ -911,7 +924,11 @@ const attachStorePublicMenu = (router, prisma) => {
           windowEnd: promo.windowEnd,
           image: promo.image,
         })),
-      });
+      };
+
+      publicMenuCache.set(cacheKey, payload);
+      res.set("X-Volta-Cache", "MISS public-store-menu");
+      return res.json(payload);
     } catch (error) {
       console.error("GET /stores/:partnerSlug/:storeSlug/menu", error);
       return res.status(500).json({ error: error.message });

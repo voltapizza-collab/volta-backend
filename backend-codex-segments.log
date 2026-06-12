@@ -1,0 +1,20 @@
+
+> volta-backend@1.0.0 start
+> node scripts/prepareProductionDatabase.js && node scripts/deployProductionMigrations.js && node index.js
+
+Environment variables loaded from .env
+Prisma schema loaded from prisma\schema.prisma
+Datasource "db": MySQL database "railway" at "crossover.proxy.rlwy.net:41063"
+
+39 migrations found in prisma/migrations
+
+Applying migration `20260612120000_customer_segment_names`
+
+The following migration have been applied:
+
+migrations/
+  └─ 20260612120000_customer_segment_names/
+    └─ migration.sql
+      
+All migrations have been successfully applied.
+Server running on port 8080

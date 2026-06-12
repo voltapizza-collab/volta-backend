@@ -10,6 +10,22 @@ const parsePositiveInt = (value) => {
   return Number.isInteger(parsed) && parsed > 0 ? parsed : null;
 };
 
+const normalizeItemType = (value) =>
+  ["CATEGORY", "CHOICE"].includes(String(value || "PRODUCT").trim().toUpperCase())
+    ? "CHOICE"
+    : "PRODUCT";
+
+const normalizePositiveIds = (value) => {
+  if (!Array.isArray(value)) return [];
+  return [
+    ...new Set(
+      value
+        .map((item) => parsePositiveInt(item))
+        .filter(Boolean)
+    ),
+  ];
+};
+
 const parseNullableDate = (value) => {
   if (value == null || value === "") return null;
   const date = new Date(value);
@@ -67,22 +83,63 @@ const parseItems = (value) => {
   if (!Array.isArray(source)) return [];
 
   return source
-    .map((item) => ({
-      pizzaId: parsePositiveInt(item?.pizzaId),
-      name: String(item?.name || "").trim(),
-      category: item?.category ? String(item.category).trim() : null,
-      quantity: Math.max(1, Number(item?.quantity || 1)),
-      size: item?.size ? String(item.size).trim() : null,
-      unitPrice: Number.isFinite(Number(item?.unitPrice)) ? Number(item.unitPrice) : null,
-      sizeOptions: Array.isArray(item?.sizeOptions)
-        ? item.sizeOptions.map((size) => String(size || "").trim()).filter(Boolean)
-        : [],
-      priceBySize:
+    .map((item) => {
+      const type = normalizeItemType(item?.type);
+      const quantity = Math.max(1, Number(item?.quantity || 1));
+      const size = item?.size ? String(item.size).trim() : null;
+      const sizeOptions = Array.isArray(item?.sizeOptions)
+        ? item.sizeOptions.map((option) => String(option || "").trim()).filter(Boolean)
+        : [];
+      const priceBySize =
         item?.priceBySize && typeof item.priceBySize === "object"
           ? item.priceBySize
-          : {},
-    }))
-    .filter((item) => item.pizzaId && item.name);
+          : {};
+
+      if (type === "CHOICE") {
+        const categoryId = parsePositiveInt(item?.categoryId);
+        const categoryName = String(item?.categoryName || item?.category || item?.name || "").trim();
+        const optionProductIds = normalizePositiveIds(item?.optionProductIds);
+        const choiceType =
+          String(item?.choiceType || "").trim().toUpperCase() === "PRODUCTS" ||
+          optionProductIds.length
+            ? "PRODUCTS"
+            : "CATEGORY";
+
+        return {
+          type,
+          choiceType,
+          categoryId,
+          categoryName,
+          name: categoryName,
+          category: categoryName,
+          quantity,
+          optionProductIds,
+          size,
+          sizeOptions,
+          priceBySize,
+        };
+      }
+
+      return {
+        type,
+        pizzaId: parsePositiveInt(item?.pizzaId),
+        name: String(item?.name || "").trim(),
+        categoryId: parsePositiveInt(item?.categoryId),
+        category: item?.category ? String(item.category).trim() : null,
+        quantity,
+        size,
+        unitPrice: Number.isFinite(Number(item?.unitPrice)) ? Number(item.unitPrice) : null,
+        sizeOptions,
+        priceBySize,
+      };
+    })
+    .filter((item) =>
+      item.type === "CHOICE"
+        ? item.choiceType === "PRODUCTS"
+          ? item.optionProductIds.length
+          : item.categoryId || item.categoryName
+        : item.pizzaId && item.name
+    );
 };
 
 const uploadPromoImage = async (file, partnerId) => {
