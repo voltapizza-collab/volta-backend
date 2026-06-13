@@ -465,19 +465,32 @@ const parseMaybeJson = (value, fallback) => {
   }
 };
 
+const normalizePaymentDestination = (...values) =>
+  values
+    .map((value) => String(value || "").trim())
+    .find(Boolean) || "";
+
 const normalizePaymentPolicySettings = (value) => {
   const parsed = parseMaybeJson(parseMaybeJson(value, {}), {});
   const source = parsed && typeof parsed === "object" && !Array.isArray(parsed) ? parsed : {};
+  const paypalEmail = normalizePaymentDestination(source.paypalEmail, source.paypalAddress);
+  const cryptoWalletAddress = normalizePaymentDestination(
+    source.cryptoWalletAddress,
+    source.cryptoAddress,
+    source.walletAddress
+  );
 
   return {
     schemaVersion: 1,
     card: true,
     cash: Boolean(source.cash),
     cashStoreIds: normalizePositiveIds(source.cashStoreIds),
-    paypal: Boolean(source.paypal),
+    paypal: Boolean(source.paypal) && Boolean(paypalEmail),
     paypalStoreIds: normalizePositiveIds(source.paypalStoreIds),
-    crypto: Boolean(source.crypto),
+    paypalEmail,
+    crypto: Boolean(source.crypto) && Boolean(cryptoWalletAddress),
     cryptoStoreIds: normalizePositiveIds(source.cryptoStoreIds),
+    cryptoWalletAddress,
   };
 };
 

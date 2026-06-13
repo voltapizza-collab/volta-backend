@@ -363,5 +363,10 @@
     "id": 79,
     "name": "Alitas de pollo",
     "category": "CARNES"
+  },
+  {
+    "id": 80,
+    "name": "1kg Relleno de Mozzarela",
+    "category": "QUESOS"
   }
 ]

@@ -234,6 +234,48 @@ const getScheduledFor = (sale) => {
   return scheduledFor ? scheduledFor.toISOString() : null;
 };
 
+const normalizeSalePaymentMode = (sale, customerData = asObject(sale?.customerData)) => {
+  const rawMode = String(
+    customerData.paymentMode ||
+      customerData.paymentMethod ||
+      customerData.payment_type ||
+      sale?.paymentMode ||
+      sale?.paymentMethod ||
+      ""
+  )
+    .trim()
+    .toLowerCase();
+  const rawStatus = String(customerData.paymentStatus || sale?.paymentStatus || "").trim().toLowerCase();
+
+  if (rawMode === "cash" || rawMode === "efectivo" || rawStatus.includes("cash")) return "cash";
+  if (
+    rawMode === "card" ||
+    rawMode === "tarjeta" ||
+    rawMode === "stripe" ||
+    rawMode === "stripe_checkout" ||
+    rawStatus.includes("card") ||
+    rawStatus.includes("stripe") ||
+    sale?.stripePaymentIntentId ||
+    sale?.stripeCheckoutSessionId
+  ) {
+    return "card";
+  }
+
+  return "";
+};
+
+const normalizeSalePaymentStatus = (sale, customerData = asObject(sale?.customerData)) => {
+  const rawStatus = String(customerData.paymentStatus || sale?.paymentStatus || "").trim();
+  if (rawStatus) return rawStatus;
+
+  const mode = normalizeSalePaymentMode(sale, customerData);
+  if (mode === "cash") return "cash_pending";
+  if (mode === "card") return sale?.status === "AWAITING_PAYMENT" ? "awaiting_card_payment" : "card_paid";
+  return "";
+};
+
+export { normalizeSalePaymentMode };
+
 const roundMoney = (value) => Math.round(Number(value || 0) * 100) / 100;
 const toCents = (value) => Math.round(roundMoney(value) * 100);
 
@@ -724,8 +766,10 @@ const getLineName = (item) =>
       (item?.pizzaId ? `Producto #${item.pizzaId}` : "Producto")
   ).trim();
 
-const formatSale = (sale) => {
+export const formatSale = (sale) => {
   const customerData = asObject(sale.customerData);
+  const paymentMode = normalizeSalePaymentMode(sale, customerData);
+  const paymentStatus = normalizeSalePaymentStatus(sale, customerData);
   const boostAmount =
     sale.boostAmount == null ? 0 : Number(sale.boostAmount || 0);
   const scheduledFor = getScheduledFor(sale);
@@ -757,6 +801,8 @@ const formatSale = (sale) => {
     channel: sale.channel,
     currency: sale.currency,
     processed: sale.processed,
+    paymentMode,
+    paymentStatus,
     scheduledFor,
     isScheduled: Boolean(scheduledFor),
     total: Number(sale.total || 0),
@@ -793,6 +839,8 @@ const formatSale = (sale) => {
       orderCount,
       averageTicket,
       trend,
+      paymentMode,
+      paymentStatus,
       scheduledFor,
       chatMessages: getChatMessages(customerData),
     },
