@@ -325,6 +325,28 @@ model IngredientSuggestion {
   reviewedAt DateTime?
   @@index([status])
 }
+model OnboardingRequest {
+  id           Int      @id @default(autoincrement())
+  token        String   @unique @db.VarChar(191)
+  name         String   @db.VarChar(191)
+  businessName String  @db.VarChar(191)
+  email        String   @db.VarChar(191)
+  phone        String?  @db.VarChar(64)
+  message      String?  @db.Text
+  status       String   @default("RECEIVED") @db.VarChar(32)
+  emailStatus  String   @default("PENDING") @db.VarChar(32)
+  emailSentAt  DateTime?
+  emailError   String?  @db.Text
+  formalData   Json?
+  submittedAt  DateTime?
+  reviewedAt   DateTime?
+  reviewerNote String?  @db.Text
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@index([status, createdAt])
+  @@index([email])
+}
 model Sale {
   id                      Int                 @id @default(autoincrement())
   code                    String              @unique

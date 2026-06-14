@@ -36,6 +36,7 @@ import presenceRoutes from "./routes/presence.js";
 import salesRoutes from "./routes/sales.js";
 import trackingAlertsRoutes from "./routes/trackingAlerts.js";
 import productReviewsRoutes from "./routes/productReviews.js";
+import onboardingRoutes from "./routes/onboarding.js";
 import { startProductReviewWorker } from "./services/productReviews.js";
 import { validateTelnyxEnv } from "./services/telnyx.js";
 import prisma, { withRequestMetrics } from "./services/prisma.js";
@@ -114,6 +115,7 @@ const presenceRouter = presenceRoutes();
 const salesRouter = salesRoutes(prisma);
 const trackingAlertsRouter = trackingAlertsRoutes(prisma);
 const productReviewsRouter = productReviewsRoutes(prisma);
+const onboardingRouter = onboardingRoutes(prisma);
 
 const envOrigins = (process.env.CORS_ORIGINS || "")
   .split(",")
@@ -210,6 +212,7 @@ app.use("/api/myorders", myordersRouter);
 app.use("/api/sales", salesRouter);
 app.use("/api/tracking-alerts", trackingAlertsRouter);
 app.use("/api/product-reviews", productReviewsRouter);
+app.use("/api/onboarding", onboardingRouter);
 app.use("/api/billing", billingRouter);
 app.use("/api/boost-settings", boostSettingsRouter);
 app.use("/api/webhooks", telnyxWebhooksRouter);
