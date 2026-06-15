@@ -8,8 +8,8 @@ import { assertCloudinaryConfigured } from "../services/cloudinaryConfig.js";
 const MAX_DOCUMENTS = 8;
 const MAX_DOCUMENT_SIZE_BYTES = 8 * 1024 * 1024;
 const ALLOWED_DOCUMENT_TYPES = new Set(["application/pdf", "image/jpeg", "image/png"]);
-const REQUIRED_DOCUMENT_TYPES = ["IDENTITY", "FISCAL", "BANK"];
-const OPTIONAL_DOCUMENT_TYPES = ["REPRESENTATION", "HEALTH"];
+const REQUIRED_DOCUMENT_TYPES = ["IDENTITY", "FISCAL"];
+const OPTIONAL_DOCUMENT_TYPES = ["BANK", "REPRESENTATION", "HEALTH"];
 const DOCUMENT_TYPES = new Set([...REQUIRED_DOCUMENT_TYPES, ...OPTIONAL_DOCUMENT_TYPES]);
 const DOCUMENT_TYPE_LABELS = {
   IDENTITY: "Documento de identidad del responsable",
@@ -177,7 +177,7 @@ const buildOnboardingEmail = (request, formalUrl) => {
     "",
     `Hemos recibido la solicitud de ${request.businessName} en Volta Pizza.`,
     "Tu proceso entra ahora en la fase 2: validacion basica de datos legales y operativos.",
-    "Necesitamos que completes el formulario con CIF/NIF/VAT, datos del responsable, direccion fiscal y un documento simple que acredite la titularidad o representacion del negocio.",
+    "Necesitamos que completes el formulario con CIF/NIF/NIE, datos del responsable, direccion fiscal y documentacion basica para validar el alta.",
     "",
     `Sube la informacion aqui: ${formalUrl}`,
     "",
@@ -209,7 +209,7 @@ const buildOnboardingEmail = (request, formalUrl) => {
           </td>
           <td style="background:#f8f5ff;border:1px solid #decfff;border-radius:12px;padding:12px 14px">
             <strong style="color:#000000">Identificacion fiscal</strong><br>
-            <span style="color:#4b405a;font-size:14px">CIF/NIF/VAT o identificador fiscal de la empresa.</span>
+            <span style="color:#4b405a;font-size:14px">CIF/NIF/NIE o identificador fiscal del titular.</span>
           </td>
         </tr>
         <tr>
