@@ -33,12 +33,21 @@ const PUBLIC_STATUSES = new Set([
   "EMAIL_SENT",
   "FORM_COMPLETED",
   "IN_REVIEW",
+  "CONTRACT_SENT",
+  "ACTIVATED",
   "APPROVED",
   "REJECTED",
   "NEEDS_INFO",
 ]);
 
-const REVIEW_STATUSES = new Set(["IN_REVIEW", "APPROVED", "REJECTED", "NEEDS_INFO"]);
+const REVIEW_STATUSES = new Set([
+  "IN_REVIEW",
+  "CONTRACT_SENT",
+  "ACTIVATED",
+  "APPROVED",
+  "REJECTED",
+  "NEEDS_INFO",
+]);
 
 const cleanText = (value, max = 500) =>
   String(value || "")
@@ -92,6 +101,8 @@ const publicFrontendUrl = () =>
     .replace(/\/$/, "");
 
 const buildFormalUrl = (token) => `${publicFrontendUrl()}/onboarding/${encodeURIComponent(token)}`;
+
+const buildContractUrl = (token) => `${buildFormalUrl(token)}?contract=1`;
 
 const mapRequest = (request) => ({
   id: request.id,
@@ -177,7 +188,7 @@ const buildOnboardingEmail = (request, formalUrl) => {
     "",
     `Hemos recibido la solicitud de ${request.businessName} en Volta Pizza.`,
     "Tu proceso entra ahora en la fase 2: validacion basica de datos legales y operativos.",
-    "Necesitamos que completes el formulario con CIF/NIF/NIE, datos del responsable, direccion fiscal y documentacion basica para validar el alta.",
+    "Necesitamos que completes el formulario con CIF/NIF/NIE, datos del responsable y documentacion basica para validar el alta.",
     "",
     `Sube la informacion aqui: ${formalUrl}`,
     "",
@@ -274,6 +285,277 @@ const buildReviewEmail = (request) => {
   });
 
   return { text, html };
+};
+
+const formatContractDate = (value) => {
+  const date = value ? new Date(value) : new Date();
+  if (Number.isNaN(date.getTime())) return "";
+  return date.toLocaleDateString("es-ES", {
+    day: "2-digit",
+    month: "long",
+    year: "numeric",
+  });
+};
+
+const formalValueLabels = {
+  AUTONOMO: "Autonomo",
+  SOCIEDAD: "Sociedad",
+  PARTNER_DELIVERY: "Reparto gestionado por el partner",
+};
+
+const formatFormalValue = (value) => formalValueLabels[value] || value || "-";
+
+const buildContractData = (request) => {
+  const formalData = request?.formalData || {};
+  const commercialName = formalData.commercialName || request?.businessName || "-";
+  const legalName = formalData.legalName || commercialName;
+  const contractDate = request?.submittedAt || request?.reviewedAt || request?.createdAt;
+  const address = [
+    formalData.fiscalAddress || formalData.businessAddress,
+    formalData.city,
+    formalData.postalCode,
+    formalData.country,
+  ]
+    .filter(Boolean)
+    .join(", ");
+
+  return {
+    contractDate: formatContractDate(contractDate),
+    legalName: formatFormalValue(legalName),
+    commercialName: formatFormalValue(commercialName),
+    partnerType: formatFormalValue(formalData.partnerType),
+    taxId: formatFormalValue(formalData.taxId),
+    address: formatFormalValue(address),
+    legalRepresentative: formatFormalValue(formalData.legalRepresentative),
+    representativeRole: formatFormalValue(formalData.representativeRole),
+    businessEmail: formatFormalValue(formalData.businessEmail || request?.email),
+    businessPhone: formatFormalValue(formalData.businessPhone || request?.phone),
+    accountHolder: formatFormalValue(formalData.accountHolder),
+    iban: formatFormalValue(formalData.iban),
+    operationMode: formatFormalValue(formalData.operationMode),
+  };
+};
+
+const buildContractEmail = (request, contractUrl) => {
+  const contract = buildContractData(request);
+  const safeContractUrl = escapeHtml(contractUrl);
+  const text = [
+    `Hola ${request.name},`,
+    "",
+    `Ya hemos preparado el contrato de adhesion comercial de ${contract.commercialName}.`,
+    "Revisalo y aceptalo desde el enlace seguro para continuar con la activacion del backoffice.",
+    "",
+    `Abrir contrato: ${contractUrl}`,
+    "",
+    "Cuando lo aceptes, generaremos tus credenciales iniciales y las enviaremos por email.",
+    "",
+    "Gracias,",
+    "Equipo Volta Pizza",
+  ].join("\n");
+
+  const html = buildEmailShell({
+    title: "Contrato listo para firma",
+    preheader: "Revisa y acepta el contrato para activar tu backoffice Volta.",
+    bodyHtml: `
+      <p style="margin:0 0 14px">Estimado/a <strong>${escapeHtml(request.name)}</strong>:</p>
+      <p style="margin:0 0 14px">Ya hemos preparado el contrato de adhesion comercial de <strong>${escapeHtml(contract.commercialName)}</strong>.</p>
+      <div style="background:#ffb61c;border-radius:14px;padding:18px;margin:20px 0 22px">
+        <div style="color:#3b008b;font-size:12px;font-weight:900;text-transform:uppercase;letter-spacing:.1em">Siguiente paso</div>
+        <div style="margin-top:6px;color:#000000;font-size:22px;line-height:1.25;font-weight:900">Revision y firma del contrato</div>
+        <div style="margin-top:8px;color:#2a173f;font-size:14px;line-height:1.5">Cuando lo aceptes, generaremos tus credenciales iniciales para entrar en el backoffice.</div>
+      </div>
+      <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="border-collapse:collapse;margin:0 0 20px;background:#f8f5ff;border:1px solid #decfff;border-radius:12px">
+        <tr>
+          <td style="padding:14px">
+            <div style="color:#3b008b;font-size:12px;font-weight:900;text-transform:uppercase;letter-spacing:.08em">Datos principales</div>
+            <div style="margin-top:8px;color:#000000;font-size:14px;line-height:1.6">
+              Titular: <strong>${escapeHtml(contract.legalName)}</strong><br>
+              CIF/NIF/NIE: <strong>${escapeHtml(contract.taxId)}</strong><br>
+              Responsable: <strong>${escapeHtml(contract.legalRepresentative)}</strong><br>
+              Email contractual: <strong>${escapeHtml(contract.businessEmail)}</strong>
+            </div>
+          </td>
+        </tr>
+      </table>
+      <p style="margin:0 0 22px;text-align:center">
+        <a href="${safeContractUrl}" style="display:inline-block;background:#3b008b;color:#ffffff;padding:15px 26px;border-radius:999px;font-weight:900;text-decoration:none;box-shadow:0 8px 18px rgba(59,0,139,.24)">Abrir contrato y firmar</a>
+      </p>
+      <div style="background:#fff8e7;border-left:5px solid #ffb61c;padding:12px 14px;margin:0 0 20px;color:#3b2c4a;font-size:13px">
+        Si el boton no funciona, copia este enlace:<br><a href="${safeContractUrl}" style="color:#6a3df0;word-break:break-all;font-weight:700">${safeContractUrl}</a>
+      </div>
+      ${buildVoltaSignature()}
+    `,
+  });
+
+  return { text, html };
+};
+
+const buildCredentialsEmail = (request, activation) => {
+  const backofficeUrl = `${publicFrontendUrl()}/Backoffice`;
+  const text = [
+    `Hola ${request.name},`,
+    "",
+    `Contrato aceptado. Ya puedes entrar en el backoffice de ${activation.partnerName}.`,
+    "",
+    `Backoffice: ${backofficeUrl}`,
+    `Usuario: ${activation.username}`,
+    `Contrasena: ${activation.password}`,
+    "",
+    "Estas credenciales iniciales son provisionales. Guardalas y contactanos si necesitas cambiarlas.",
+    "",
+    "Gracias,",
+    "Equipo Volta Pizza",
+  ].join("\n");
+
+  const html = buildEmailShell({
+    title: "Credenciales de backoffice",
+    preheader: "Tu acceso inicial a Volta Pizza ya esta disponible.",
+    bodyHtml: `
+      <p style="margin:0 0 14px">Estimado/a <strong>${escapeHtml(request.name)}</strong>:</p>
+      <p style="margin:0 0 14px">Contrato aceptado. Ya puedes entrar en el backoffice de <strong>${escapeHtml(activation.partnerName)}</strong>.</p>
+      <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="border-collapse:collapse;margin:20px 0;background:#f8f5ff;border:1px solid #decfff;border-radius:14px">
+        <tr>
+          <td style="padding:18px">
+            <div style="color:#3b008b;font-size:12px;font-weight:900;text-transform:uppercase;letter-spacing:.1em">Acceso inicial</div>
+            <div style="margin-top:10px;color:#000000;font-size:15px;line-height:1.7">
+              URL: <a href="${escapeHtml(backofficeUrl)}" style="color:#6a3df0;font-weight:900;text-decoration:none">${escapeHtml(backofficeUrl)}</a><br>
+              Usuario: <strong>${escapeHtml(activation.username)}</strong><br>
+              Contrasena: <strong>${escapeHtml(activation.password)}</strong>
+            </div>
+          </td>
+        </tr>
+      </table>
+      <p style="margin:0 0 22px;text-align:center">
+        <a href="${escapeHtml(backofficeUrl)}" style="display:inline-block;background:#3b008b;color:#ffffff;padding:15px 26px;border-radius:999px;font-weight:900;text-decoration:none;box-shadow:0 8px 18px rgba(59,0,139,.24)">Entrar al backoffice</a>
+      </p>
+      <div style="background:#fff8e7;border-left:5px solid #ffb61c;padding:12px 14px;margin:0 0 20px;color:#3b2c4a;font-size:13px">
+        Estas credenciales iniciales son provisionales. Guardalas y contactanos si necesitas cambiarlas.
+      </div>
+      ${buildVoltaSignature()}
+    `,
+  });
+
+  return { text, html };
+};
+
+const slugify = (value, fallback = "partner") => {
+  const normalized = String(value || "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 48);
+
+  return normalized || fallback;
+};
+
+const resolveUniquePartnerSlug = async (tx, baseValue) => {
+  const baseSlug = slugify(baseValue, "partner");
+  let slug = baseSlug;
+  let suffix = 2;
+
+  while (await tx.partner.findUnique({ where: { slug }, select: { id: true } })) {
+    slug = `${baseSlug}-${suffix}`;
+    suffix += 1;
+  }
+
+  return slug;
+};
+
+const resolveUniqueStoreSlug = async (tx, partnerId, baseValue) => {
+  const baseSlug = slugify(baseValue, "central");
+  let slug = baseSlug;
+  let suffix = 2;
+
+  while (
+    await tx.store.findUnique({
+      where: { partnerId_slug: { partnerId, slug } },
+      select: { id: true },
+    })
+  ) {
+    slug = `${baseSlug}-${suffix}`;
+    suffix += 1;
+  }
+
+  return slug;
+};
+
+const buildActivationPayload = ({ partner, store, username, password }) => ({
+  partnerId: partner.id,
+  storeId: store.id,
+  partnerName: partner.name,
+  partnerSlug: partner.slug,
+  storeName: store.storeName,
+  storeSlug: store.slug,
+  username,
+  password,
+  backofficeUrl: `${publicFrontendUrl()}/Backoffice`,
+  activatedAt: new Date().toISOString(),
+});
+
+const createPartnerActivation = async (tx, request) => {
+  const formalData = request.formalData || {};
+  const existingActivation = formalData.activation || null;
+
+  if (existingActivation?.partnerId) {
+    const partner = await tx.partner.findUnique({
+      where: { id: Number(existingActivation.partnerId) },
+      include: { stores: true },
+    });
+
+    if (partner) {
+      return {
+        ...existingActivation,
+        partnerName: partner.name,
+        partnerSlug: partner.slug,
+        storeId: existingActivation.storeId || partner.stores?.[0]?.id || null,
+        username: existingActivation.username || partner.slug,
+        password: existingActivation.password || partner.slug,
+      };
+    }
+  }
+
+  const partnerName = cleanText(formalData.commercialName || request.businessName, 191);
+  const partnerSlug = await resolveUniquePartnerSlug(tx, partnerName);
+  const country = cleanText(formalData.country, 80) || "Espana";
+  const currency = country.toLowerCase().includes("esp") ? "EUR" : "EUR";
+
+  const partner = await tx.partner.create({
+    data: {
+      name: partnerName,
+      slug: partnerSlug,
+      country,
+      currency,
+      active: true,
+      storefrontMode: "commercial-light",
+      trackingNotificationSettings: {},
+      storefrontButtonConfig: {},
+    },
+  });
+
+  const storeSlug = await resolveUniqueStoreSlug(tx, partner.id, partnerName);
+  const store = await tx.store.create({
+    data: {
+      partnerId: partner.id,
+      slug: storeSlug,
+      storeName: partnerName,
+      address: cleanText(formalData.businessAddress || formalData.fiscalAddress, 255) || "-",
+      city: cleanText(formalData.city, 120) || null,
+      zipCode: cleanText(formalData.postalCode, 32) || null,
+      email: cleanText(formalData.businessEmail || request.email, 191) || null,
+      tlf: cleanText(formalData.businessPhone || request.phone, 64) || null,
+      active: true,
+      acceptingOrders: false,
+    },
+  });
+
+  return buildActivationPayload({
+    partner,
+    store,
+    username: partner.slug,
+    password: partner.slug,
+  });
 };
 
 const sanitizeFileName = (value) =>
@@ -379,9 +661,7 @@ const buildFormalData = (body, supportingDocuments = []) => {
   if (!legalName) missing.push("legalName");
   if (!taxId) missing.push("taxId");
   if (!legalRepresentative) missing.push("legalRepresentative");
-  if (!representativeId) missing.push("representativeId");
   if (!representativeRole) missing.push("representativeRole");
-  if (!fiscalAddress) missing.push("fiscalAddress");
   if (!commercialName) missing.push("commercialName");
   if (!businessAddress) missing.push("businessAddress");
   if (!city) missing.push("city");
@@ -532,6 +812,69 @@ export default function onboardingRoutes(prisma) {
     }
   });
 
+  router.post("/requests/:id/contract/send", async (req, res) => {
+    try {
+      const id = Number(req.params.id);
+
+      if (!Number.isInteger(id) || id <= 0) {
+        return res.status(400).json({ ok: false, error: "invalid_onboarding_request_id" });
+      }
+
+      const request = await prisma.onboardingRequest.findUnique({ where: { id } });
+
+      if (!request) {
+        return res.status(404).json({ ok: false, error: "onboarding_request_not_found" });
+      }
+
+      if (!request.formalData) {
+        return res.status(409).json({ ok: false, error: "formal_data_required" });
+      }
+
+      if (["REJECTED", "ACTIVATED"].includes(request.status)) {
+        return res.status(409).json({ ok: false, error: "onboarding_request_closed" });
+      }
+
+      const contractUrl = buildContractUrl(request.token);
+      const contractEmailBody = buildContractEmail(request, contractUrl);
+      const contractEmailResult = await sendSmtpEmail({
+        to: request.email,
+        subject: "Contrato listo para firma - Volta Pizza",
+        text: contractEmailBody.text,
+        html: contractEmailBody.html,
+        replyTo: process.env.ONBOARDING_REPLY_TO || "voltapizza@gmail.com",
+      });
+
+      const now = new Date();
+      const updated = await prisma.onboardingRequest.update({
+        where: { id },
+        data: {
+          status: "CONTRACT_SENT",
+          reviewedAt: request.reviewedAt || now,
+          formalData: {
+            ...(request.formalData || {}),
+            contractNotification: {
+              emailStatus: contractEmailResult.ok
+                ? "SENT"
+                : contractEmailResult.skipped
+                  ? "NOT_CONFIGURED"
+                  : "FAILED",
+              emailSentAt: contractEmailResult.ok ? now.toISOString() : null,
+              emailError: contractEmailResult.ok
+                ? null
+                : contractEmailResult.reason || "email_send_failed",
+              contractUrl,
+            },
+          },
+        },
+      });
+
+      return res.json({ ok: true, request: mapRequest(updated) });
+    } catch (error) {
+      console.error("[onboarding.contract.send] error:", error);
+      return res.status(500).json({ ok: false, error: "contract_send_failed" });
+    }
+  });
+
   router.delete("/requests/:id", async (req, res) => {
     try {
       const id = Number(req.params.id);
@@ -581,7 +924,7 @@ export default function onboardingRoutes(prisma) {
         return res.status(404).json({ ok: false, error: "onboarding_request_not_found" });
       }
 
-      if (["APPROVED", "REJECTED"].includes(request.status)) {
+      if (["CONTRACT_SENT", "ACTIVATED", "APPROVED", "REJECTED"].includes(request.status)) {
         return res.status(409).json({ ok: false, error: "onboarding_request_closed" });
       }
 
@@ -657,6 +1000,108 @@ export default function onboardingRoutes(prisma) {
         return res.status(503).json({ ok: false, error: "document_upload_not_configured" });
       }
       return res.status(500).json({ ok: false, error: "onboarding_form_submit_failed" });
+    }
+  });
+
+  router.post("/form/:token/sign-contract", async (req, res) => {
+    try {
+      const token = cleanText(req.params.token, 191);
+      const accepted = parseBoolean(req.body?.acceptedContract);
+
+      if (!accepted) {
+        return res.status(400).json({ ok: false, error: "contract_acceptance_required" });
+      }
+
+      const request = await prisma.onboardingRequest.findUnique({ where: { token } });
+
+      if (!request) {
+        return res.status(404).json({ ok: false, error: "onboarding_request_not_found" });
+      }
+
+      if (!request.formalData) {
+        return res.status(409).json({ ok: false, error: "formal_data_required" });
+      }
+
+      if (request.status !== "CONTRACT_SENT") {
+        return res.status(409).json({ ok: false, error: "onboarding_request_not_signable" });
+      }
+
+      const signedMeta = {
+        acceptedAt: new Date().toISOString(),
+        acceptedFrom: "public_contract_page",
+      };
+
+      const activation = await prisma.$transaction(async (tx) => {
+        const lockedRequest = await tx.onboardingRequest.findUnique({ where: { token } });
+
+        if (!lockedRequest) {
+          const error = new Error("onboarding_request_not_found");
+          error.status = 404;
+          throw error;
+        }
+
+        const nextActivation = await createPartnerActivation(tx, lockedRequest);
+        await tx.onboardingRequest.update({
+          where: { token },
+          data: {
+            status: "ACTIVATED",
+            reviewedAt: lockedRequest.reviewedAt || new Date(),
+            formalData: {
+              ...(lockedRequest.formalData || {}),
+              contractSignature: {
+                ...((lockedRequest.formalData || {}).contractSignature || {}),
+                ...signedMeta,
+              },
+              activation: nextActivation,
+            },
+          },
+        });
+
+        return nextActivation;
+      });
+
+      const credentialsEmailBody = buildCredentialsEmail(request, activation);
+      const credentialsEmailResult = await sendSmtpEmail({
+        to: request.email,
+        subject: "Tus credenciales de backoffice - Volta Pizza",
+        text: credentialsEmailBody.text,
+        html: credentialsEmailBody.html,
+        replyTo: process.env.ONBOARDING_REPLY_TO || "voltapizza@gmail.com",
+      });
+
+      const finalRequest = await prisma.onboardingRequest.update({
+        where: { token },
+        data: {
+          formalData: {
+            ...(request.formalData || {}),
+            contractNotification: (request.formalData || {}).contractNotification || null,
+            contractSignature: {
+              ...((request.formalData || {}).contractSignature || {}),
+              ...signedMeta,
+            },
+            activation,
+            credentialsNotification: {
+              emailStatus: credentialsEmailResult.ok
+                ? "SENT"
+                : credentialsEmailResult.skipped
+                  ? "NOT_CONFIGURED"
+                  : "FAILED",
+              emailSentAt: credentialsEmailResult.ok ? new Date().toISOString() : null,
+              emailError: credentialsEmailResult.ok
+                ? null
+                : credentialsEmailResult.reason || "email_send_failed",
+            },
+          },
+        },
+      });
+
+      return res.json({ ok: true, request: mapRequest(finalRequest), activation });
+    } catch (error) {
+      console.error("[onboarding.contract.sign] error:", error);
+      if (error?.status) {
+        return res.status(error.status).json({ ok: false, error: error.message });
+      }
+      return res.status(500).json({ ok: false, error: "contract_sign_failed" });
     }
   });
 
