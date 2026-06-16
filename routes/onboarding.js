@@ -653,7 +653,7 @@ const createPartnerActivation = async (tx, request) => {
       zipCode: cleanText(formalData.postalCode, 32) || null,
       email: cleanText(formalData.businessEmail || request.email, 191) || null,
       tlf: cleanText(formalData.businessPhone || request.phone, 64) || null,
-      active: true,
+      active: false,
       acceptingOrders: false,
     },
   });

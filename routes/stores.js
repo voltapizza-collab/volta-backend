@@ -24,6 +24,26 @@ const toNullableFloat = (value) => {
   return Number.isFinite(parsed) ? parsed : null;
 };
 
+const hasUsableStoreCoordinates = (store) => {
+  const latitude = toNullableFloat(store?.latitude);
+  const longitude = toNullableFloat(store?.longitude);
+  return (
+    latitude != null &&
+    longitude != null &&
+    latitude >= -90 &&
+    latitude <= 90 &&
+    longitude >= -180 &&
+    longitude <= 180
+  );
+};
+
+const storeCoordinatesRequiredResponse = (res) =>
+  res.status(409).json({
+    error: "store_coordinates_required",
+    message:
+      "Completa latitud y longitud de la tienda antes de activarla.",
+  });
+
 const toNullableInt = (value) => {
   if (value === "" || value == null) return null;
   const parsed = Number(value);
@@ -45,6 +65,11 @@ const buildStorePayload = (body) => {
     ? toNullableInt(body.reservationCapacity) ?? 0
     : null;
 
+  const latitude = toNullableFloat(body.latitude);
+  const longitude = toNullableFloat(body.longitude);
+  const hasCoordinates = hasUsableStoreCoordinates({ latitude, longitude });
+  const explicitActive = typeof body.active === "boolean";
+
   return {
     storeName: String(body.storeName || body.name || "").trim(),
     slug: slugify(body.slug || body.storeName || body.name),
@@ -53,9 +78,9 @@ const buildStorePayload = (body) => {
     zipCode: body.zipCode ? String(body.zipCode).trim() : null,
     email: body.email ? String(body.email).trim() : null,
     tlf: body.tlf ? String(body.tlf).trim() : null,
-    latitude: toNullableFloat(body.latitude),
-    longitude: toNullableFloat(body.longitude),
-    active: typeof body.active === "boolean" ? body.active : true,
+    latitude,
+    longitude,
+    active: explicitActive ? body.active : hasCoordinates,
     acceptingOrders:
       typeof body.acceptingOrders === "boolean" ? body.acceptingOrders : true,
     acceptsReservations,
@@ -603,6 +628,10 @@ const attachStorePublicMenu = (router, prisma) => {
         return res.status(404).json({ error: "Store not found" });
       }
 
+      if (store.active === false || !hasUsableStoreCoordinates(store)) {
+        return res.status(404).json({ error: "Store not active" });
+      }
+
       const pizzas = await prisma.menuPizza.findMany({
         where: {
           partnerId: store.partnerId,
@@ -964,6 +993,10 @@ const attachStorePublicMenu = (router, prisma) => {
         return res.status(404).json({ error: "Store not found" });
       }
 
+      if (store.active === false || !hasUsableStoreCoordinates(store)) {
+        return res.status(404).json({ error: "Store not active" });
+      }
+
       return res.json(store);
     } catch (error) {
       console.error("GET /stores/:partnerSlug/:storeSlug", error);
@@ -989,8 +1022,16 @@ export default function storesRoutes(prisma) {
     try {
       const previous = await prisma.store.findUnique({
         where: { id },
-        select: { active: true },
+        select: { active: true, latitude: true, longitude: true },
       });
+
+      if (!previous) {
+        return res.status(404).json({ error: "Store not found" });
+      }
+
+      if (active && !hasUsableStoreCoordinates(previous)) {
+        return storeCoordinatesRequiredResponse(res);
+      }
 
       const updated = await prisma.store.update({
         where: { id },
@@ -1293,6 +1334,10 @@ export default function storesRoutes(prisma) {
       return res.status(400).json({ error: "slug required" });
     }
 
+    if (req.body.active === true && !hasUsableStoreCoordinates(payload)) {
+      return storeCoordinatesRequiredResponse(res);
+    }
+
     try {
       const result = await prisma.$transaction(async (tx) => {
         const partner = await tx.partner.findUnique({
@@ -1340,6 +1385,19 @@ export default function storesRoutes(prisma) {
         return res.status(404).json({ error: "Store not found" });
       }
 
+      const nextActive =
+        typeof req.body.active === "boolean" ? payload.active : existing.active;
+      const nextData = {
+        latitude: payload.latitude,
+        longitude: payload.longitude,
+      };
+
+      if (nextActive && !hasUsableStoreCoordinates(nextData)) {
+        nextData.active = false;
+      } else {
+        nextData.active = nextActive;
+      }
+
       const updated = await prisma.store.update({
         where: { id },
         data: {
@@ -1350,10 +1408,9 @@ export default function storesRoutes(prisma) {
           zipCode: payload.zipCode,
           email: payload.email,
           tlf: payload.tlf,
-          latitude: payload.latitude,
-          longitude: payload.longitude,
-          active:
-            typeof req.body.active === "boolean" ? payload.active : existing.active,
+          latitude: nextData.latitude,
+          longitude: nextData.longitude,
+          active: nextData.active,
           acceptingOrders:
             typeof req.body.acceptingOrders === "boolean"
               ? payload.acceptingOrders
