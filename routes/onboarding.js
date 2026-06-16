@@ -390,6 +390,114 @@ const buildContractEmail = (request, contractUrl) => {
   return { text, html };
 };
 
+const CONTRACT_DOCUMENT_VERSION = "volta-adhesion-comercial-v1";
+
+const normalizeIp = (value) =>
+  String(value || "")
+    .split(",")[0]
+    .trim()
+    .slice(0, 128);
+
+const buildSignedContractSnapshot = (request, signature, activation = null) => {
+  const contract = buildContractData(request);
+  const signedAt = signature?.acceptedAt || new Date().toISOString();
+  const lines = [
+    "CONTRATO DE ADHESION COMERCIAL",
+    "",
+    `Version documental: ${CONTRACT_DOCUMENT_VERSION}`,
+    `Fecha de firma electronica: ${signedAt}`,
+    `Firmante: ${contract.legalRepresentative}`,
+    `Cargo: ${contract.representativeRole}`,
+    `Correo de firma: ${contract.businessEmail}`,
+    signature?.ipAddress ? `IP registrada: ${signature.ipAddress}` : null,
+    signature?.userAgent ? `Agente tecnico: ${signature.userAgent}` : null,
+    "",
+    `En fecha ${contract.contractDate}, por medio de aceptacion y firma electronica, Volta Pizza y el Comerciante identificado en este documento formalizan el presente contrato de adhesion comercial, que se regira por las siguientes manifestaciones y clausulas.`,
+    "",
+    "REUNIDOS",
+    "",
+    'De una parte, VOLTA PIZZA, SOCIEDAD LIMITADA, con domicilio social en CALLE IRMANS VILLAR, 1, Piso 1, Puerta B, 32005, Ourense, Ourense, Galicia, Espana, representada en este acto por Luigi Vincenzo Roppo Gonzalez, con NIE Z0329461Z, titular o gestora de la plataforma comercial, tecnologica y operativa destinada a la promocion, recepcion, gestion y seguimiento de pedidos de restauracion, en adelante, "Volta".',
+    "",
+    `De otra parte, ${contract.legalName}, ${contract.partnerType}, con CIF/NIF/NIE ${contract.taxId}, domicilio o local operativo en ${contract.address}, telefono ${contract.businessPhone} y correo electronico ${contract.businessEmail}, representada por ${contract.legalRepresentative}, en calidad de ${contract.representativeRole}, en adelante, el "Comerciante".`,
+    "",
+    "Las partes se reconocen capacidad suficiente para contratar y obligarse. El Comerciante declara que los datos anteriores son exactos, completos y han sido facilitados por el mismo durante el proceso de alta.",
+    "",
+    "EXPONEN",
+    "",
+    "I. Que Volta dispone de una plataforma y de servicios asociados para incorporar negocios de restauracion, organizar su presencia comercial, recibir pedidos y facilitar su gestion.",
+    `II. Que el Comerciante desarrolla una actividad de restauracion bajo el nombre comercial ${contract.commercialName} y desea adherirse a las condiciones comerciales de Volta.`,
+    "III. Que el presente documento contiene condiciones generales predispuestas por Volta para una pluralidad de relaciones comerciales de la misma naturaleza, sin perjuicio de los datos particulares del Comerciante y de los anexos economicos u operativos que se acepten.",
+    "",
+    "CLAUSULAS",
+    "",
+    "1. Naturaleza del contrato",
+    "Este contrato es un contrato de adhesion comercial. Su aceptacion por el Comerciante se produce mediante firma electronica o por cualquier otro mecanismo de aceptacion electronica habilitado por Volta que deje constancia de la identidad del firmante, fecha, documento aceptado y trazabilidad de la operacion.",
+    "",
+    "2. Definiciones",
+    '"Plataforma": el sitio web, aplicaciones, paneles, herramientas y canales operados por Volta para la gestion comercial y operativa.',
+    '"Comerciante": la persona fisica o juridica que se adhiere a este contrato y ofrece productos de restauracion a traves de Volta.',
+    '"Cliente": el usuario final que realiza pedidos o interactua con la oferta comercial del Comerciante.',
+    '"Pedido": solicitud de productos realizada por un Cliente y recibida por el Comerciante a traves de la Plataforma.',
+    '"Comision": importe, porcentaje, tarifa fija, coste tecnico, coste de pasarela o cargo pactado a favor de Volta por el uso de la Plataforma o servicios asociados.',
+    '"Liquidacion": calculo periodico de importes a favor del Comerciante, una vez descontadas comisiones, ajustes, devoluciones, incidencias, impuestos o costes aplicables.',
+    "",
+    "3. Objeto",
+    "El objeto del contrato es regular la adhesion del Comerciante a Volta para la publicacion, promocion, recepcion y gestion de pedidos de su negocio, asi como el uso de las herramientas y procesos que Volta habilite para dicha relacion comercial.",
+    "",
+    "4. Alta, datos y documentacion",
+    "El Comerciante se obliga a facilitar datos reales, completos y actualizados. Volta podra solicitar documentacion de identidad, titularidad, representacion, actividad, cuenta bancaria o cualquier otra razonablemente necesaria para validar el alta, prevenir fraude, cumplir obligaciones legales o proteger la Plataforma.",
+    "",
+    "5. Modelo operativo",
+    "El modelo operativo de Volta consiste en poner a disposicion del Comerciante una plataforma de ventas, gestion comercial, comunicacion con clientes, creacion de ofertas, segmentacion de clientes, gestion de precios, seguimiento de pedidos, acciones promocionales y herramientas de administracion asociadas a su actividad de restauracion.",
+    "El Comerciante conserva la direccion de su negocio, la definicion final de su oferta, la preparacion de los productos, la atencion de incidencias propias de su actividad y el cumplimiento de las obligaciones legales, fiscales, sanitarias y laborales que le correspondan.",
+    "",
+    "6. Comisiones y liquidaciones",
+    "Salvo pacto escrito distinto, el importe neto de ventas computable para liquidacion se distribuira de la siguiente manera: noventa por ciento (90%) para el Comerciante, nueve por ciento (9%) para Volta y uno por ciento (1%) para el embajador asociado a la pizzeria, cuando exista.",
+    "Esta distribucion no incluye otros cargos, consumos, descuentos, costes o servicios adicionales que puedan generarse por el uso de herramientas o prestaciones complementarias, incluyendo, a titulo enunciativo, descuentos aplicados desde el POS, hardware o dispositivos utilizados, paquetes de mensajes, acciones Boost, promociones, servicios adicionales, ajustes, devoluciones, incidencias, costes de pasarela o cualquier otro concepto aceptado o generado dentro de la operativa de la Plataforma.",
+    `La cuenta declarada para liquidaciones es titularidad de ${contract.accountHolder}, IBAN ${contract.iban}. El Comerciante responde de la exactitud de estos datos y debera comunicar cualquier modificacion antes de que produzca efectos.`,
+    "",
+    "7. Obligaciones del Comerciante",
+    "El Comerciante debera preparar los pedidos aceptados, mantener actualizada su oferta, precios, horarios, disponibilidad, informacion alimentaria y alergenos, atender incidencias, cumplir la normativa sanitaria, fiscal, laboral, de consumo y proteccion de datos que le resulte aplicable, y no utilizar la Plataforma para fines distintos de los autorizados.",
+    "",
+    "8. Obligaciones de Volta",
+    "Volta pondra a disposicion del Comerciante los medios tecnicos y comerciales razonables para la gestion de su presencia en la Plataforma, sin garantizar volumen minimo de pedidos, facturacion, posicionamiento, continuidad absoluta del servicio ni resultados economicos.",
+    "",
+    "9. Suspension y resolucion",
+    "Volta podra suspender el alta, la publicacion, la recepcion de pedidos o las liquidaciones cuando existan datos incompletos, documentacion no validada, riesgo de fraude, incumplimiento legal, incidencias graves, impagos, reclamaciones relevantes o riesgo para clientes, repartidores, terceros o para la Plataforma. Cualquiera de las partes podra resolver el contrato mediante comunicacion escrita con treinta dias naturales de preaviso, sin perjuicio de las cantidades devengadas y obligaciones pendientes.",
+    "",
+    "10. Comunicaciones",
+    `Las comunicaciones contractuales y operativas se remitiran preferentemente por medios electronicos. A efectos de notificaciones al Comerciante se designa el correo ${contract.businessEmail}. El Comerciante debera mantenerlo operativo y actualizado.`,
+    "",
+    "11. Duracion",
+    "El contrato entrara en vigor desde su aceptacion electronica y tendra duracion indefinida, salvo resolucion conforme a la clausula anterior o sustitucion por una nueva version aceptada por el Comerciante.",
+    "",
+    "12. Ley aplicable y fuero",
+    "El contrato se regira por la legislacion espanola. Las partes se someten a los juzgados y tribunales de Madrid, salvo que una norma imperativa establezca otro fuero.",
+    "",
+    "13. Firma electronica",
+    "La firma electronica, aceptacion por codigo, trazabilidad de envio, registro de IP, sello temporal o cualquier mecanismo equivalente habilitado por Volta servira para acreditar la aceptacion del documento por el Comerciante. Cada ejemplar electronico aceptado o firmado tendra valor de original entre las partes.",
+    "",
+    "FIRMAS",
+    "VOLTA: Volta Pizza - Firma electronica emitida por plataforma.",
+    `COMERCIANTE: ${contract.legalName} - ${contract.legalRepresentative} - ${contract.representativeRole} - ${contract.businessEmail}.`,
+    activation ? `BACKOFFICE ACTIVADO: ${activation.partnerName} - usuario ${activation.username}.` : null,
+  ].filter(Boolean);
+
+  return {
+    title: "Contrato de adhesion comercial",
+    version: CONTRACT_DOCUMENT_VERSION,
+    status: "SIGNED",
+    signedAt,
+    signedBy: contract.legalRepresentative,
+    signerRole: contract.representativeRole,
+    signerEmail: contract.businessEmail,
+    commercialName: contract.commercialName,
+    legalName: contract.legalName,
+    taxId: contract.taxId,
+    contentText: lines.join("\n"),
+  };
+};
+
 const buildCredentialsEmail = (request, activation) => {
   const backofficeUrl = `${publicFrontendUrl()}/Backoffice`;
   const text = [
@@ -1026,9 +1134,18 @@ export default function onboardingRoutes(prisma) {
         return res.status(409).json({ ok: false, error: "onboarding_request_not_signable" });
       }
 
+      const contract = buildContractData(request);
       const signedMeta = {
         acceptedAt: new Date().toISOString(),
         acceptedFrom: "public_contract_page",
+        documentTitle: "Contrato de adhesion comercial",
+        documentVersion: CONTRACT_DOCUMENT_VERSION,
+        signerName: contract.legalRepresentative,
+        signerRole: contract.representativeRole,
+        signerEmail: contract.businessEmail,
+        ipAddress: normalizeIp(req.headers["x-forwarded-for"] || req.ip || req.socket?.remoteAddress),
+        userAgent: cleanText(req.headers["user-agent"], 500),
+        contractUrl: buildContractUrl(token),
       };
 
       const activation = await prisma.$transaction(async (tx) => {
@@ -1040,7 +1157,14 @@ export default function onboardingRoutes(prisma) {
           throw error;
         }
 
+        if (lockedRequest.status !== "CONTRACT_SENT") {
+          const error = new Error("onboarding_request_not_signable");
+          error.status = 409;
+          throw error;
+        }
+
         const nextActivation = await createPartnerActivation(tx, lockedRequest);
+        const signedContract = buildSignedContractSnapshot(lockedRequest, signedMeta, nextActivation);
         await tx.onboardingRequest.update({
           where: { token },
           data: {
@@ -1052,6 +1176,7 @@ export default function onboardingRoutes(prisma) {
                 ...((lockedRequest.formalData || {}).contractSignature || {}),
                 ...signedMeta,
               },
+              signedContract,
               activation: nextActivation,
             },
           },
@@ -1059,6 +1184,8 @@ export default function onboardingRoutes(prisma) {
 
         return nextActivation;
       });
+
+      const signedContract = buildSignedContractSnapshot(request, signedMeta, activation);
 
       const credentialsEmailBody = buildCredentialsEmail(request, activation);
       const credentialsEmailResult = await sendSmtpEmail({
@@ -1079,6 +1206,7 @@ export default function onboardingRoutes(prisma) {
               ...((request.formalData || {}).contractSignature || {}),
               ...signedMeta,
             },
+            signedContract,
             activation,
             credentialsNotification: {
               emailStatus: credentialsEmailResult.ok
@@ -1095,7 +1223,7 @@ export default function onboardingRoutes(prisma) {
         },
       });
 
-      return res.json({ ok: true, request: mapRequest(finalRequest), activation });
+      return res.json({ ok: true, request: mapRequest(finalRequest), activation, signedContract });
     } catch (error) {
       console.error("[onboarding.contract.sign] error:", error);
       if (error?.status) {
