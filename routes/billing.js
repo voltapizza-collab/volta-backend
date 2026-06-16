@@ -88,9 +88,44 @@ const quoteInstantCashout = (amount, policy) => {
   };
 };
 
-const formatBillingSale = (sale, partnerCurrency = "EUR") => {
+const getSaleCustomerKey = (sale) => {
+  if (sale.customerId) return `id:${sale.customerId}`;
+
+  const customerData = asObject(sale.customerData);
+  const phone = String(customerData.phone || sale.customer?.phone || "").replace(/\D/g, "");
+  if (phone) return `phone:${phone}`;
+
+  const name = String(customerData.name || sale.customer?.name || "").trim().toLowerCase();
+  return name ? `name:${name}` : `sale:${sale.id}`;
+};
+
+const buildPaidOrderCountBySaleId = (paidSales) => {
+  const countsByCustomer = new Map();
+  const countsBySaleId = new Map();
+
+  [...paidSales]
+    .sort((left, right) => {
+      const leftTime = new Date(left.date || left.createdAt || 0).getTime();
+      const rightTime = new Date(right.date || right.createdAt || 0).getTime();
+      if (leftTime !== rightTime) return leftTime - rightTime;
+      return Number(left.id || 0) - Number(right.id || 0);
+    })
+    .forEach((sale) => {
+      const key = getSaleCustomerKey(sale);
+      const nextCount = (countsByCustomer.get(key) || 0) + 1;
+      countsByCustomer.set(key, nextCount);
+      countsBySaleId.set(sale.id, nextCount);
+    });
+
+  return countsBySaleId;
+};
+
+const formatBillingSale = (sale, partner = {}, movementOrderCount = null) => {
   const customerData = asObject(sale.customerData);
   const customerName = customerData.name || sale.customer?.name || "";
+  const totalOrderCount = Number(sale.customer?._count?.sales || customerData.orderCount || 0);
+  const orderCount = Number(movementOrderCount || customerData.movementOrderCount || totalOrderCount || 0);
+  const partnerCurrency = partner.currency || "EUR";
 
   return {
     id: sale.id,
@@ -99,6 +134,8 @@ const formatBillingSale = (sale, partnerCurrency = "EUR") => {
     status: sale.status,
     storeId: sale.store?.id || null,
     storeName: sale.store?.storeName || "Sin tienda",
+    partnerId: partner.id || sale.partnerId || null,
+    partnerName: partner.name || "Sin partner",
     customerId: sale.customerId || null,
     customerName,
     customerData: {
@@ -108,6 +145,9 @@ const formatBillingSale = (sale, partnerCurrency = "EUR") => {
       address_1: customerData.address_1 || sale.address_1 || sale.customer?.address_1 || "",
       code: sale.customer?.code || customerData.customerCode || "",
       segment: normalizeCustomerSegment(sale.customer?.segment || customerData.segment, ""),
+      orderCount,
+      movementOrderCount: orderCount,
+      totalOrderCount,
     },
     products: asArray(sale.products),
     extras: asArray(sale.extras),
@@ -188,6 +228,11 @@ export default function billingRoutes(prisma) {
               email: true,
               address_1: true,
               segment: true,
+              _count: {
+                select: {
+                  sales: true,
+                },
+              },
             },
           },
         },
@@ -202,6 +247,7 @@ export default function billingRoutes(prisma) {
         .filter((sale) => Number.isFinite(sale.total) && sale.total > 0);
 
       const paidSales = safeSales.filter((sale) => sale.status === "PAID");
+      const paidOrderCountBySaleId = buildPaidOrderCountBySaleId(paidSales);
       const monthSales = safeSales.filter((sale) => {
         const date = new Date(sale.date);
         return date >= monthStart && date < nextMonthStart;
@@ -291,9 +337,9 @@ export default function billingRoutes(prisma) {
         },
         instantQuote,
         stores: [...stores.values()].sort((left, right) => right.gross - left.gross),
-        recentSales: safeSales
-          .slice(0, 8)
-          .map((sale) => formatBillingSale(sale, partner.currency || "EUR")),
+        recentSales: paidSales.map((sale) =>
+          formatBillingSale(sale, partner, paidOrderCountBySaleId.get(sale.id))
+        ),
         updatedAt: new Date().toISOString(),
       });
     } catch (error) {
