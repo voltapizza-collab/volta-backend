@@ -793,6 +793,8 @@ router.post("/backoffice-login", async (req, res) => {
       storeId: store?.id || null,
       partnerName: partner.name,
       partnerSlug: partner.slug,
+      storeName: store?.storeName || null,
+      storeSlug: store?.slug || null,
       isDemo: false,
     });
   } catch (error) {

@@ -500,33 +500,72 @@ const buildSignedContractSnapshot = (request, signature, activation = null) => {
 
 const buildCredentialsEmail = (request, activation) => {
   const backofficeUrl = `${publicFrontendUrl()}/Backoffice`;
+  const posUrl = `${publicFrontendUrl()}/pos`;
+  const storefrontUrl = `${publicFrontendUrl()}/${activation.partnerSlug}/${activation.storeSlug}`;
+  const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${encodeURIComponent(
+    storefrontUrl
+  )}`;
   const text = [
     `Hola ${request.name},`,
     "",
-    `Contrato aceptado. Ya puedes entrar en el backoffice de ${activation.partnerName}.`,
+    `Bienvenido/a a Volta Pizza. El contrato de ${activation.partnerName} ya esta aceptado y tu acceso inicial esta disponible.`,
+    "",
+    `Tienda online: ${storefrontUrl}`,
+    `QR de tu tienda: ${qrUrl}`,
     "",
     `Backoffice: ${backofficeUrl}`,
     `Usuario: ${activation.username}`,
     `Contrasena: ${activation.password}`,
     "",
-    "Estas credenciales iniciales son provisionales. Guardalas y contactanos si necesitas cambiarlas.",
+    `POS: ${posUrl}`,
+    `Usuario POS: ${activation.username}`,
+    `Contrasena POS: ${activation.password}`,
+    "",
+    "Estas credenciales iniciales son provisionales. Guardalas y contactanos si necesitas cambiarlas. Antes de activar la tienda, revisa que direccion, coordenadas, carta y horarios esten configurados.",
     "",
     "Gracias,",
     "Equipo Volta Pizza",
   ].join("\n");
 
   const html = buildEmailShell({
-    title: "Credenciales de backoffice",
-    preheader: "Tu acceso inicial a Volta Pizza ya esta disponible.",
+    title: "Bienvenido/a a Volta Pizza",
+    preheader: "Tu tienda online, QR, backoffice y POS ya estan preparados.",
     bodyHtml: `
       <p style="margin:0 0 14px">Estimado/a <strong>${escapeHtml(request.name)}</strong>:</p>
-      <p style="margin:0 0 14px">Contrato aceptado. Ya puedes entrar en el backoffice de <strong>${escapeHtml(activation.partnerName)}</strong>.</p>
-      <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="border-collapse:collapse;margin:20px 0;background:#f8f5ff;border:1px solid #decfff;border-radius:14px">
+      <p style="margin:0 0 14px">Contrato aceptado. Bienvenido/a a Volta Pizza: ya tienes preparada la tienda online de <strong>${escapeHtml(activation.partnerName)}</strong>, el acceso al backoffice y el acceso al POS.</p>
+      <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="border-collapse:collapse;margin:20px 0;background:#fff8e7;border:1px solid #ffd789;border-radius:14px">
+        <tr>
+          <td style="padding:18px;vertical-align:top">
+            <div style="color:#a15c00;font-size:12px;font-weight:900;text-transform:uppercase;letter-spacing:.1em">Tu tienda online</div>
+            <div style="margin-top:10px;color:#000000;font-size:15px;line-height:1.7">
+              <a href="${escapeHtml(storefrontUrl)}" style="color:#d97706;font-weight:900;text-decoration:none">${escapeHtml(storefrontUrl)}</a>
+            </div>
+            <p style="margin:10px 0 0;color:#4b3a1f;font-size:13px;line-height:1.5">Comparte este enlace con tus clientes cuando la tienda este configurada y activa.</p>
+          </td>
+          <td style="padding:18px;text-align:center;vertical-align:top;width:150px">
+            <img src="${escapeHtml(qrUrl)}" width="128" height="128" alt="QR de la tienda online" style="display:block;border:0;margin:0 auto 8px;background:#ffffff;padding:8px;border-radius:10px">
+            <div style="color:#4b3a1f;font-size:12px;font-weight:800">QR de tu tienda</div>
+          </td>
+        </tr>
+      </table>
+      <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="border-collapse:collapse;margin:0 0 16px;background:#f8f5ff;border:1px solid #decfff;border-radius:14px">
         <tr>
           <td style="padding:18px">
-            <div style="color:#3b008b;font-size:12px;font-weight:900;text-transform:uppercase;letter-spacing:.1em">Acceso inicial</div>
+            <div style="color:#3b008b;font-size:12px;font-weight:900;text-transform:uppercase;letter-spacing:.1em">Backoffice</div>
             <div style="margin-top:10px;color:#000000;font-size:15px;line-height:1.7">
               URL: <a href="${escapeHtml(backofficeUrl)}" style="color:#6a3df0;font-weight:900;text-decoration:none">${escapeHtml(backofficeUrl)}</a><br>
+              Usuario: <strong>${escapeHtml(activation.username)}</strong><br>
+              Contrasena: <strong>${escapeHtml(activation.password)}</strong>
+            </div>
+          </td>
+        </tr>
+      </table>
+      <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="border-collapse:collapse;margin:0 0 20px;background:#eefaf6;border:1px solid #a7ead7;border-radius:14px">
+        <tr>
+          <td style="padding:18px">
+            <div style="color:#047857;font-size:12px;font-weight:900;text-transform:uppercase;letter-spacing:.1em">POS para atender pedidos</div>
+            <div style="margin-top:10px;color:#000000;font-size:15px;line-height:1.7">
+              URL: <a href="${escapeHtml(posUrl)}" style="color:#059669;font-weight:900;text-decoration:none">${escapeHtml(posUrl)}</a><br>
               Usuario: <strong>${escapeHtml(activation.username)}</strong><br>
               Contrasena: <strong>${escapeHtml(activation.password)}</strong>
             </div>
@@ -537,7 +576,7 @@ const buildCredentialsEmail = (request, activation) => {
         <a href="${escapeHtml(backofficeUrl)}" style="display:inline-block;background:#3b008b;color:#ffffff;padding:15px 26px;border-radius:999px;font-weight:900;text-decoration:none;box-shadow:0 8px 18px rgba(59,0,139,.24)">Entrar al backoffice</a>
       </p>
       <div style="background:#fff8e7;border-left:5px solid #ffb61c;padding:12px 14px;margin:0 0 20px;color:#3b2c4a;font-size:13px">
-        Estas credenciales iniciales son provisionales. Guardalas y contactanos si necesitas cambiarlas.
+        Estas credenciales iniciales son provisionales. Guardalas y contactanos si necesitas cambiarlas. Antes de activar la tienda, revisa que direccion, coordenadas, carta y horarios esten configurados.
       </div>
       ${buildVoltaSignature()}
     `,
