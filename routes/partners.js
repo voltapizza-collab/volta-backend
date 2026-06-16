@@ -1,8 +1,10 @@
 import express from "express";
 import axios from "axios";
+import crypto from "crypto";
 import multer from "multer";
 import { v2 as cloudinary } from "cloudinary";
 import { assertCloudinaryConfigured } from "../services/cloudinaryConfig.js";
+import { sendSmtpEmail } from "../services/email.js";
 import {
   ensureBackofficeDemoSession,
   isBackofficeDemoCredential,
@@ -37,7 +39,48 @@ const PRICE_ADJUSTMENT_STATUSES = ["ACTIVE", "PAUSED"];
 
 const isPrismaConnectionClosed = (error) =>
   error?.code === "P1017" ||
-  String(error?.message || "").includes("Server has closed the connection");
+    String(error?.message || "").includes("Server has closed the connection");
+
+const compactCredential = (value) =>
+  String(value || "")
+    .trim()
+    .toLowerCase()
+    .replace(/\s+/g, "");
+
+const publicFrontendUrl = () =>
+  (
+    process.env.PUBLIC_FRONTEND_URL ||
+    process.env.FRONTEND_URL ||
+    process.env.STOREFRONT_URL ||
+    "https://voltapizza.com"
+  )
+    .trim()
+    .replace(/\/$/, "");
+
+const escapeHtml = (value) =>
+  String(value ?? "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
+
+const hashPassword = (password) => {
+  const salt = crypto.randomBytes(16).toString("hex");
+  const hash = crypto.scryptSync(String(password), salt, 64).toString("hex");
+  return `scrypt:${salt}:${hash}`;
+};
+
+const verifyPassword = (password, storedHash) => {
+  const [algorithm, salt, hash] = String(storedHash || "").split(":");
+  if (algorithm !== "scrypt" || !salt || !hash) return false;
+  const candidate = crypto.scryptSync(String(password), salt, 64);
+  const expected = Buffer.from(hash, "hex");
+  return expected.length === candidate.length && crypto.timingSafeEqual(expected, candidate);
+};
+
+const hashResetToken = (token) =>
+  crypto.createHash("sha256").update(String(token)).digest("hex");
 
 const GOOGLE_GEOCODING_URL =
   "https://maps.googleapis.com/maps/api/geocode/json";
@@ -147,6 +190,9 @@ async function ensurePartnerSettingsColumns() {
     ["trackingNotificationSettings", "JSON NULL"],
     ["priceAdjustmentRules", "JSON NULL"],
     ["paymentPolicySettings", "JSON NULL"],
+    ["backofficePasswordHash", "TEXT NULL"],
+    ["backofficeResetTokenHash", "VARCHAR(128) NULL"],
+    ["backofficeResetExpiresAt", "DATETIME NULL"],
   ];
 
   let existingColumns = new Set();
@@ -700,6 +746,196 @@ router.post("/backoffice-demo-session", async (req, res) => {
   } catch (error) {
     console.error("[backoffice-demo-session]", error);
     return res.status(500).json({ error: "No se pudo preparar la sesion demo." });
+  }
+});
+
+router.post("/backoffice-login", async (req, res) => {
+  try {
+    await ensurePartnerSettingsColumns();
+
+    const username = compactCredential(req.body?.username);
+    const password = String(req.body?.password || "").trim();
+
+    if (!username || !password) {
+      return res.status(400).json({ error: "credentials_required" });
+    }
+
+    const rows = await prisma.$queryRawUnsafe(
+      `SELECT id, name, slug, active, backofficePasswordHash
+         FROM Partner
+        WHERE slug = ?
+        LIMIT 1`,
+      username
+    );
+    const partner = rows?.[0] || null;
+
+    if (!partner || partner.active === false) {
+      return res.status(401).json({ error: "invalid_credentials" });
+    }
+
+    const storedHash = partner.backofficePasswordHash || "";
+    const valid = storedHash
+      ? verifyPassword(password, storedHash)
+      : compactCredential(password) === compactCredential(partner.slug);
+
+    if (!valid) {
+      return res.status(401).json({ error: "invalid_credentials" });
+    }
+
+    const stores = await prisma.store.findMany({
+      where: { partnerId: Number(partner.id) },
+      orderBy: { id: "asc" },
+    });
+    const store = stores[0] || null;
+
+    return res.json({
+      partnerId: Number(partner.id),
+      storeId: store?.id || null,
+      partnerName: partner.name,
+      partnerSlug: partner.slug,
+      isDemo: false,
+    });
+  } catch (error) {
+    console.error("[backoffice-login]", error);
+    return res.status(500).json({ error: "backoffice_login_failed" });
+  }
+});
+
+router.post("/backoffice-password/request", async (req, res) => {
+  try {
+    await ensurePartnerSettingsColumns();
+
+    const identifier = String(req.body?.identifier || "").trim();
+    const normalized = compactCredential(identifier);
+
+    if (!normalized) {
+      return res.status(400).json({ error: "identifier_required" });
+    }
+
+    const partnerRows = await prisma.$queryRawUnsafe(
+      `SELECT id, name, slug
+         FROM Partner
+        WHERE slug = ?
+        LIMIT 1`,
+      normalized
+    );
+    let partner = partnerRows?.[0] || null;
+    let email = "";
+
+    if (partner) {
+      const store = await prisma.store.findFirst({
+        where: { partnerId: Number(partner.id), email: { not: null } },
+        orderBy: { id: "asc" },
+        select: { email: true },
+      });
+      email = String(store?.email || "").trim();
+    } else {
+      const store = await prisma.store.findFirst({
+        where: { email: identifier },
+        include: { partner: true },
+      });
+      if (store?.partner) {
+        partner = store.partner;
+        email = String(store.email || "").trim();
+      }
+    }
+
+    if (partner && email) {
+      const token = crypto.randomBytes(32).toString("hex");
+      const tokenHash = hashResetToken(token);
+      const expiresAt = new Date(Date.now() + 60 * 60 * 1000);
+      const resetUrl = `${publicFrontendUrl()}/Backoffice?reset=${encodeURIComponent(token)}`;
+
+      await prisma.$executeRawUnsafe(
+        `UPDATE Partner
+            SET backofficeResetTokenHash = ?,
+                backofficeResetExpiresAt = ?
+          WHERE id = ?`,
+        tokenHash,
+        expiresAt,
+        Number(partner.id)
+      );
+
+      const safeName = escapeHtml(partner.name || partner.slug);
+      const safeResetUrl = escapeHtml(resetUrl);
+      await sendSmtpEmail({
+        to: email,
+        subject: "Restablecer acceso al backoffice - Volta Pizza",
+        text: [
+          `Hola ${partner.name || partner.slug},`,
+          "",
+          "Hemos recibido una solicitud para restablecer la contrasena del backoffice.",
+          `Puedes crear una nueva contrasena aqui: ${resetUrl}`,
+          "",
+          "Este enlace caduca en 1 hora. Si no has solicitado este cambio, puedes ignorar este correo.",
+          "",
+          "Equipo Volta Pizza",
+        ].join("\n"),
+        html: `
+          <div style="font-family:Arial,Helvetica,sans-serif;background:#f7f2ff;padding:28px;color:#1f172a">
+            <div style="max-width:620px;margin:auto;background:#fff;border:1px solid #decfff;border-radius:16px;padding:28px">
+              <h1 style="margin:0 0 12px;color:#3b008b">Restablecer acceso</h1>
+              <p>Hola <strong>${safeName}</strong>,</p>
+              <p>Hemos recibido una solicitud para restablecer la contrasena del backoffice.</p>
+              <p style="text-align:center;margin:26px 0">
+                <a href="${safeResetUrl}" style="display:inline-block;background:#3b008b;color:#fff;padding:14px 22px;border-radius:999px;text-decoration:none;font-weight:900">Crear nueva contrasena</a>
+              </p>
+              <p style="font-size:13px;color:#5b5068">Este enlace caduca en 1 hora. Si no has solicitado este cambio, puedes ignorar este correo.</p>
+              <p style="font-size:13px;color:#5b5068">Enlace: <a href="${safeResetUrl}">${safeResetUrl}</a></p>
+            </div>
+          </div>
+        `,
+        replyTo: process.env.ONBOARDING_REPLY_TO || "voltapizza@gmail.com",
+      });
+    }
+
+    return res.json({ ok: true });
+  } catch (error) {
+    console.error("[backoffice-password.request]", error);
+    return res.status(500).json({ error: "password_reset_request_failed" });
+  }
+});
+
+router.post("/backoffice-password/reset", async (req, res) => {
+  try {
+    await ensurePartnerSettingsColumns();
+
+    const token = String(req.body?.token || "").trim();
+    const password = String(req.body?.password || "").trim();
+
+    if (!token || password.length < 6) {
+      return res.status(400).json({ error: "invalid_password_reset" });
+    }
+
+    const tokenHash = hashResetToken(token);
+    const rows = await prisma.$queryRawUnsafe(
+      `SELECT id
+         FROM Partner
+        WHERE backofficeResetTokenHash = ?
+          AND backofficeResetExpiresAt > NOW()
+        LIMIT 1`,
+      tokenHash
+    );
+    const partner = rows?.[0] || null;
+
+    if (!partner) {
+      return res.status(400).json({ error: "invalid_or_expired_token" });
+    }
+
+    await prisma.$executeRawUnsafe(
+      `UPDATE Partner
+          SET backofficePasswordHash = ?,
+              backofficeResetTokenHash = NULL,
+              backofficeResetExpiresAt = NULL
+        WHERE id = ?`,
+      hashPassword(password),
+      Number(partner.id)
+    );
+
+    return res.json({ ok: true });
+  } catch (error) {
+    console.error("[backoffice-password.reset]", error);
+    return res.status(500).json({ error: "password_reset_failed" });
   }
 });
 
