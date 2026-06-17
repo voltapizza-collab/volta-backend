@@ -1,4 +1,5 @@
 import crypto from "crypto";
+import axios from "axios";
 import express from "express";
 import multer from "multer";
 import { v2 as cloudinary } from "cloudinary";
@@ -20,6 +21,7 @@ const DOCUMENT_TYPE_LABELS = {
   HEALTH: "Licencia o autorizacion sanitaria",
   OTHER: "Documento de soporte",
 };
+const GOOGLE_GEOCODING_URL = "https://maps.googleapis.com/maps/api/geocode/json";
 
 const upload = multer({
   storage: multer.memoryStorage(),
@@ -83,6 +85,70 @@ const escapeHtml = (value) =>
 
 const parseBoolean = (value) =>
   value === true || ["true", "1", "on", "yes"].includes(String(value || "").toLowerCase());
+
+const getGoogleGeocodingKey = () =>
+  process.env.GOOGLE_GEOCODING_KEY ||
+  process.env.GOOGLE_MAPS_API_KEY ||
+  process.env.REACT_APP_GOOGLE_KEY ||
+  "";
+
+const resolveGeocodeRegion = (country) => {
+  const value = cleanText(country, 16);
+  const normalized = value
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase();
+
+  if (!value || normalized.includes("esp")) return "ES";
+  if (/^[a-z]{2}$/i.test(value)) return value.toUpperCase();
+  return value;
+};
+
+const resolveOnboardingStoreCoordinates = async (formalData = {}) => {
+  const key = getGoogleGeocodingKey();
+  if (!key) return null;
+
+  const address = [
+    cleanText(formalData.businessAddress || formalData.fiscalAddress, 255),
+    cleanText(formalData.city, 120),
+    cleanText(formalData.postalCode, 32),
+    cleanText(formalData.country, 80) || "Espana",
+  ]
+    .filter(Boolean)
+    .join(", ");
+
+  if (!address) return null;
+
+  try {
+    const response = await axios.get(GOOGLE_GEOCODING_URL, {
+      params: {
+        address,
+        region: resolveGeocodeRegion(formalData.country),
+        key,
+      },
+    });
+
+    const location = response.data?.results?.[0]?.geometry?.location;
+    const latitude = Number(location?.lat);
+    const longitude = Number(location?.lng);
+
+    if (
+      !Number.isFinite(latitude) ||
+      !Number.isFinite(longitude) ||
+      latitude < -90 ||
+      latitude > 90 ||
+      longitude < -180 ||
+      longitude > 180
+    ) {
+      return null;
+    }
+
+    return { latitude, longitude };
+  } catch (error) {
+    console.warn("[onboarding.geocode] warning:", error?.message || error);
+    return null;
+  }
+};
 
 const normalizeDocumentType = (value) => {
   const type = String(value || "").trim().toUpperCase();
@@ -417,7 +483,7 @@ const buildSignedContractSnapshot = (request, signature, activation = null) => {
     "",
     "REUNIDOS",
     "",
-    'De una parte, VOLTA PIZZA, SOCIEDAD LIMITADA, con domicilio social en CALLE IRMANS VILLAR, 1, Piso 1, Puerta B, 32005, Ourense, Ourense, Galicia, Espana, representada en este acto por Luigi Vincenzo Roppo Gonzalez, con NIE Z0329461Z, titular o gestora de la plataforma comercial, tecnologica y operativa destinada a la promocion, recepcion, gestion y seguimiento de pedidos de restauracion, en adelante, "Volta".',
+    'De una parte, VOLTA PIZZA, S.L.U., con NIF B88818414 y domicilio social en CALLE IRMANS VILLAR, NUM 1, PLANTA 1, PUERTA B, 32005 OURENSE (OURENSE), Espana, representada en este acto por Luigi Vincenzo Roppo Gonzalez, con NIE Z0329461Z, titular o gestora de la plataforma comercial, tecnologica y operativa destinada a la promocion, recepcion, gestion y seguimiento de pedidos de restauracion, en adelante, "Volta".',
     "",
     `De otra parte, ${contract.legalName}, ${contract.partnerType}, con CIF/NIF/NIE ${contract.taxId}, domicilio o local operativo en ${contract.address}, telefono ${contract.businessPhone} y correo electronico ${contract.businessEmail}, representada por ${contract.legalRepresentative}, en calidad de ${contract.representativeRole}, en adelante, el "Comerciante".`,
     "",
@@ -454,7 +520,7 @@ const buildSignedContractSnapshot = (request, signature, activation = null) => {
     "",
     "6. Comisiones y liquidaciones",
     "Salvo pacto escrito distinto, el importe neto de ventas computable para liquidacion se distribuira de la siguiente manera: noventa por ciento (90%) para el Comerciante, nueve por ciento (9%) para Volta y uno por ciento (1%) para el embajador asociado a la pizzeria, cuando exista.",
-    "Esta distribucion no incluye otros cargos, consumos, descuentos, costes o servicios adicionales que puedan generarse por el uso de herramientas o prestaciones complementarias, incluyendo, a titulo enunciativo, descuentos aplicados desde el POS, hardware o dispositivos utilizados, paquetes de mensajes, acciones Boost, promociones, servicios adicionales, ajustes, devoluciones, incidencias, costes de pasarela o cualquier otro concepto aceptado o generado dentro de la operativa de la Plataforma.",
+    "Esta distribucion no incluye otros cargos, consumos, descuentos, costes o servicios adicionales que puedan generarse por el uso de herramientas o prestaciones complementarias, incluyendo, a titulo enunciativo, hardware o dispositivos utilizados, paquetes de mensajes, acciones Boost, promociones, servicios adicionales, ajustes, devoluciones, incidencias, costes de pasarela o cualquier otro concepto aceptado o generado dentro de la operativa de la Plataforma.",
     `La cuenta declarada para liquidaciones es titularidad de ${contract.accountHolder}, IBAN ${contract.iban}. El Comerciante responde de la exactitud de estos datos y debera comunicar cualquier modificacion antes de que produzca efectos.`,
     "",
     "7. Obligaciones del Comerciante",
@@ -467,7 +533,7 @@ const buildSignedContractSnapshot = (request, signature, activation = null) => {
     "Volta podra suspender el alta, la publicacion, la recepcion de pedidos o las liquidaciones cuando existan datos incompletos, documentacion no validada, riesgo de fraude, incumplimiento legal, incidencias graves, impagos, reclamaciones relevantes o riesgo para clientes, repartidores, terceros o para la Plataforma. Cualquiera de las partes podra resolver el contrato mediante comunicacion escrita con treinta dias naturales de preaviso, sin perjuicio de las cantidades devengadas y obligaciones pendientes.",
     "",
     "10. Comunicaciones",
-    `Las comunicaciones contractuales y operativas se remitiran preferentemente por medios electronicos. A efectos de notificaciones al Comerciante se designa el correo ${contract.businessEmail}. El Comerciante debera mantenerlo operativo y actualizado.`,
+    `Las comunicaciones contractuales y operativas se remitiran preferentemente por medios electronicos. A efectos de notificaciones al Comerciante se designan el correo ${contract.businessEmail} y el telefono ${contract.businessPhone} como elementos de contacto. El Comerciante se compromete a mantenerlos activos, operativos y actualizados.`,
     "",
     "11. Duracion",
     "El contrato entrara en vigor desde su aceptacion electronica y tendra duracion indefinida, salvo resolucion conforme a la clausula anterior o sustitucion por una nueva version aceptada por el Comerciante.",
@@ -479,7 +545,7 @@ const buildSignedContractSnapshot = (request, signature, activation = null) => {
     "La firma electronica, aceptacion por codigo, trazabilidad de envio, registro de IP, sello temporal o cualquier mecanismo equivalente habilitado por Volta servira para acreditar la aceptacion del documento por el Comerciante. Cada ejemplar electronico aceptado o firmado tendra valor de original entre las partes.",
     "",
     "FIRMAS",
-    "VOLTA: Volta Pizza - Firma electronica emitida por plataforma.",
+    "VOLTA: Volta Pizza - Luigi Vincenzo Roppo Gonzalez - firma incorporada en el documento enviado al Comerciante.",
     `COMERCIANTE: ${contract.legalName} - ${contract.legalRepresentative} - ${contract.representativeRole} - ${contract.businessEmail}.`,
     activation ? `BACKOFFICE ACTIVADO: ${activation.partnerName} - usuario ${activation.username}.` : null,
   ].filter(Boolean);
@@ -663,6 +729,8 @@ const buildActivationPayload = ({ partner, store, username, password, posPin }) 
   partnerSlug: partner.slug,
   storeName: store.storeName,
   storeSlug: store.slug,
+  storeLatitude: store.latitude ?? null,
+  storeLongitude: store.longitude ?? null,
   username,
   password,
   posUsername: partner.name,
@@ -679,7 +747,7 @@ const buildActivationPayload = ({ partner, store, username, password, posPin }) 
   activatedAt: new Date().toISOString(),
 });
 
-const createPartnerActivation = async (tx, request) => {
+const createPartnerActivation = async (tx, request, storeCoordinates = null) => {
   const formalData = request.formalData || {};
   const existingActivation = formalData.activation || null;
 
@@ -721,12 +789,15 @@ const createPartnerActivation = async (tx, request) => {
 
   const storeSlug = await resolveUniqueStoreSlug(tx, partner.id, partnerName);
   const posPin = generateSixDigitPin();
+  const storeAddress = cleanText(formalData.businessAddress || formalData.fiscalAddress, 255) || "-";
   const store = await tx.store.create({
     data: {
       partnerId: partner.id,
       slug: storeSlug,
       storeName: partnerName,
-      address: cleanText(formalData.businessAddress || formalData.fiscalAddress, 255) || "-",
+      address: storeAddress,
+      latitude: storeCoordinates?.latitude ?? null,
+      longitude: storeCoordinates?.longitude ?? null,
       city: cleanText(formalData.city, 120) || null,
       zipCode: cleanText(formalData.postalCode, 32) || null,
       email: cleanText(formalData.businessEmail || request.email, 191) || null,
@@ -1227,6 +1298,7 @@ export default function onboardingRoutes(prisma) {
         userAgent: cleanText(req.headers["user-agent"], 500),
         contractUrl: buildContractUrl(token),
       };
+      const storeCoordinates = await resolveOnboardingStoreCoordinates(request.formalData);
 
       const activation = await prisma.$transaction(async (tx) => {
         const lockedRequest = await tx.onboardingRequest.findUnique({ where: { token } });
@@ -1243,7 +1315,7 @@ export default function onboardingRoutes(prisma) {
           throw error;
         }
 
-        const nextActivation = await createPartnerActivation(tx, lockedRequest);
+        const nextActivation = await createPartnerActivation(tx, lockedRequest, storeCoordinates);
         const signedContract = buildSignedContractSnapshot(lockedRequest, signedMeta, nextActivation);
         await tx.onboardingRequest.update({
           where: { token },
