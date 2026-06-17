@@ -14,6 +14,11 @@ import {
   normalizeSmsNotificationSettings,
 } from "../services/smsNotificationSettings.js";
 import prisma from "../services/prisma.js";
+import {
+  ensureStorePosCredentialColumns,
+  isSixDigitPin,
+  verifySecret,
+} from "../services/posCredentials.js";
 
 const router = express.Router();
 const upload = multer({ storage: multer.memoryStorage() });
@@ -46,6 +51,17 @@ const compactCredential = (value) =>
     .trim()
     .toLowerCase()
     .replace(/\s+/g, "");
+
+const sanitizeSummaryStore = (store) => {
+  const { posPinHash, posPinEncrypted, ...safeStore } = store || {};
+  return {
+    ...safeStore,
+    posCredentialsConfigured: Boolean(posPinHash),
+    posCredentialsRecoverable: Boolean(posPinEncrypted),
+    posCredentialsEnabled: store?.posCredentialsEnabled !== false,
+    posPinUpdatedAt: store?.posPinUpdatedAt || null,
+  };
+};
 
 const publicFrontendUrl = () =>
   (
@@ -696,6 +712,68 @@ const normalizeHexColor = (value, fallback = null) => {
   return /^#[0-9A-F]{6}$/.test(raw) ? raw : fallback;
 };
 
+const parsePositivePartnerId = (value) => {
+  const numericValue = Number(value);
+  return Number.isInteger(numericValue) && numericValue > 0 ? numericValue : null;
+};
+
+const mapCountRowsByPartnerId = (rows = []) =>
+  new Map(rows.map((row) => [Number(row.partnerId), Number(row._count?._all || 0)]));
+
+const mapSalesRowsByPartnerId = (rows = []) =>
+  new Map(
+    rows.map((row) => [
+      Number(row.partnerId),
+      {
+        orders: Number(row._count?._all || 0),
+        revenue: Number(row._sum?.total || 0),
+        lastOrderAt: row._max?.date || null,
+      },
+    ])
+  );
+
+const getPartnerDeletionCounts = async (partnerId) => {
+  const [
+    stores,
+    customers,
+    sales,
+    products,
+    coupons,
+    promos,
+    directDiscounts,
+    incentives,
+    reservations,
+    smsLedger,
+  ] = await Promise.all([
+    prisma.store.count({ where: { partnerId } }),
+    prisma.customer.count({ where: { partnerId } }),
+    prisma.sale.count({ where: { partnerId } }),
+    prisma.menuPizza.count({ where: { partnerId } }),
+    prisma.coupon.count({ where: { partnerId } }),
+    prisma.promo.count({ where: { partnerId } }),
+    prisma.directDiscount.count({ where: { partnerId } }),
+    prisma.incentive.count({ where: { partnerId } }),
+    prisma.reservation.count({ where: { partnerId } }),
+    prisma.smsCreditLedger.count({ where: { partnerId } }),
+  ]);
+
+  return {
+    stores,
+    customers,
+    sales,
+    products,
+    coupons,
+    promos,
+    directDiscounts,
+    incentives,
+    reservations,
+    smsLedger,
+  };
+};
+
+const getBlockingDeletionTotal = (counts) =>
+  Object.values(counts).reduce((sum, value) => sum + Number(value || 0), 0);
+
 async function uploadPartnerLogo(file, partnerId) {
   if (!file) {
     const error = new Error("Logo file required");
@@ -729,10 +807,229 @@ router.post("/", async (req, res) => {
 
 // listar partners
 router.get("/", async (req, res) => {
-  const list = await prisma.partner.findMany({
-    include: { stores: true }
-  });
-  res.json(list);
+  try {
+    await ensureStorePosCredentialColumns(prisma);
+
+    const list = await prisma.partner.findMany({
+      include: { stores: true }
+    });
+    res.json(
+      list.map((partner) => ({
+        ...partner,
+        stores: (partner.stores || []).map(sanitizeSummaryStore),
+      }))
+    );
+  } catch (error) {
+    console.error("[partners.list]", error);
+    res.status(500).json({ error: "partners_list_failed" });
+  }
+});
+
+router.get("/global/summary", async (_req, res) => {
+  try {
+    await ensureStorePosCredentialColumns(prisma);
+
+    const thirtyDaysAgo = new Date();
+    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+
+    const [
+      partners,
+      salesRows,
+      sales30Rows,
+      restrictedCustomerRows,
+    ] = await Promise.all([
+      prisma.partner.findMany({
+        orderBy: [{ active: "desc" }, { createdAt: "desc" }],
+        select: {
+          id: true,
+          name: true,
+          slug: true,
+          country: true,
+          currency: true,
+          active: true,
+          smsCredits: true,
+          smsConsumed: true,
+          smsRecharged: true,
+          createdAt: true,
+          updatedAt: true,
+          stores: {
+            orderBy: { id: "asc" },
+            select: {
+              id: true,
+              slug: true,
+              storeName: true,
+              city: true,
+              active: true,
+              acceptingOrders: true,
+              posPinHash: true,
+              posPinEncrypted: true,
+              posPinUpdatedAt: true,
+              posCredentialsEnabled: true,
+            },
+          },
+          _count: {
+            select: {
+              stores: true,
+              customers: true,
+              sales: true,
+              menuPizzas: true,
+            },
+          },
+        },
+      }),
+      prisma.sale.groupBy({
+        by: ["partnerId"],
+        _sum: { total: true },
+        _count: { _all: true },
+        _max: { date: true },
+      }),
+      prisma.sale.groupBy({
+        by: ["partnerId"],
+        where: { date: { gte: thirtyDaysAgo } },
+        _sum: { total: true },
+        _count: { _all: true },
+        _max: { date: true },
+      }),
+      prisma.customer.groupBy({
+        by: ["partnerId"],
+        where: { isRestricted: true },
+        _count: { _all: true },
+      }),
+    ]);
+
+    const salesByPartnerId = mapSalesRowsByPartnerId(salesRows);
+    const sales30ByPartnerId = mapSalesRowsByPartnerId(sales30Rows);
+    const restrictedCustomersByPartnerId = mapCountRowsByPartnerId(restrictedCustomerRows);
+
+    const rows = partners.map((partner) => {
+      const sales = salesByPartnerId.get(partner.id) || {};
+      const sales30 = sales30ByPartnerId.get(partner.id) || {};
+      const stores = (partner.stores || []).map(sanitizeSummaryStore);
+      const activeStores = stores.filter((store) => store.active !== false).length;
+      const acceptingStores = stores.filter(
+        (store) => store.active !== false && store.acceptingOrders !== false
+      ).length;
+
+      return {
+        id: partner.id,
+        name: partner.name,
+        slug: partner.slug,
+        country: partner.country,
+        currency: partner.currency,
+        active: partner.active,
+        createdAt: partner.createdAt,
+        updatedAt: partner.updatedAt,
+        smsCredits: partner.smsCredits,
+        smsConsumed: partner.smsConsumed,
+        smsRecharged: partner.smsRecharged,
+        stores,
+        metrics: {
+          stores: partner._count.stores,
+          activeStores,
+          acceptingStores,
+          customers: partner._count.customers,
+          restrictedCustomers: restrictedCustomersByPartnerId.get(partner.id) || 0,
+          products: partner._count.menuPizzas,
+          orders: sales.orders || partner._count.sales || 0,
+          revenue: sales.revenue || 0,
+          orders30: sales30.orders || 0,
+          revenue30: sales30.revenue || 0,
+          lastOrderAt: sales.lastOrderAt || null,
+        },
+        canDelete:
+          partner._count.stores === 0 &&
+          partner._count.customers === 0 &&
+          partner._count.sales === 0 &&
+          partner._count.menuPizzas === 0,
+      };
+    });
+
+    const totals = rows.reduce(
+      (acc, partner) => {
+        acc.partners += 1;
+        if (partner.active) acc.active += 1;
+        if (!partner.active) acc.restricted += 1;
+        acc.stores += partner.metrics.stores;
+        acc.customers += partner.metrics.customers;
+        acc.orders30 += partner.metrics.orders30;
+        acc.revenue30 += partner.metrics.revenue30;
+        return acc;
+      },
+      {
+        partners: 0,
+        active: 0,
+        restricted: 0,
+        stores: 0,
+        customers: 0,
+        orders30: 0,
+        revenue30: 0,
+      }
+    );
+
+    return res.json({ partners: rows, totals });
+  } catch (error) {
+    console.error("[partners.global.summary]", error);
+    return res.status(500).json({ error: "partners_summary_failed" });
+  }
+});
+
+router.patch("/by-id/:partnerId/active", async (req, res) => {
+  const partnerId = parsePositivePartnerId(req.params.partnerId);
+
+  if (!partnerId || typeof req.body?.active !== "boolean") {
+    return res.status(400).json({ error: "partnerId and body.active required" });
+  }
+
+  try {
+    const partner = await prisma.partner.update({
+      where: { id: partnerId },
+      data: { active: req.body.active },
+      select: { id: true, active: true, updatedAt: true },
+    });
+
+    return res.json({ ok: true, partner });
+  } catch (error) {
+    console.error("[partners.active]", error);
+    if (error?.code === "P2025") {
+      return res.status(404).json({ error: "partner_not_found" });
+    }
+    return res.status(500).json({ error: "partner_active_update_failed" });
+  }
+});
+
+router.delete("/by-id/:partnerId", async (req, res) => {
+  const partnerId = parsePositivePartnerId(req.params.partnerId);
+
+  if (!partnerId) {
+    return res.status(400).json({ error: "Valid partnerId required" });
+  }
+
+  try {
+    const partner = await prisma.partner.findUnique({
+      where: { id: partnerId },
+      select: { id: true, name: true },
+    });
+
+    if (!partner) {
+      return res.status(404).json({ error: "partner_not_found" });
+    }
+
+    const counts = await getPartnerDeletionCounts(partnerId);
+    const blockingTotal = getBlockingDeletionTotal(counts);
+
+    if (blockingTotal > 0) {
+      return res.status(409).json({
+        error: "partner_has_dependencies",
+        counts,
+      });
+    }
+
+    await prisma.partner.delete({ where: { id: partnerId } });
+    return res.json({ ok: true, deletedId: partnerId });
+  } catch (error) {
+    console.error("[partners.delete]", error);
+    return res.status(500).json({ error: "partner_delete_failed" });
+  }
 });
 
 router.post("/backoffice-demo-session", async (req, res) => {
@@ -746,6 +1043,62 @@ router.post("/backoffice-demo-session", async (req, res) => {
   } catch (error) {
     console.error("[backoffice-demo-session]", error);
     return res.status(500).json({ error: "No se pudo preparar la sesion demo." });
+  }
+});
+
+router.post("/pos-login", async (req, res) => {
+  try {
+    await ensureStorePosCredentialColumns(prisma);
+
+    const username = compactCredential(req.body?.username);
+    const pin = String(req.body?.password || req.body?.pin || "").trim();
+
+    if (!username || !isSixDigitPin(pin)) {
+      return res.status(401).json({ error: "invalid_credentials" });
+    }
+
+    const rows = await prisma.$queryRawUnsafe(
+      `SELECT p.id AS partnerId,
+              p.name AS partnerName,
+              p.slug AS partnerSlug,
+              p.active AS partnerActive,
+              s.id AS storeId,
+              s.storeName,
+              s.slug AS storeSlug,
+              s.city AS storeCity,
+              s.active AS storeActive,
+              s.posPinHash,
+              s.posCredentialsEnabled
+         FROM Partner p
+         JOIN Store s ON s.partnerId = p.id
+        WHERE (LOWER(REPLACE(p.slug, ' ', '')) = ?
+               OR LOWER(REPLACE(p.name, ' ', '')) = ?)
+          AND p.active <> false
+          AND s.posCredentialsEnabled <> false
+        ORDER BY s.id ASC`,
+      username,
+      username
+    );
+
+    const match = (rows || []).find((row) => row.posPinHash && verifySecret(pin, row.posPinHash));
+
+    if (!match) {
+      return res.status(401).json({ error: "invalid_credentials" });
+    }
+
+    return res.json({
+      partnerId: Number(match.partnerId),
+      storeId: Number(match.storeId),
+      partnerName: match.partnerName,
+      partnerSlug: match.partnerSlug,
+      storeName: match.storeName,
+      storeSlug: match.storeSlug,
+      storeCity: match.storeCity || null,
+      isDemo: false,
+    });
+  } catch (error) {
+    console.error("[pos-login]", error);
+    return res.status(500).json({ error: "pos_login_failed" });
   }
 });
 

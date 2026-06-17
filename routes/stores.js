@@ -2,6 +2,12 @@ import express from "express";
 import { getBoostSettings } from "../services/boostSettings.js";
 import { sendStoreStatusTrackingSms } from "../services/trackingNotifications.js";
 import { createTtlCache } from "../services/responseCache.js";
+import {
+  buildPosPinData,
+  decryptPin,
+  ensureStorePosCredentialColumns,
+  generateSixDigitPin,
+} from "../services/posCredentials.js";
 
 const TZ = process.env.TIMEZONE || "Europe/Madrid";
 const TRENDING_PRICE_BAND = 0.5;
@@ -43,6 +49,19 @@ const storeCoordinatesRequiredResponse = (res) =>
     message:
       "Completa latitud y longitud de la tienda antes de activarla.",
   });
+
+const sanitizeStore = (store) => {
+  if (!store || typeof store !== "object") return store;
+
+  const { posPinHash, posPinEncrypted, ...safeStore } = store;
+  return {
+    ...safeStore,
+    posCredentialsConfigured: Boolean(posPinHash),
+    posCredentialsRecoverable: Boolean(posPinEncrypted),
+    posCredentialsEnabled: store.posCredentialsEnabled !== false,
+    posPinUpdatedAt: store.posPinUpdatedAt || null,
+  };
+};
 
 const toNullableInt = (value) => {
   if (value === "" || value == null) return null;
@@ -997,7 +1016,7 @@ const attachStorePublicMenu = (router, prisma) => {
         return res.status(404).json({ error: "Store not active" });
       }
 
-      return res.json(store);
+      return res.json(sanitizeStore(store));
     } catch (error) {
       console.error("GET /stores/:partnerSlug/:storeSlug", error);
       return res.status(500).json({ error: error.message });
@@ -1165,7 +1184,7 @@ export default function storesRoutes(prisma) {
         orderBy: { storeName: "asc" },
       });
 
-      return res.json(stores);
+      return res.json(stores.map(sanitizeStore));
     } catch (error) {
       console.error("[GET /stores/reservations-enabled]", error);
       return res.status(500).json({ error: "internal" });
@@ -1293,7 +1312,7 @@ export default function storesRoutes(prisma) {
         return res.status(404).json({ error: "not found" });
       }
 
-      return res.json(store);
+      return res.json(sanitizeStore(store));
     } catch (error) {
       console.error("[GET /stores/:id]", error);
       return res.status(400).json({ error: error.message });
@@ -1302,6 +1321,8 @@ export default function storesRoutes(prisma) {
 
   router.get("/", async (req, res) => {
     try {
+      await ensureStorePosCredentialColumns(prisma);
+
       const partnerId = req.query.partnerId
         ? parsePositiveInt(req.query.partnerId)
         : null;
@@ -1311,10 +1332,58 @@ export default function storesRoutes(prisma) {
         orderBy: [{ partnerId: "asc" }, { id: "desc" }],
       });
 
-      return res.json(stores);
+      return res.json(stores.map(sanitizeStore));
     } catch (error) {
       console.error("[GET /stores]", error);
       return res.status(500).json({ error: "Error fetching stores" });
+    }
+  });
+
+  router.get("/:id/pos-credentials", async (req, res) => {
+    const id = parsePositiveInt(req.params.id);
+    if (!id) {
+      return res.status(400).json({ error: "Valid id required" });
+    }
+
+    try {
+      await ensureStorePosCredentialColumns(prisma);
+
+      const store = await prisma.store.findUnique({
+        where: { id },
+        include: { partner: true },
+      });
+
+      if (!store) {
+        return res.status(404).json({ error: "Store not found" });
+      }
+
+      let pin = decryptPin(store.posPinEncrypted);
+      let updated = store;
+      let regenerated = false;
+
+      if (!pin || !/^\d{6}$/.test(pin)) {
+        pin = generateSixDigitPin();
+        updated = await prisma.store.update({
+          where: { id },
+          data: buildPosPinData(pin),
+          include: { partner: true },
+        });
+        regenerated = true;
+      }
+
+      return res.json({
+        ok: true,
+        regenerated,
+        store: sanitizeStore(updated),
+        posCredentials: {
+          username: updated.partner?.name || updated.partner?.slug || null,
+          pin,
+          updatedAt: updated.posPinUpdatedAt || null,
+        },
+      });
+    } catch (error) {
+      console.error("[GET /stores/:id/pos-credentials]", error);
+      return res.status(500).json({ error: "pos_credentials_fetch_failed" });
     }
   });
 
@@ -1339,32 +1408,83 @@ export default function storesRoutes(prisma) {
     }
 
     try {
+      await ensureStorePosCredentialColumns(prisma);
+
       const result = await prisma.$transaction(async (tx) => {
         const partner = await tx.partner.findUnique({
           where: { id: partnerId },
-          select: { id: true },
+          select: { id: true, name: true },
         });
 
         if (!partner) {
           throw new Error("Partner not found");
         }
 
+        const posPin = generateSixDigitPin();
         const store = await tx.store.create({
           data: {
             partnerId,
             ...payload,
+            ...buildPosPinData(posPin),
           },
         });
 
         await zeroStockForNewStore(tx, store.id, partnerId);
 
-        return store;
+        return { store, partner, posPin };
       });
 
-      return res.json(result);
+      return res.json({
+        ...sanitizeStore(result.store),
+        posCredentials: {
+          username: result.partner?.name || null,
+          pin: result.posPin,
+          updatedAt: result.store?.posPinUpdatedAt || null,
+        },
+      });
     } catch (error) {
       console.error("[POST /stores]", error);
       return res.status(400).json({ error: error.message });
+    }
+  });
+
+  router.post("/:id/pos-credentials/regenerate", async (req, res) => {
+    const id = parsePositiveInt(req.params.id);
+    if (!id) {
+      return res.status(400).json({ error: "Valid id required" });
+    }
+
+    try {
+      await ensureStorePosCredentialColumns(prisma);
+
+      const existing = await prisma.store.findUnique({
+        where: { id },
+        include: { partner: true },
+      });
+
+      if (!existing) {
+        return res.status(404).json({ error: "Store not found" });
+      }
+
+      const posPin = generateSixDigitPin();
+      const updated = await prisma.store.update({
+        where: { id },
+        data: buildPosPinData(posPin),
+        include: { partner: true },
+      });
+
+      return res.json({
+        ok: true,
+        store: sanitizeStore(updated),
+        posCredentials: {
+          username: updated.partner?.name || updated.partner?.slug || null,
+          pin: posPin,
+          updatedAt: updated.posPinUpdatedAt || null,
+        },
+      });
+    } catch (error) {
+      console.error("[POST /stores/:id/pos-credentials/regenerate]", error);
+      return res.status(500).json({ error: "pos_credentials_regenerate_failed" });
     }
   });
 
@@ -1420,7 +1540,7 @@ export default function storesRoutes(prisma) {
         },
       });
 
-      return res.json(updated);
+      return res.json(sanitizeStore(updated));
     } catch (error) {
       console.error("[PATCH /stores/:id]", error);
       return res.status(400).json({ error: error.message });

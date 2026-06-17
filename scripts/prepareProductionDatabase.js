@@ -4,6 +4,7 @@ import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
 import { ensureIngredientMediaColumns } from "../services/ingredientMediaColumns.js";
+import { ensureStorePosCredentialColumns } from "../services/posCredentials.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -141,6 +142,7 @@ try {
   await ensureTrackingNotificationSettingsColumn();
   const priceAdjustmentRulesColumnReady = await ensurePriceAdjustmentRulesColumn();
   await ensureIngredientMediaColumns(prisma);
+  await ensureStorePosCredentialColumns(prisma);
 
   const migrationNames = [
     STOREFRONT_MODE_MIGRATION,

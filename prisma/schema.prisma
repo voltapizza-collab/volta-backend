@@ -204,6 +204,10 @@ model Store {
   acceptingOrders      Boolean            @default(true)
   acceptsReservations  Boolean            @default(false)
   reservationCapacity  Int?
+  posPinHash           String?            @db.Text
+  posPinEncrypted      String?            @db.Text
+  posPinUpdatedAt      DateTime?
+  posCredentialsEnabled Boolean           @default(true)
   createdAt            DateTime           @default(now())
   updatedAt            DateTime           @updatedAt
   reservations         Reservation[]

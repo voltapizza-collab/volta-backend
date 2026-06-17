@@ -4,6 +4,7 @@ import multer from "multer";
 import { v2 as cloudinary } from "cloudinary";
 import { sendSmtpEmail } from "../services/email.js";
 import { assertCloudinaryConfigured } from "../services/cloudinaryConfig.js";
+import { buildPosPinData, generateSixDigitPin } from "../services/posCredentials.js";
 
 const MAX_DOCUMENTS = 8;
 const MAX_DOCUMENT_SIZE_BYTES = 8 * 1024 * 1024;
@@ -499,9 +500,36 @@ const buildSignedContractSnapshot = (request, signature, activation = null) => {
 };
 
 const buildCredentialsEmail = (request, activation) => {
-  const backofficeUrl = `${publicFrontendUrl()}/Backoffice`;
+  const backofficeUrl = `${publicFrontendUrl()}/backoffice`;
   const posUrl = `${publicFrontendUrl()}/pos`;
-  const storefrontUrl = `${publicFrontendUrl()}/${activation.partnerSlug}/${activation.storeSlug}`;
+  const storefrontUrl = `${publicFrontendUrl()}/${activation.partnerSlug}`;
+  const posCredentials = Array.isArray(activation.posCredentials) && activation.posCredentials.length
+    ? activation.posCredentials
+    : [
+        {
+          storeName: activation.storeName,
+          username: activation.posUsername || activation.partnerName,
+          pin: activation.posPin || activation.password,
+        },
+      ];
+  const posTextLines = posCredentials.flatMap((credential) => [
+    `Tienda ${credential.storeName}:`,
+    `Usuario POS: ${credential.username}`,
+    `PIN POS: ${credential.pin}`,
+  ]);
+  const posHtmlRows = posCredentials
+    .map(
+      (credential) => `
+        <tr>
+          <td style="padding:10px 0;border-top:1px solid #c8f1e4">
+            <strong>${escapeHtml(credential.storeName)}</strong><br>
+            Usuario: <strong>${escapeHtml(credential.username)}</strong><br>
+            PIN: <strong>${escapeHtml(credential.pin)}</strong>
+          </td>
+        </tr>
+      `
+    )
+    .join("");
   const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${encodeURIComponent(
     storefrontUrl
   )}`;
@@ -518,8 +546,7 @@ const buildCredentialsEmail = (request, activation) => {
     `Contrasena: ${activation.password}`,
     "",
     `POS: ${posUrl}`,
-    `Usuario POS: ${activation.username}`,
-    `Contrasena POS: ${activation.password}`,
+    ...posTextLines,
     "",
     "Estas credenciales iniciales son provisionales. Guardalas y contactanos si necesitas cambiarlas. Antes de activar la tienda, revisa que direccion, coordenadas, carta y horarios esten configurados.",
     "",
@@ -566,8 +593,9 @@ const buildCredentialsEmail = (request, activation) => {
             <div style="color:#047857;font-size:12px;font-weight:900;text-transform:uppercase;letter-spacing:.1em">POS para atender pedidos</div>
             <div style="margin-top:10px;color:#000000;font-size:15px;line-height:1.7">
               URL: <a href="${escapeHtml(posUrl)}" style="color:#059669;font-weight:900;text-decoration:none">${escapeHtml(posUrl)}</a><br>
-              Usuario: <strong>${escapeHtml(activation.username)}</strong><br>
-              Contrasena: <strong>${escapeHtml(activation.password)}</strong>
+              <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="border-collapse:collapse;margin-top:8px">
+                ${posHtmlRows}
+              </table>
             </div>
           </td>
         </tr>
@@ -628,7 +656,7 @@ const resolveUniqueStoreSlug = async (tx, partnerId, baseValue) => {
   return slug;
 };
 
-const buildActivationPayload = ({ partner, store, username, password }) => ({
+const buildActivationPayload = ({ partner, store, username, password, posPin }) => ({
   partnerId: partner.id,
   storeId: store.id,
   partnerName: partner.name,
@@ -637,7 +665,17 @@ const buildActivationPayload = ({ partner, store, username, password }) => ({
   storeSlug: store.slug,
   username,
   password,
-  backofficeUrl: `${publicFrontendUrl()}/Backoffice`,
+  posUsername: partner.name,
+  posPin,
+  posCredentials: [
+    {
+      storeId: store.id,
+      storeName: store.storeName,
+      username: partner.name,
+      pin: posPin,
+    },
+  ],
+  backofficeUrl: `${publicFrontendUrl()}/backoffice`,
   activatedAt: new Date().toISOString(),
 });
 
@@ -682,6 +720,7 @@ const createPartnerActivation = async (tx, request) => {
   });
 
   const storeSlug = await resolveUniqueStoreSlug(tx, partner.id, partnerName);
+  const posPin = generateSixDigitPin();
   const store = await tx.store.create({
     data: {
       partnerId: partner.id,
@@ -694,6 +733,7 @@ const createPartnerActivation = async (tx, request) => {
       tlf: cleanText(formalData.businessPhone || request.phone, 64) || null,
       active: false,
       acceptingOrders: false,
+      ...buildPosPinData(posPin),
     },
   });
 
@@ -702,6 +742,7 @@ const createPartnerActivation = async (tx, request) => {
     store,
     username: partner.slug,
     password: partner.slug,
+    posPin,
   });
 };
 
@@ -1229,7 +1270,7 @@ export default function onboardingRoutes(prisma) {
       const credentialsEmailBody = buildCredentialsEmail(request, activation);
       const credentialsEmailResult = await sendSmtpEmail({
         to: request.email,
-        subject: "Tus credenciales de backoffice - Volta Pizza",
+        subject: "Tus accesos Volta: backoffice, tienda y POS",
         text: credentialsEmailBody.text,
         html: credentialsEmailBody.html,
         replyTo: process.env.ONBOARDING_REPLY_TO || "voltapizza@gmail.com",

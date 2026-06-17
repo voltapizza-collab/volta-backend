@@ -1,0 +1,4 @@
+ALTER TABLE `Store`
+  ADD COLUMN `posPinHash` TEXT NULL,
+  ADD COLUMN `posPinUpdatedAt` DATETIME NULL,
+  ADD COLUMN `posCredentialsEnabled` BOOLEAN NOT NULL DEFAULT true;
