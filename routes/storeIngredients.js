@@ -1,6 +1,8 @@
 import express from "express";
 import { sendIngredientDisabledTrackingSms } from "../services/trackingNotifications.js";
 import { ensureIngredientMediaColumns } from "../services/ingredientMediaColumns.js";
+import { ensureIngredientSemanticsAvailable } from "../services/ingredientSemanticsColumns.js";
+import { resolveIngredientDisplay } from "../services/ingredientSemantics.js";
 import prisma from "../services/prisma.js";
 
 const router = express.Router({ mergeParams: true });
@@ -11,10 +13,29 @@ const DEMO_INGREDIENT_NAMES = new Set([
   "tomate san marzano demo",
   "champinones demo",
 ]);
+const SUPPORTED_SEMANTIC_LOCALES = new Set([
+  "es",
+  "en",
+  "it",
+  "fr",
+  "pt",
+  "ar",
+  "zh",
+]);
 
 const parseId = (v) => {
   const n = Number(v);
   return Number.isInteger(n) && n > 0 ? n : null;
+};
+
+const normalizeLocaleParam = (value) => {
+  const locale = String(value || "")
+    .trim()
+    .toLowerCase()
+    .replace("_", "-")
+    .split("-")[0];
+
+  return SUPPORTED_SEMANTIC_LOCALES.has(locale) ? locale : null;
 };
 
 const normalizeAllergens = (value) => {
@@ -37,27 +58,115 @@ const normalizeAllergens = (value) => {
 const isDemoIngredient = (ingredient) =>
   DEMO_INGREDIENT_NAMES.has(String(ingredient?.name || "").trim().toLowerCase());
 
-const isDemoStore = async (storeId) => {
+const ingredientSemanticSelect = {
+  translations: {
+    select: {
+      locale: true,
+      name: true,
+      description: true,
+      isReviewed: true,
+    },
+  },
+  aliases: {
+    select: {
+      locale: true,
+      country: true,
+      alias: true,
+      searchable: true,
+      displayable: true,
+      isReviewed: true,
+    },
+  },
+  semanticCategory: {
+    select: {
+      defaultName: true,
+      translations: {
+        select: {
+          locale: true,
+          name: true,
+          isReviewed: true,
+        },
+      },
+    },
+  },
+};
+
+const getIngredientSemanticInclude = (enabled) =>
+  enabled
+    ? {
+        canonicalKey: true,
+        semanticStatus: true,
+        semanticCategoryId: true,
+        ...ingredientSemanticSelect,
+      }
+    : {};
+
+const ingredientBaseSelect = {
+  id: true,
+  name: true,
+  category: true,
+  status: true,
+  allergens: true,
+  unit: true,
+  costPrice: true,
+  description: true,
+  image: true,
+  imagePublicId: true,
+};
+
+const getStoreIngredientContext = async (
+  storeId,
+  semanticsEnabled = false,
+  localeOverride = null
+) => {
   const store = await prisma.store.findUnique({
     where: { id: storeId },
     select: {
       id: true,
-      partner: { select: { slug: true } },
+      partnerId: true,
+      partner: {
+        select: {
+          slug: true,
+          country: true,
+          ...(semanticsEnabled ? { backofficeLocale: true } : {}),
+        },
+      },
     },
   });
 
   if (!store) return null;
-  return store.partner?.slug === DEMO_PARTNER_SLUG;
+  return {
+    store,
+    allowDemoIngredients: store.partner?.slug === DEMO_PARTNER_SLUG,
+    locale: semanticsEnabled
+      ? normalizeLocaleParam(localeOverride) ||
+        normalizeLocaleParam(store.partner?.backofficeLocale) ||
+        "es"
+      : "es",
+    country: store.partner?.country || "",
+  };
 };
 
-const serializeIngredient = (ing, storeStock, extra = {}) => {
+const serializeIngredient = (ing, storeStock, context = {}, extra = {}) => {
   const isPriced = Number(ing.costPrice) > 0;
+  const semantic = resolveIngredientDisplay(ing, {
+    locale: context.locale || "es",
+    country: context.country || "",
+  });
 
   return {
     id: ing.id,
     name: ing.name,
+    displayName: semantic.displayName,
+    canonicalKey: ing.canonicalKey || null,
     category: ing.category,
+    displayCategory: semantic.displayCategory,
     status: ing.status,
+    semanticStatus: semantic.semanticStatus,
+    aliases: semantic.aliases,
+    searchAliases: semantic.searchAliases,
+    semanticTranslations: semantic.translations,
+    searchText: semantic.searchText,
     allergens: normalizeAllergens(ing.allergens),
     unit: ing.unit,
     costPrice: ing.costPrice,
@@ -71,15 +180,17 @@ const serializeIngredient = (ing, storeStock, extra = {}) => {
   };
 };
 
-const getMenuScopedIngredients = async (storeId) => {
-  const store = await prisma.store.findUnique({
-    where: { id: storeId },
-    select: {
-      id: true,
-      partnerId: true,
-      partner: { select: { slug: true } },
-    },
-  });
+const getMenuScopedIngredients = async (
+  storeId,
+  semanticsEnabled = false,
+  localeOverride = null
+) => {
+  const context = await getStoreIngredientContext(
+    storeId,
+    semanticsEnabled,
+    localeOverride
+  );
+  const store = context?.store;
 
   if (!store) return null;
 
@@ -103,16 +214,14 @@ const getMenuScopedIngredients = async (storeId) => {
         select: {
           ingredient: {
             select: {
-              id: true,
-              name: true,
-              category: true,
-              status: true,
-              allergens: true,
-              unit: true,
-              costPrice: true,
-              description: true,
-              image: true,
-              imagePublicId: true,
+              ...ingredientBaseSelect,
+              ...(semanticsEnabled
+                ? {
+                    canonicalKey: true,
+                    semanticStatus: true,
+                    ...ingredientSemanticSelect,
+                  }
+                : {}),
               storeStocks: {
                 where: { storeId },
                 select: {
@@ -150,7 +259,7 @@ const getMenuScopedIngredients = async (storeId) => {
     });
   });
 
-  const allowDemoIngredients = store.partner?.slug === DEMO_PARTNER_SLUG;
+  const allowDemoIngredients = context.allowDemoIngredients;
 
   return [...byIngredient.values()]
     .filter(({ ingredient }) => allowDemoIngredients || !isDemoIngredient(ingredient))
@@ -161,7 +270,7 @@ const getMenuScopedIngredients = async (storeId) => {
         left.name.localeCompare(right.name, "es", { sensitivity: "base" })
       );
 
-      return serializeIngredient(ingredient, ingredient.storeStocks?.[0], {
+      return serializeIngredient(ingredient, ingredient.storeStocks?.[0], context, {
         affectedProducts: uniqueProducts.length,
         affectedProductNames: uniqueProducts.map((product) => product.name),
       });
@@ -189,13 +298,23 @@ router.get("/", async (req, res) => {
       return res.status(400).json({ error: "Invalid storeId" });
     }
 
-    const allowDemoIngredients = await isDemoStore(storeId);
-    if (allowDemoIngredients == null) {
+    const semanticsEnabled = await ensureIngredientSemanticsAvailable(prisma);
+    const localeOverride = normalizeLocaleParam(req.query.locale);
+    const context = await getStoreIngredientContext(
+      storeId,
+      semanticsEnabled,
+      localeOverride
+    );
+    if (!context) {
       return res.status(404).json({ error: "Store not found" });
     }
 
     if (req.query.scope === "menu") {
-      const scoped = await getMenuScopedIngredients(storeId);
+      const scoped = await getMenuScopedIngredients(
+        storeId,
+        semanticsEnabled,
+        localeOverride
+      );
       if (!scoped) {
         return res.status(404).json({ error: "Store not found" });
       }
@@ -205,16 +324,18 @@ router.get("/", async (req, res) => {
     const ingredients = await prisma.ingredient.findMany({
       where: { status: "ACTIVE" },
       orderBy: { name: "asc" },
-      include: {
+      select: {
+        ...ingredientBaseSelect,
         storeStocks: {
           where: { storeId },
         },
+        ...getIngredientSemanticInclude(semanticsEnabled),
       },
     });
 
     const result = ingredients
-      .filter((ing) => allowDemoIngredients || !isDemoIngredient(ing))
-      .map((ing) => serializeIngredient(ing, ing.storeStocks[0]));
+      .filter((ing) => context.allowDemoIngredients || !isDemoIngredient(ing))
+      .map((ing) => serializeIngredient(ing, ing.storeStocks[0], context));
 
     res.json(result);
   } catch (err) {

@@ -568,7 +568,7 @@ const buildSignedContractSnapshot = (request, signature, activation = null) => {
 const buildCredentialsEmail = (request, activation) => {
   const backofficeUrl = `${publicFrontendUrl()}/backoffice`;
   const posUrl = `${publicFrontendUrl()}/pos`;
-  const storefrontUrl = `${publicFrontendUrl()}/${activation.partnerSlug}`;
+  const storefrontUrl = `${publicFrontendUrl()}/${activation.partnerSlug}/order`;
   const posCredentials = Array.isArray(activation.posCredentials) && activation.posCredentials.length
     ? activation.posCredentials
     : [

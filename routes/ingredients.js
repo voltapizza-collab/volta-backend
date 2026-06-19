@@ -3,6 +3,8 @@ import multer from "multer";
 import { v2 as cloudinary } from "cloudinary";
 import { ensureIngredientMediaColumns } from "../services/ingredientMediaColumns.js";
 import { assertCloudinaryConfigured } from "../services/cloudinaryConfig.js";
+import { ensureIngredientSemanticsAvailable } from "../services/ingredientSemanticsColumns.js";
+import { normalizeSemanticsPayload } from "../services/ingredientSemanticAdmin.js";
 import prisma from "../services/prisma.js";
 
 const router = express.Router();
@@ -63,20 +65,276 @@ const getErrorStatus = (err, fallback = 400) => {
   return fallback;
 };
 
+const ingredientSemanticInclude = {
+  translations: {
+    orderBy: { locale: "asc" },
+  },
+  aliases: {
+    orderBy: [{ locale: "asc" }, { alias: "asc" }],
+  },
+  semanticCategory: {
+    include: {
+      translations: {
+        orderBy: { locale: "asc" },
+      },
+    },
+  },
+};
+
+const semanticCategoryInclude = {
+  translations: {
+    orderBy: { locale: "asc" },
+  },
+};
+
+const requireIngredientSemantics = async () => {
+  const available = await ensureIngredientSemanticsAvailable(prisma);
+
+  if (!available) {
+    const error = new Error("Ingredient semantics migration is not available");
+    error.status = 409;
+    throw error;
+  }
+};
+
+const parseIngredientId = (value) => {
+  const id = Number(value);
+  if (!Number.isInteger(id) || id <= 0) {
+    const error = new Error("Invalid ingredient id");
+    error.status = 400;
+    throw error;
+  }
+  return id;
+};
+
+const ingredientLegacySelect = {
+  id: true,
+  name: true,
+  category: true,
+  allergens: true,
+  calories: true,
+  protein: true,
+  carbs: true,
+  fat: true,
+  isSystem: true,
+  stock: true,
+  unit: true,
+  costPrice: true,
+  description: true,
+  image: true,
+  imagePublicId: true,
+  status: true,
+  createdAt: true,
+  updatedAt: true,
+};
+
 router.get("/", async (req, res) => {
   try {
     await ensureIngredientMediaColumns(prisma);
+    const semanticsEnabled = await ensureIngredientSemanticsAvailable(prisma);
 
     const ingredients = await prisma.ingredient.findMany({
       orderBy: { createdAt: "desc" },
+      select: {
+        ...ingredientLegacySelect,
+        ...(semanticsEnabled
+          ? {
+              canonicalKey: true,
+              semanticStatus: true,
+              semanticCategoryId: true,
+              translations: {
+                select: {
+                  locale: true,
+                  name: true,
+                  isReviewed: true,
+                },
+              },
+              aliases: {
+                select: {
+                  locale: true,
+                  alias: true,
+                  searchable: true,
+                  displayable: true,
+                  isReviewed: true,
+                },
+              },
+              _count: {
+                select: {
+                  translations: true,
+                  aliases: true,
+                },
+              },
+            }
+          : {}),
+      },
     });
 
-    res.json(ingredients.filter((ingredient) => !isDemoIngredient(ingredient)));
+    res.json(
+      ingredients
+        .filter((ingredient) => !isDemoIngredient(ingredient))
+        .map((ingredient) => {
+          const { _count, translations, aliases, ...rest } = ingredient;
+
+          if (!semanticsEnabled) return rest;
+
+          return {
+            ...rest,
+            semanticTranslations: translations || [],
+            semanticAliases: aliases || [],
+            translationCount: _count?.translations || 0,
+            aliasCount: _count?.aliases || 0,
+          };
+        })
+    );
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: "error fetching ingredients" });
   }
 });
+
+router.get("/semantic-categories", async (_req, res) => {
+  try {
+    await requireIngredientSemantics();
+
+    const categories = await prisma.ingredientSemanticCategory.findMany({
+      include: semanticCategoryInclude,
+      orderBy: [{ position: "asc" }, { defaultName: "asc" }],
+    });
+
+    res.json(categories);
+  } catch (err) {
+    console.error(err);
+    res.status(getErrorStatus(err, 500)).json({
+      error: err.message || "error fetching semantic categories",
+    });
+  }
+});
+
+router.get("/:id/semantics", async (req, res) => {
+  try {
+    await requireIngredientSemantics();
+
+    const id = parseIngredientId(req.params.id);
+    const ingredient = await prisma.ingredient.findUnique({
+      where: { id },
+      include: ingredientSemanticInclude,
+    });
+
+    if (!ingredient) {
+      return res.status(404).json({ error: "Ingredient not found" });
+    }
+
+    res.json(ingredient);
+  } catch (err) {
+    console.error(err);
+    res.status(getErrorStatus(err, 500)).json({
+      error: err.message || "error fetching ingredient semantics",
+    });
+  }
+});
+
+router.patch("/:id/semantics", async (req, res) => {
+  try {
+    await requireIngredientSemantics();
+
+    const id = parseIngredientId(req.params.id);
+    const payload = normalizeSemanticsPayload(req.body);
+
+    const existing = await prisma.ingredient.findUnique({
+      where: { id },
+      select: { id: true },
+    });
+
+    if (!existing) {
+      return res.status(404).json({ error: "Ingredient not found" });
+    }
+
+    if (payload.semanticCategoryId) {
+      const category = await prisma.ingredientSemanticCategory.findUnique({
+        where: { id: payload.semanticCategoryId },
+        select: { id: true },
+      });
+
+      if (!category) {
+        return res.status(400).json({ error: "Semantic category not found" });
+      }
+    }
+
+    const ingredientData = {};
+    ["canonicalKey", "semanticStatus", "semanticCategoryId"].forEach((field) => {
+      if (Object.prototype.hasOwnProperty.call(payload, field)) {
+        ingredientData[field] = payload[field];
+      }
+    });
+
+    const ingredient = await prisma.$transaction(async (tx) => {
+      if (Object.keys(ingredientData).length) {
+        await tx.ingredient.update({
+          where: { id },
+          data: ingredientData,
+        });
+      }
+
+      for (const translation of payload.translations) {
+        await tx.ingredientTranslation.upsert({
+          where: {
+            ingredientId_locale: {
+              ingredientId: id,
+              locale: translation.locale,
+            },
+          },
+          update: {
+            name: translation.name,
+            description: translation.description,
+            isReviewed: translation.isReviewed,
+          },
+          create: {
+            ingredientId: id,
+            ...translation,
+          },
+        });
+      }
+
+      for (const alias of payload.aliases) {
+        const existingAlias = await tx.ingredientAlias.findFirst({
+          where: {
+            ingredientId: id,
+            locale: alias.locale,
+            normalizedAlias: alias.normalizedAlias,
+          },
+          select: { id: true },
+        });
+
+        if (existingAlias) {
+          await tx.ingredientAlias.update({
+            where: { id: existingAlias.id },
+            data: alias,
+          });
+        } else {
+          await tx.ingredientAlias.create({
+            data: {
+              ingredientId: id,
+              ...alias,
+            },
+          });
+        }
+      }
+
+      return tx.ingredient.findUnique({
+        where: { id },
+        include: ingredientSemanticInclude,
+      });
+    });
+
+    res.json(ingredient);
+  } catch (err) {
+    console.error(err);
+    res.status(getErrorStatus(err, 500)).json({
+      error: err.message || "error updating ingredient semantics",
+    });
+  }
+});
+
 router.get("/suggestions", async (req, res) => {
   try {
     const { status } = req.query;
@@ -120,6 +378,7 @@ router.post("/", upload.single("image"), async (req, res) => {
           allergens: normalizeAllergens(allergens),
           description: normalizeText(description, 420) || null,
         },
+        select: ingredientLegacySelect,
       });
 
       return created;
@@ -136,6 +395,7 @@ router.post("/", upload.single("image"), async (req, res) => {
       const updated = await prisma.ingredient.update({
         where: { id: ingredient.id },
         data: uploadedImage,
+        select: ingredientLegacySelect,
       });
       return res.json(updated);
     } catch (uploadError) {
@@ -220,7 +480,11 @@ router.patch("/:id", upload.single("image"), async (req, res) => {
       return res.status(400).json({ error: "No valid fields to update" });
     }
 
-    const ingredient = await prisma.ingredient.update({ where: { id }, data });
+    const ingredient = await prisma.ingredient.update({
+      where: { id },
+      data,
+      select: ingredientLegacySelect,
+    });
 
     if (uploadedImage?.imagePublicId && existing.imagePublicId) {
       await cloudinary.uploader.destroy(existing.imagePublicId).catch((error) => {
@@ -361,6 +625,7 @@ router.patch("/suggestions/:id/approve", async (req, res) => {
         ? await tx.ingredient.update({
             where: { id: existingIngredient.id },
             data: { status: "ACTIVE" },
+            select: ingredientLegacySelect,
           })
         : await tx.ingredient.create({
             data: {
@@ -368,6 +633,7 @@ router.patch("/suggestions/:id/approve", async (req, res) => {
               category: suggestion.category,
               allergens: [],
             },
+            select: ingredientLegacySelect,
           });
 
       return { suggestion: updatedSuggestion, ingredient };

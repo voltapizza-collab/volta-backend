@@ -6,7 +6,12 @@
   "type": "module",
   "scripts": {
     "start": "node scripts/prepareProductionDatabase.js && node scripts/deployProductionMigrations.js && node index.js",
-    "test": "node --test tests/cloudinaryConfig.test.js tests/posCredentials.test.js tests/telnyx.test.js tests/trackingNotifications.test.js tests/trackingAlerts.test.js tests/storeMenuActivation.test.js tests/deliveryResolution.test.js tests/checkoutCouponOverlap.test.js tests/myordersFilters.test.js tests/couponRedeemUrls.test.js tests/productReviews.test.js tests/stripeCheckout.test.js"
+    "map:ingredient-semantics": "node scripts/mapIngredientSemanticCategories.js",
+    "seed:ingredient-batch3": "node scripts/seedIngredientSemanticBatch3.js",
+    "seed:ingredient-batch2": "node scripts/seedIngredientSemanticBatch2.js",
+    "seed:ingredient-pilot": "node scripts/seedIngredientSemanticPilot.js",
+    "seed:ingredient-semantics": "node scripts/seedIngredientSemanticCategories.js",
+    "test": "node --test tests/cloudinaryConfig.test.js tests/posCredentials.test.js tests/telnyx.test.js tests/trackingNotifications.test.js tests/trackingAlerts.test.js tests/storeMenuActivation.test.js tests/ingredientSemantics.test.js tests/ingredientSemanticsColumns.test.js tests/ingredientSemanticCategoryMap.test.js tests/ingredientSemanticAdmin.test.js tests/deliveryResolution.test.js tests/checkoutCouponOverlap.test.js tests/myordersFilters.test.js tests/couponRedeemUrls.test.js tests/productReviews.test.js tests/stripeCheckout.test.js"
   },
   "keywords": [],
   "author": "",

@@ -169,13 +169,11 @@ const isStoreOpenNow = (store, now = new Date()) => {
 
 const filterOperationalStores = (stores = [], now = getStoreClockNow()) =>
   stores.filter(
-    (store) => store?.active !== false && store?.acceptingOrders !== false && isStoreOpenNow(store, now)
+    (store) => store?.active !== false && isStoreOpenNow(store, now)
   );
 
 export const selectDeliveryCoverageStores = (stores = [], now = getStoreClockNow()) => {
-  const activeStores = stores.filter(
-    (store) => store?.active !== false && store?.acceptingOrders !== false
-  );
+  const activeStores = stores.filter((store) => store?.active !== false);
   const operationalStores = filterOperationalStores(activeStores, now);
 
   return operationalStores.length ? operationalStores : activeStores;
@@ -1316,7 +1314,6 @@ router.post("/:slug/delivery/resolve", async (req, res) => {
       where: {
         partnerId: Number(partner.id),
         active: true,
-        acceptingOrders: true,
       },
       include: {
         hours: {
@@ -1518,11 +1515,10 @@ router.post("/:slug/delivery/resolve", async (req, res) => {
       const partner = await getPartnerPolicyBySlug(req.params.slug);
       const rawStores = partner
         ? await prisma.store.findMany({
-            where: {
-              partnerId: Number(partner.id),
-              active: true,
-              acceptingOrders: true,
-            },
+          where: {
+            partnerId: Number(partner.id),
+            active: true,
+          },
             include: {
               hours: {
                 orderBy: [{ dayOfWeek: "asc" }, { openTime: "asc" }],

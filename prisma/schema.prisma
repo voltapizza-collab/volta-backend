@@ -162,6 +162,7 @@ model Partner {
     trackingNotificationSettings Json?
     priceAdjustmentRules Json?
     paymentPolicySettings Json?
+    backofficeLocale    String   @default("es")
     smsCredits          Int      @default(0)
   smsRecharged        Int      @default(0)
   smsConsumed         Int      @default(0)
@@ -312,6 +313,9 @@ model Ingredient {
   description      String?               @db.Text
   image            String?               @db.Text
   imagePublicId    String?
+  canonicalKey     String?               @unique
+  semanticStatus   String                @default("UNREVIEWED")
+  semanticCategoryId Int?
   status           IngredientStatus      @default(ACTIVE)
   createdAt        DateTime              @default(now())
   updatedAt        DateTime              @updatedAt
@@ -319,6 +323,78 @@ model Ingredient {
   ingredientExtras IngredientExtra[]
   categoryUses     IngredientCategoryUse[]
   storeStocks      StoreIngredientStock[]
+  translations     IngredientTranslation[]
+  aliases          IngredientAlias[]
+  semanticCategory IngredientSemanticCategory? @relation(fields: [semanticCategoryId], references: [id], onDelete: SetNull)
+
+  @@index([semanticCategoryId])
+  @@index([semanticStatus])
+}
+model IngredientSemanticCategory {
+  id           Int      @id @default(autoincrement())
+  canonicalKey String   @unique
+  defaultName  String
+  status       String   @default("ACTIVE")
+  position     Int      @default(0)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  ingredients  Ingredient[]
+  translations IngredientSemanticCategoryTranslation[]
+
+  @@index([status, position])
+}
+model IngredientSemanticCategoryTranslation {
+  id         Int      @id @default(autoincrement())
+  categoryId Int
+  locale     String
+  name       String
+  isReviewed Boolean  @default(false)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  category IngredientSemanticCategory @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+
+  @@unique([categoryId, locale])
+  @@index([locale])
+}
+model IngredientTranslation {
+  id           Int      @id @default(autoincrement())
+  ingredientId Int
+  locale       String
+  name         String
+  description  String?  @db.Text
+  isReviewed   Boolean  @default(false)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  ingredient Ingredient @relation(fields: [ingredientId], references: [id], onDelete: Cascade)
+
+  @@unique([ingredientId, locale])
+  @@index([locale])
+  @@index([name])
+}
+model IngredientAlias {
+  id              Int      @id @default(autoincrement())
+  ingredientId    Int
+  locale          String?
+  country         String?
+  alias           String
+  normalizedAlias String
+  searchable      Boolean  @default(true)
+  displayable     Boolean  @default(false)
+  isReviewed      Boolean  @default(false)
+  source          String   @default("SYSTEM")
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  ingredient Ingredient @relation(fields: [ingredientId], references: [id], onDelete: Cascade)
+
+  @@unique([ingredientId, locale, normalizedAlias])
+  @@index([ingredientId])
+  @@index([normalizedAlias])
+  @@index([locale])
+  @@index([country])
 }
 model IngredientSuggestion {
   id        Int      @id @default(autoincrement())

@@ -1,0 +1,41 @@
+[db.slow] raw.queryRaw 1183ms
+[db.slow] raw.queryRaw 1989ms
+[db.slow] raw.queryRaw 1923ms
+[db.slow] raw.queryRaw 2053ms
+[db.slow] raw.queryRaw 439ms
+[db.slow] raw.queryRaw 442ms
+[db.slow] IngredientSemanticCategory.findMany 424ms
+[http.slow] GET /ingredients/semantic-categories 200 2485ms queries=4 db=5649ms slow=raw.queryRaw:1183ms,raw.queryRaw:1989ms,raw.queryRaw:2053ms,IngredientSemanticCategory.findMany:424ms
+[db.slow] Store.findUnique 806ms
+[db.slow] Ingredient.findMany 1735ms
+[http.slow] GET /stores/1/ingredients 200 4919ms queries=6 db=5563ms slow=raw.queryRaw:1923ms,raw.queryRaw:439ms,raw.queryRaw:442ms,Store.findUnique:806ms
+[db.slow] ProductReviewRequest.findMany 453ms
+[db.slow] ProductReviewRequest.findMany 431ms
+[db.slow] IngredientSemanticCategory.findMany 1030ms
+[http.slow] GET /ingredients/semantic-categories 200 1033ms queries=1 db=1030ms slow=IngredientSemanticCategory.findMany:1030ms
+[db.slow] ProductReviewRequest.findMany 394ms
+[db.slow] ProductReviewRequest.findMany 405ms
+[db.slow] ProductReviewRequest.findMany 393ms
+[db.slow] IngredientSemanticCategory.findMany 594ms
+[http.slow] GET /ingredients/semantic-categories 200 597ms queries=1 db=594ms slow=IngredientSemanticCategory.findMany:594ms
+[db.slow] raw.queryRaw 1192ms
+[db.slow] Store.findUnique 781ms
+[db.slow] Ingredient.findMany 2526ms
+[http.slow] GET /stores/1/ingredients 200 4513ms queries=3 db=4499ms slow=raw.queryRaw:1192ms,Store.findUnique:781ms,Ingredient.findMany:2526ms
+[db.slow] raw.queryRaw 391ms
+[db.slow] Store.findUnique 401ms
+[db.slow] Ingredient.findMany 1238ms
+[http.slow] GET /stores/1/ingredients 200 2040ms queries=3 db=2030ms slow=raw.queryRaw:391ms,Store.findUnique:401ms,Ingredient.findMany:1238ms
+[db.slow] ProductReviewRequest.findMany 589ms
+[db.slow] ProductReviewRequest.findMany 395ms
+[db.slow] ProductReviewRequest.findMany 422ms
+[db.slow] ProductReviewRequest.findMany 396ms
+[db.slow] ProductReviewRequest.findMany 391ms
+[db.slow] ProductReviewRequest.findMany 408ms
+[db.slow] ProductReviewRequest.findMany 397ms
+[db.slow] ProductReviewRequest.findMany 391ms
+[db.slow] ProductReviewRequest.findMany 411ms
+[db.slow] raw.queryRaw 393ms
+[db.slow] Ingredient.findMany 397ms
+[http.slow] GET /ingredients 200 795ms queries=2 db=790ms slow=raw.queryRaw:393ms,Ingredient.findMany:397ms
+[db.slow] ProductReviewRequest.findMany 434ms
