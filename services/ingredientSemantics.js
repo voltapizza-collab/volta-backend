@@ -12,7 +12,8 @@ export const normalizeSearchText = (value) =>
 const normalizeLocale = (locale) =>
   String(locale || "")
     .trim()
-    .toLowerCase();
+    .toLowerCase()
+    .replace("_", "-");
 
 const uniqueValues = (values) => {
   const seen = new Set();
@@ -42,8 +43,26 @@ const formatTechnicalCategory = (category) => {
     .join(" ");
 };
 
+const expandLocale = (locale) => {
+  const normalized = normalizeLocale(locale);
+  if (!normalized) return [];
+
+  const baseLocale = normalized.split("-")[0];
+  return normalized === baseLocale ? [normalized] : [normalized, baseLocale];
+};
+
 const orderedLocales = (locale, fallbackLocales = DEFAULT_FALLBACK_LOCALES) =>
-  uniqueValues([locale, ...fallbackLocales].map(normalizeLocale));
+  uniqueValues([
+    ...expandLocale(locale),
+    ...fallbackLocales.flatMap(expandLocale),
+  ]);
+
+const isRequestedLocaleMatch = (translationLocale, requestedLocale) => {
+  const translationLocales = new Set(expandLocale(translationLocale));
+  return expandLocale(requestedLocale).some((locale) =>
+    translationLocales.has(locale)
+  );
+};
 
 const findReviewedTranslation = (translations, locales) => {
   const rows = Array.isArray(translations) ? translations : [];
@@ -105,7 +124,7 @@ const resolveAliases = (
   });
 
   const searchAliases = uniqueValues(
-    scopedRows
+    rows
       .filter((row) => row?.searchable !== false)
       .map((row) => row.alias)
   );
@@ -133,9 +152,12 @@ export const resolveCategoryDisplay = (
   const translation = getReviewedCategoryTranslation(category, locales);
 
   if (translation?.name) {
+    const resolvedLocale = normalizeLocale(translation.locale);
+
     return {
       displayCategory: translation.name,
-      categoryFallbackUsed: false,
+      categoryResolvedLocale: resolvedLocale || null,
+      categoryFallbackUsed: !isRequestedLocaleMatch(resolvedLocale, locale),
     };
   }
 
@@ -143,6 +165,7 @@ export const resolveCategoryDisplay = (
     displayCategory:
       category?.defaultName ||
       formatTechnicalCategory(ingredient?.category),
+    categoryResolvedLocale: null,
     categoryFallbackUsed: true,
   };
 };
@@ -176,6 +199,7 @@ export const resolveIngredientDisplay = (
     translation?.name ||
     String(ingredient?.name || "").trim() ||
     `Ingrediente ${ingredient?.id || ""}`.trim();
+  const resolvedLocale = translation ? normalizeLocale(translation.locale) : null;
 
   const displayDescription =
     translation?.description ||
@@ -197,8 +221,11 @@ export const resolveIngredientDisplay = (
     searchAliases: aliasResolution.searchAliases,
     translations: getReviewedTranslations(ingredient?.translations),
     searchText,
-    fallbackUsed: !translation,
+    requestedLocale: normalizeLocale(locale) || null,
+    resolvedLocale,
+    fallbackUsed: !translation || !isRequestedLocaleMatch(resolvedLocale, locale),
     categoryFallbackUsed: categoryResolution.categoryFallbackUsed,
+    categoryResolvedLocale: categoryResolution.categoryResolvedLocale,
     semanticStatus: ingredient?.semanticStatus || "UNREVIEWED",
   };
 };

@@ -41,6 +41,8 @@ const CATEGORIES = [
       it: "Formaggi",
       fr: "Fromages",
       pt: "Queijos",
+      ar: "أجبان",
+      zh: "奶酪",
     },
   },
   {
@@ -53,6 +55,8 @@ const CATEGORIES = [
       it: "Salse",
       fr: "Sauces",
       pt: "Molhos",
+      ar: "صلصات",
+      zh: "酱料",
     },
   },
   {
@@ -65,6 +69,8 @@ const CATEGORIES = [
       it: "Carni",
       fr: "Viandes",
       pt: "Carnes",
+      ar: "لحوم",
+      zh: "肉类",
     },
   },
   {
@@ -77,6 +83,8 @@ const CATEGORIES = [
       it: "Salumi",
       fr: "Charcuteries",
       pt: "Enchidos",
+      ar: "لحوم معالجة",
+      zh: "腌制肉类",
     },
   },
   {
@@ -89,6 +97,8 @@ const CATEGORIES = [
       it: "Pesce e frutti di mare",
       fr: "Poissons et fruits de mer",
       pt: "Peixes e mariscos",
+      ar: "أسماك ومأكولات بحرية",
+      zh: "鱼类和海鲜",
     },
   },
   {
@@ -101,6 +111,8 @@ const CATEGORIES = [
       it: "Verdure",
       fr: "Legumes",
       pt: "Legumes",
+      ar: "خضروات",
+      zh: "蔬菜",
     },
   },
   {
@@ -113,6 +125,8 @@ const CATEGORIES = [
       it: "Funghi",
       fr: "Champignons",
       pt: "Cogumelos",
+      ar: "فطر",
+      zh: "蘑菇",
     },
   },
   {
@@ -125,6 +139,8 @@ const CATEGORIES = [
       it: "Frutta",
       fr: "Fruits",
       pt: "Frutas",
+      ar: "فواكه",
+      zh: "水果",
     },
   },
   {
@@ -137,6 +153,8 @@ const CATEGORIES = [
       it: "Erbe e spezie",
       fr: "Herbes et epices",
       pt: "Ervas e especiarias",
+      ar: "أعشاب وتوابل",
+      zh: "香草和香料",
     },
   },
   {
@@ -149,6 +167,8 @@ const CATEGORIES = [
       it: "Oli, grassi e aceti",
       fr: "Huiles, graisses et vinaigres",
       pt: "Oleos, gorduras e vinagres",
+      ar: "زيوت ودهون وخل",
+      zh: "油脂和醋",
     },
   },
   {
@@ -161,6 +181,8 @@ const CATEGORIES = [
       it: "Creme dolci",
       fr: "Cremes sucrees",
       pt: "Cremes doces",
+      ar: "كريمة حلوة",
+      zh: "甜奶油",
     },
   },
   {
@@ -173,6 +195,8 @@ const CATEGORIES = [
       it: "Dolcificanti",
       fr: "Edulcorants",
       pt: "Adocantes",
+      ar: "محليات",
+      zh: "甜味剂",
     },
   },
   {
@@ -185,6 +209,8 @@ const CATEGORIES = [
       it: "Frutta secca e semi",
       fr: "Fruits secs et graines",
       pt: "Frutos secos e sementes",
+      ar: "مكسرات وبذور",
+      zh: "坚果和种子",
     },
   },
   {
@@ -197,6 +223,8 @@ const CATEGORIES = [
       it: "Proteine vegane",
       fr: "Proteine vegetale",
       pt: "Proteina vegana",
+      ar: "بروتين نباتي",
+      zh: "植物蛋白",
     },
   },
   {
@@ -209,6 +237,8 @@ const CATEGORIES = [
       it: "Extra",
       fr: "Extras",
       pt: "Extras",
+      ar: "إضافات",
+      zh: "额外配料",
     },
   },
   {
@@ -221,6 +251,8 @@ const CATEGORIES = [
       it: "Altro",
       fr: "Autres",
       pt: "Outros",
+      ar: "أخرى",
+      zh: "其他",
     },
   },
 ];

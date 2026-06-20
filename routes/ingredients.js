@@ -5,16 +5,15 @@ import { ensureIngredientMediaColumns } from "../services/ingredientMediaColumns
 import { assertCloudinaryConfigured } from "../services/cloudinaryConfig.js";
 import { ensureIngredientSemanticsAvailable } from "../services/ingredientSemanticsColumns.js";
 import { normalizeSemanticsPayload } from "../services/ingredientSemanticAdmin.js";
+import { resolveIngredientDisplay } from "../services/ingredientSemantics.js";
+import {
+  suggestLocalSemanticMapping,
+  suggestLocalSemanticMappings,
+} from "../services/ingredientLocalSemantics.js";
 import prisma from "../services/prisma.js";
 
 const router = express.Router();
 const upload = multer({ storage: multer.memoryStorage() });
-const DEMO_INGREDIENT_NAMES = new Set([
-  "mozzarella demo",
-  "pepperoni demo",
-  "tomate san marzano demo",
-  "champinones demo",
-]);
 
 const parseMaybeJson = (value, fallback) => {
   if (value == null || value === "") return fallback;
@@ -33,15 +32,19 @@ const normalizeText = (value, max = 400) =>
     .trim()
     .slice(0, max);
 
+const normalizeLocaleParam = (value) =>
+  String(value || "")
+    .trim()
+    .toLowerCase()
+    .replace("_", "-")
+    .split("-")[0] || null;
+
 const normalizeAllergens = (value) => {
   const parsed = parseMaybeJson(value, value);
   return Array.isArray(parsed)
     ? parsed.map((item) => String(item || "").trim()).filter(Boolean)
     : [];
 };
-
-const isDemoIngredient = (ingredient) =>
-  DEMO_INGREDIENT_NAMES.has(String(ingredient?.name || "").trim().toLowerCase());
 
 const uploadIngredientImage = async (file, ingredientId) => {
   if (!file) return null;
@@ -97,6 +100,28 @@ const requireIngredientSemantics = async () => {
   }
 };
 
+const mapSemanticIngredient = (ingredient, locale = "es") => {
+  if (!ingredient) return null;
+
+  const semantic = resolveIngredientDisplay(ingredient, { locale });
+  const { translations, aliases, _count, semanticCategory, ...rest } = ingredient;
+
+  return {
+    ...rest,
+    displayName: semantic.displayName,
+    displayCategory: semantic.displayCategory,
+    semanticCategoryKey: semanticCategory?.canonicalKey || null,
+    searchText: semantic.searchText,
+    requestedLocale: semantic.requestedLocale,
+    resolvedLocale: semantic.resolvedLocale,
+    fallbackUsed: semantic.fallbackUsed,
+    semanticTranslations: translations || [],
+    semanticAliases: aliases || [],
+    translationCount: _count?.translations || 0,
+    aliasCount: _count?.aliases || 0,
+  };
+};
+
 const parseIngredientId = (value) => {
   const id = Number(value);
   if (!Number.isInteger(id) || id <= 0) {
@@ -134,6 +159,7 @@ router.get("/", async (req, res) => {
     const semanticsEnabled = await ensureIngredientSemanticsAvailable(prisma);
 
     const ingredients = await prisma.ingredient.findMany({
+      where: { isSystem: true },
       orderBy: { createdAt: "desc" },
       select: {
         ...ingredientLegacySelect,
@@ -146,16 +172,31 @@ router.get("/", async (req, res) => {
                 select: {
                   locale: true,
                   name: true,
+                  description: true,
                   isReviewed: true,
                 },
               },
               aliases: {
                 select: {
                   locale: true,
+                  country: true,
                   alias: true,
                   searchable: true,
                   displayable: true,
                   isReviewed: true,
+                },
+              },
+              semanticCategory: {
+                select: {
+                  canonicalKey: true,
+                  defaultName: true,
+                  translations: {
+                    select: {
+                      locale: true,
+                      name: true,
+                      isReviewed: true,
+                    },
+                  },
                 },
               },
               _count: {
@@ -171,14 +212,27 @@ router.get("/", async (req, res) => {
 
     res.json(
       ingredients
-        .filter((ingredient) => !isDemoIngredient(ingredient))
         .map((ingredient) => {
           const { _count, translations, aliases, ...rest } = ingredient;
 
           if (!semanticsEnabled) return rest;
+          const semantic = resolveIngredientDisplay(ingredient, {
+            locale: normalizeLocaleParam(req.query.locale) || "es",
+          });
 
           return {
             ...rest,
+            displayName: semantic.displayName,
+            displayDescription: semantic.displayDescription,
+            displayCategory: semantic.displayCategory,
+            displayAliases: semantic.aliases,
+            searchAliases: semantic.searchAliases,
+            searchText: semantic.searchText,
+            requestedLocale: semantic.requestedLocale,
+            resolvedLocale: semantic.resolvedLocale,
+            fallbackUsed: semantic.fallbackUsed,
+            categoryResolvedLocale: semantic.categoryResolvedLocale,
+            categoryFallbackUsed: semantic.categoryFallbackUsed,
             semanticTranslations: translations || [],
             semanticAliases: aliases || [],
             translationCount: _count?.translations || 0,
@@ -210,6 +264,357 @@ router.get("/semantic-categories", async (_req, res) => {
   }
 });
 
+router.get("/local-semantic-mappings", async (req, res) => {
+  try {
+    await requireIngredientSemantics();
+
+    const locale = normalizeLocaleParam(req.query.locale) || "es";
+    const globalIngredientSelect = {
+      ...ingredientLegacySelect,
+      canonicalKey: true,
+      semanticStatus: true,
+      semanticCategoryId: true,
+      translations: {
+        select: {
+          locale: true,
+          name: true,
+          description: true,
+          isReviewed: true,
+        },
+      },
+      aliases: {
+        select: {
+          locale: true,
+          country: true,
+          alias: true,
+          searchable: true,
+          displayable: true,
+          isReviewed: true,
+        },
+      },
+      semanticCategory: {
+        select: {
+          canonicalKey: true,
+          defaultName: true,
+          translations: {
+            select: {
+              locale: true,
+              name: true,
+              isReviewed: true,
+            },
+          },
+        },
+      },
+      _count: {
+        select: {
+          translations: true,
+          aliases: true,
+        },
+      },
+    };
+
+    const [localIngredients, globalIngredients] = await Promise.all([
+      prisma.ingredient.findMany({
+        where: { isSystem: false },
+        orderBy: [{ updatedAt: "desc" }, { name: "asc" }],
+        select: {
+          ...ingredientLegacySelect,
+          localSemanticMapping: {
+            include: {
+              globalIngredient: {
+                select: globalIngredientSelect,
+              },
+            },
+          },
+          _count: {
+            select: {
+              menuPizzas: true,
+              ingredientExtras: true,
+              categoryUses: true,
+              storeStocks: true,
+            },
+          },
+        },
+      }),
+      prisma.ingredient.findMany({
+        where: {
+          isSystem: true,
+          semanticStatus: "REVIEWED",
+          canonicalKey: { not: null },
+        },
+        orderBy: [{ name: "asc" }],
+        select: globalIngredientSelect,
+      }),
+    ]);
+
+    const globalOptions = globalIngredients.map((ingredient) =>
+      mapSemanticIngredient(ingredient, locale)
+    );
+
+    res.json({
+      localIngredients: localIngredients.map((ingredient) => {
+        const mapping = ingredient.localSemanticMapping;
+        const { localSemanticMapping, _count, ...rest } = ingredient;
+        const suggestedMappings = mapping
+          ? []
+          : suggestLocalSemanticMappings(rest, globalOptions, 3);
+        const suggestedMapping =
+          suggestedMappings[0] || suggestLocalSemanticMapping(rest, globalOptions);
+        const suggestionAlternatives = suggestedMappings.slice(1);
+        const suggestionScoreGap =
+          suggestedMappings.length > 1
+            ? suggestedMappings[0].score - suggestedMappings[1].score
+            : null;
+
+        return {
+          ...rest,
+          usageCount:
+            (_count?.menuPizzas || 0) +
+            (_count?.ingredientExtras || 0) +
+            (_count?.categoryUses || 0) +
+            (_count?.storeStocks || 0),
+          usageBreakdown: {
+            menuPizzas: _count?.menuPizzas || 0,
+            ingredientExtras: _count?.ingredientExtras || 0,
+            categoryUses: _count?.categoryUses || 0,
+            storeStocks: _count?.storeStocks || 0,
+          },
+          semanticMapping: mapping
+            ? {
+                id: mapping.id,
+                status: mapping.status,
+                notes: mapping.notes,
+                source: mapping.source,
+                suggestedGlobalIngredientId: mapping.suggestedGlobalIngredientId,
+                suggestionScore: mapping.suggestionScore,
+                suggestionConfidence: mapping.suggestionConfidence,
+                suggestionReasons: Array.isArray(mapping.suggestionReasons)
+                  ? mapping.suggestionReasons
+                  : [],
+                acceptedAt: mapping.acceptedAt,
+                acceptedBy: mapping.acceptedBy,
+                globalIngredientId: mapping.globalIngredientId,
+                globalIngredient: mapSemanticIngredient(
+                  mapping.globalIngredient,
+                  locale
+                ),
+              }
+            : null,
+          suggestedMapping: suggestedMapping
+            ? {
+                score: suggestedMapping.score,
+                confidence: suggestedMapping.confidence,
+                reasons: suggestedMapping.reasons,
+                isAmbiguous:
+                  suggestedMapping.confidence !== "HIGH" ||
+                  (suggestionScoreGap != null && suggestionScoreGap < 12),
+                scoreGap: suggestionScoreGap,
+                globalIngredientId: suggestedMapping.ingredient.id,
+                globalIngredient: suggestedMapping.ingredient,
+              }
+            : null,
+          suggestionAlternatives: suggestionAlternatives.map((suggestion) => ({
+            score: suggestion.score,
+            confidence: suggestion.confidence,
+            reasons: suggestion.reasons,
+            globalIngredientId: suggestion.ingredient.id,
+            globalIngredient: suggestion.ingredient,
+          })),
+        };
+      }),
+      globalOptions,
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(getErrorStatus(err, 500)).json({
+      error: err.message || "error fetching local semantic mappings",
+    });
+  }
+});
+
+router.patch("/local-semantic-mappings/:localIngredientId", async (req, res) => {
+  try {
+    await requireIngredientSemantics();
+
+    const localIngredientId = parseIngredientId(req.params.localIngredientId);
+    const globalIngredientId = parseIngredientId(req.body.globalIngredientId);
+    const status = String(req.body.status || "MAPPED").trim().toUpperCase();
+    const notes = normalizeText(req.body.notes, 600) || null;
+    const source = String(req.body.source || "MANUAL").trim().toUpperCase();
+    const acceptedBy = normalizeText(req.body.acceptedBy, 160) || null;
+    const suggestionScore =
+      req.body.suggestionScore == null || req.body.suggestionScore === ""
+        ? null
+        : Number(req.body.suggestionScore);
+    const suggestionConfidence = normalizeText(req.body.suggestionConfidence, 40) || null;
+    const suggestionReasons = Array.isArray(req.body.suggestionReasons)
+      ? req.body.suggestionReasons
+          .map((reason) => normalizeText(reason, 160))
+          .filter(Boolean)
+      : null;
+    const suggestedGlobalIngredientId =
+      req.body.suggestedGlobalIngredientId == null ||
+      req.body.suggestedGlobalIngredientId === ""
+        ? null
+        : parseIngredientId(req.body.suggestedGlobalIngredientId);
+
+    if (!["MAPPED", "NEEDS_REVIEW"].includes(status)) {
+      return res.status(400).json({ error: "Invalid local mapping status" });
+    }
+
+    if (!["MANUAL", "SUGGESTED_ACCEPTED"].includes(source)) {
+      return res.status(400).json({ error: "Invalid local mapping source" });
+    }
+
+    if (
+      suggestionScore != null &&
+      (!Number.isInteger(suggestionScore) || suggestionScore < 0 || suggestionScore > 100)
+    ) {
+      return res.status(400).json({ error: "Invalid suggestion score" });
+    }
+
+    const [localIngredient, globalIngredient, suggestedGlobalIngredient] = await Promise.all([
+      prisma.ingredient.findUnique({
+        where: { id: localIngredientId },
+        select: { id: true, isSystem: true },
+      }),
+      prisma.ingredient.findUnique({
+        where: { id: globalIngredientId },
+        select: {
+          id: true,
+          isSystem: true,
+          canonicalKey: true,
+          semanticStatus: true,
+        },
+      }),
+      suggestedGlobalIngredientId
+        ? prisma.ingredient.findUnique({
+            where: { id: suggestedGlobalIngredientId },
+            select: {
+              id: true,
+              isSystem: true,
+              canonicalKey: true,
+              semanticStatus: true,
+            },
+          })
+        : null,
+    ]);
+
+    if (!localIngredient) {
+      return res.status(404).json({ error: "Local ingredient not found" });
+    }
+
+    if (localIngredient.isSystem) {
+      return res.status(400).json({
+        error: "Only local ingredients can be mapped to a global identity",
+      });
+    }
+
+    if (!globalIngredient) {
+      return res.status(404).json({ error: "Global ingredient not found" });
+    }
+
+    if (
+      !globalIngredient.isSystem ||
+      globalIngredient.semanticStatus !== "REVIEWED" ||
+      !globalIngredient.canonicalKey
+    ) {
+      return res.status(400).json({
+        error: "Mapping target must be a reviewed global ingredient",
+      });
+    }
+
+    if (source === "SUGGESTED_ACCEPTED") {
+      if (!suggestedGlobalIngredientId) {
+        return res.status(400).json({
+          error: "Suggested accepted mappings require suggestedGlobalIngredientId",
+        });
+      }
+
+      if (suggestedGlobalIngredientId !== globalIngredientId) {
+        return res.status(400).json({
+          error: "Accepted suggestion must match selected global ingredient",
+        });
+      }
+
+      if (
+        !suggestedGlobalIngredient ||
+        !suggestedGlobalIngredient.isSystem ||
+        suggestedGlobalIngredient.semanticStatus !== "REVIEWED" ||
+        !suggestedGlobalIngredient.canonicalKey
+      ) {
+        return res.status(400).json({
+          error: "Suggested target must be a reviewed global ingredient",
+        });
+      }
+    }
+
+    const decisionTrace =
+      source === "SUGGESTED_ACCEPTED"
+        ? {
+            suggestedGlobalIngredientId,
+            suggestionScore,
+            suggestionConfidence,
+            suggestionReasons: suggestionReasons || [],
+            acceptedAt: new Date(),
+            acceptedBy,
+          }
+        : {
+            suggestedGlobalIngredientId: null,
+            suggestionScore: null,
+            suggestionConfidence: null,
+            suggestionReasons: null,
+            acceptedAt: null,
+            acceptedBy,
+          };
+
+    const mapping = await prisma.ingredientLocalSemanticMapping.upsert({
+      where: { localIngredientId },
+      update: {
+        globalIngredientId,
+        status,
+        notes,
+        source,
+        ...decisionTrace,
+      },
+      create: {
+        localIngredientId,
+        globalIngredientId,
+        status,
+        notes,
+        source,
+        ...decisionTrace,
+      },
+    });
+
+    res.json(mapping);
+  } catch (err) {
+    console.error(err);
+    res.status(getErrorStatus(err, 500)).json({
+      error: err.message || "error updating local semantic mapping",
+    });
+  }
+});
+
+router.delete("/local-semantic-mappings/:localIngredientId", async (req, res) => {
+  try {
+    await requireIngredientSemantics();
+
+    const localIngredientId = parseIngredientId(req.params.localIngredientId);
+
+    await prisma.ingredientLocalSemanticMapping.deleteMany({
+      where: { localIngredientId },
+    });
+
+    res.json({ ok: true });
+  } catch (err) {
+    console.error(err);
+    res.status(getErrorStatus(err, 500)).json({
+      error: err.message || "error deleting local semantic mapping",
+    });
+  }
+});
+
 router.get("/:id/semantics", async (req, res) => {
   try {
     await requireIngredientSemantics();
@@ -222,6 +627,12 @@ router.get("/:id/semantics", async (req, res) => {
 
     if (!ingredient) {
       return res.status(404).json({ error: "Ingredient not found" });
+    }
+
+    if (!ingredient.isSystem) {
+      return res.status(403).json({
+        error: "Ingredient is local and is not part of the global semantic catalog",
+      });
     }
 
     res.json(ingredient);
@@ -242,11 +653,17 @@ router.patch("/:id/semantics", async (req, res) => {
 
     const existing = await prisma.ingredient.findUnique({
       where: { id },
-      select: { id: true },
+      select: { id: true, isSystem: true },
     });
 
     if (!existing) {
       return res.status(404).json({ error: "Ingredient not found" });
+    }
+
+    if (!existing.isSystem) {
+      return res.status(403).json({
+        error: "Ingredient is local and is not part of the global semantic catalog",
+      });
     }
 
     if (payload.semanticCategoryId) {
@@ -377,6 +794,7 @@ router.post("/", upload.single("image"), async (req, res) => {
           category: normalizeText(category, 80).toUpperCase(),
           allergens: normalizeAllergens(allergens),
           description: normalizeText(description, 420) || null,
+          isSystem: true,
         },
         select: ingredientLegacySelect,
       });
@@ -632,6 +1050,7 @@ router.patch("/suggestions/:id/approve", async (req, res) => {
               name: suggestion.name,
               category: suggestion.category,
               allergens: [],
+              isSystem: true,
             },
             select: ingredientLegacySelect,
           });

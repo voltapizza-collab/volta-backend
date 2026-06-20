@@ -58,6 +58,19 @@ const normalizeAllergens = (value) => {
 const isDemoIngredient = (ingredient) =>
   DEMO_INGREDIENT_NAMES.has(String(ingredient?.name || "").trim().toLowerCase());
 
+const ingredientBaseSelect = {
+  id: true,
+  name: true,
+  category: true,
+  status: true,
+  allergens: true,
+  unit: true,
+  costPrice: true,
+  description: true,
+  image: true,
+  imagePublicId: true,
+};
+
 const ingredientSemanticSelect = {
   translations: {
     select: {
@@ -79,6 +92,7 @@ const ingredientSemanticSelect = {
   },
   semanticCategory: {
     select: {
+      canonicalKey: true,
       defaultName: true,
       translations: {
         select: {
@@ -91,6 +105,14 @@ const ingredientSemanticSelect = {
   },
 };
 
+const mappedGlobalIngredientSelect = {
+  ...ingredientBaseSelect,
+  canonicalKey: true,
+  semanticStatus: true,
+  semanticCategoryId: true,
+  ...ingredientSemanticSelect,
+};
+
 const getIngredientSemanticInclude = (enabled) =>
   enabled
     ? {
@@ -98,21 +120,22 @@ const getIngredientSemanticInclude = (enabled) =>
         semanticStatus: true,
         semanticCategoryId: true,
         ...ingredientSemanticSelect,
+        localSemanticMapping: {
+          select: {
+            id: true,
+            status: true,
+            source: true,
+            globalIngredientId: true,
+            suggestionScore: true,
+            suggestionConfidence: true,
+            acceptedAt: true,
+            globalIngredient: {
+              select: mappedGlobalIngredientSelect,
+            },
+          },
+        },
       }
     : {};
-
-const ingredientBaseSelect = {
-  id: true,
-  name: true,
-  category: true,
-  status: true,
-  allergens: true,
-  unit: true,
-  costPrice: true,
-  description: true,
-  image: true,
-  imagePublicId: true,
-};
 
 const getStoreIngredientContext = async (
   storeId,
@@ -153,6 +176,17 @@ const serializeIngredient = (ing, storeStock, context = {}, extra = {}) => {
     locale: context.locale || "es",
     country: context.country || "",
   });
+  const mapping = ing.localSemanticMapping || null;
+  const mappedGlobal = mapping?.globalIngredient || null;
+  const mappedSemantic = mappedGlobal
+    ? resolveIngredientDisplay(mappedGlobal, {
+        locale: context.locale || "es",
+        country: context.country || "",
+      })
+    : null;
+  const searchText = [semantic.searchText, mappedSemantic?.searchText]
+    .filter(Boolean)
+    .join(" ");
 
   return {
     id: ing.id,
@@ -161,12 +195,44 @@ const serializeIngredient = (ing, storeStock, context = {}, extra = {}) => {
     canonicalKey: ing.canonicalKey || null,
     category: ing.category,
     displayCategory: semantic.displayCategory,
+    requestedLocale: semantic.requestedLocale,
+    resolvedLocale: semantic.resolvedLocale,
+    fallbackUsed: semantic.fallbackUsed,
+    categoryResolvedLocale: semantic.categoryResolvedLocale,
+    categoryFallbackUsed: semantic.categoryFallbackUsed,
     status: ing.status,
     semanticStatus: semantic.semanticStatus,
     aliases: semantic.aliases,
     searchAliases: semantic.searchAliases,
     semanticTranslations: semantic.translations,
-    searchText: semantic.searchText,
+    searchText,
+    semanticMapping: mappedGlobal
+      ? {
+          id: mapping.id,
+          status: mapping.status,
+          source: mapping.source,
+          globalIngredientId: mapping.globalIngredientId,
+          suggestionScore: mapping.suggestionScore,
+          suggestionConfidence: mapping.suggestionConfidence,
+          acceptedAt: mapping.acceptedAt,
+          globalIngredient: {
+            id: mappedGlobal.id,
+            name: mappedGlobal.name,
+            displayName: mappedSemantic.displayName,
+            canonicalKey: mappedGlobal.canonicalKey || null,
+            category: mappedGlobal.category,
+            displayCategory: mappedSemantic.displayCategory,
+            semanticStatus: mappedSemantic.semanticStatus,
+            aliases: mappedSemantic.aliases,
+            searchAliases: mappedSemantic.searchAliases,
+            semanticTranslations: mappedSemantic.translations,
+            searchText: mappedSemantic.searchText,
+            allergens: normalizeAllergens(mappedGlobal.allergens),
+            image: mappedGlobal.image || null,
+            imagePublicId: mappedGlobal.imagePublicId || null,
+          },
+        }
+      : null,
     allergens: normalizeAllergens(ing.allergens),
     unit: ing.unit,
     costPrice: ing.costPrice,
@@ -216,10 +282,24 @@ const getMenuScopedIngredients = async (
             select: {
               ...ingredientBaseSelect,
               ...(semanticsEnabled
-                ? {
+                  ? {
                     canonicalKey: true,
                     semanticStatus: true,
                     ...ingredientSemanticSelect,
+                    localSemanticMapping: {
+                      select: {
+                        id: true,
+                        status: true,
+                        source: true,
+                        globalIngredientId: true,
+                        suggestionScore: true,
+                        suggestionConfidence: true,
+                        acceptedAt: true,
+                        globalIngredient: {
+                          select: mappedGlobalIngredientSelect,
+                        },
+                      },
+                    },
                   }
                 : {}),
               storeStocks: {
@@ -276,15 +356,20 @@ const getMenuScopedIngredients = async (
       });
     })
     .sort((left, right) => {
-      const categoryOrder = String(left.category || "").localeCompare(
-        String(right.category || ""),
-        "es",
+      const locale = context.locale || "es";
+      const categoryOrder = String(left.displayCategory || left.category || "").localeCompare(
+        String(right.displayCategory || right.category || ""),
+        locale,
         { sensitivity: "base" }
       );
 
       return (
         categoryOrder ||
-        left.name.localeCompare(right.name, "es", { sensitivity: "base" })
+        String(left.displayName || left.name || "").localeCompare(
+          String(right.displayName || right.name || ""),
+          locale,
+          { sensitivity: "base" }
+        )
       );
     });
 };
@@ -335,7 +420,24 @@ router.get("/", async (req, res) => {
 
     const result = ingredients
       .filter((ing) => context.allowDemoIngredients || !isDemoIngredient(ing))
-      .map((ing) => serializeIngredient(ing, ing.storeStocks[0], context));
+      .map((ing) => serializeIngredient(ing, ing.storeStocks[0], context))
+      .sort((left, right) => {
+        const locale = context.locale || "es";
+        const categoryOrder = String(left.displayCategory || left.category || "").localeCompare(
+          String(right.displayCategory || right.category || ""),
+          locale,
+          { sensitivity: "base" }
+        );
+
+        return (
+          categoryOrder ||
+          String(left.displayName || left.name || "").localeCompare(
+            String(right.displayName || right.name || ""),
+            locale,
+            { sensitivity: "base" }
+          )
+        );
+      });
 
     res.json(result);
   } catch (err) {

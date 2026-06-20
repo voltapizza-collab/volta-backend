@@ -37,6 +37,8 @@ test("resolveIngredientDisplay uses reviewed translation by locale", () => {
   assert.equal(resolved.displayName, "Aglio");
   assert.equal(resolved.displayDescription, "Aglio fresco");
   assert.equal(resolved.fallbackUsed, false);
+  assert.equal(resolved.requestedLocale, "it");
+  assert.equal(resolved.resolvedLocale, "it");
   assert.equal(resolved.semanticStatus, "REVIEWED");
   assert.deepEqual(resolved.translations, [
     { locale: "es", name: "Ajo" },
@@ -62,8 +64,30 @@ test("resolveIngredientDisplay falls back through English and Spanish translatio
   );
 
   assert.equal(resolved.displayName, "Mozzarella cheese");
-  assert.equal(resolved.fallbackUsed, false);
+  assert.equal(resolved.fallbackUsed, true);
+  assert.equal(resolved.requestedLocale, "pt");
+  assert.equal(resolved.resolvedLocale, "en");
   assert.doesNotMatch(resolved.searchText, /\bmussarela\b/);
+});
+
+test("resolveIngredientDisplay resolves base locale before global fallback", () => {
+  const resolved = resolveIngredientDisplay(
+    {
+      id: 21,
+      name: "Champiñones",
+      category: "SETAS",
+      translations: [
+        { locale: "es", name: "Champiñones", isReviewed: true },
+        { locale: "fr", name: "Champignons", isReviewed: true },
+      ],
+    },
+    { locale: "fr-FR" }
+  );
+
+  assert.equal(resolved.displayName, "Champignons");
+  assert.equal(resolved.requestedLocale, "fr-fr");
+  assert.equal(resolved.resolvedLocale, "fr");
+  assert.equal(resolved.fallbackUsed, false);
 });
 
 test("resolveIngredientDisplay uses reviewed French translations", () => {
@@ -89,6 +113,9 @@ test("resolveIngredientDisplay uses reviewed French translations", () => {
 
   assert.equal(resolved.displayName, "Champignons de Paris");
   assert.equal(resolved.displayCategory, "Champignons");
+  assert.equal(resolved.resolvedLocale, "fr");
+  assert.equal(resolved.categoryResolvedLocale, "fr");
+  assert.equal(resolved.categoryFallbackUsed, false);
   assert.deepEqual(resolved.translations, [
     { locale: "es", name: "Champiñones" },
     { locale: "fr", name: "Champignons de Paris" },
@@ -131,7 +158,7 @@ test("resolveIngredientDisplay separates searchable and displayable aliases", ()
   assert.deepEqual(resolved.aliases, ["Garlic"]);
   assert.match(resolved.searchText, /\bgarlic\b/);
   assert.match(resolved.searchText, /ajo molido barato/);
-  assert.doesNotMatch(resolved.searchText, /\baglio\b/);
+  assert.match(resolved.searchText, /\baglio\b/);
 });
 
 test("resolveIngredientDisplay uses reviewed semantic category translation", () => {

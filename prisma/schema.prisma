@@ -326,9 +326,36 @@ model Ingredient {
   translations     IngredientTranslation[]
   aliases          IngredientAlias[]
   semanticCategory IngredientSemanticCategory? @relation(fields: [semanticCategoryId], references: [id], onDelete: SetNull)
+  localSemanticMapping IngredientLocalSemanticMapping? @relation("LocalIngredientSemanticMapping")
+  globalSemanticMappings IngredientLocalSemanticMapping[] @relation("GlobalIngredientSemanticMapping")
+  suggestedLocalSemanticMappings IngredientLocalSemanticMapping[] @relation("SuggestedIngredientSemanticMapping")
 
   @@index([semanticCategoryId])
   @@index([semanticStatus])
+}
+model IngredientLocalSemanticMapping {
+  id                 Int      @id @default(autoincrement())
+  localIngredientId  Int      @unique
+  globalIngredientId Int
+  suggestedGlobalIngredientId Int?
+  status             String   @default("MAPPED")
+  notes              String?  @db.Text
+  source             String   @default("MANUAL")
+  suggestionScore    Int?
+  suggestionConfidence String?
+  suggestionReasons  Json?
+  acceptedAt         DateTime?
+  acceptedBy         String?
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  localIngredient  Ingredient @relation("LocalIngredientSemanticMapping", fields: [localIngredientId], references: [id], onDelete: Cascade)
+  globalIngredient Ingredient @relation("GlobalIngredientSemanticMapping", fields: [globalIngredientId], references: [id], onDelete: Cascade)
+  suggestedGlobalIngredient Ingredient? @relation("SuggestedIngredientSemanticMapping", fields: [suggestedGlobalIngredientId], references: [id], onDelete: SetNull)
+
+  @@index([globalIngredientId])
+  @@index([suggestedGlobalIngredientId])
+  @@index([status])
 }
 model IngredientSemanticCategory {
   id           Int      @id @default(autoincrement())
