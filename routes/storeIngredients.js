@@ -58,10 +58,32 @@ const normalizeAllergens = (value) => {
 const isDemoIngredient = (ingredient) =>
   DEMO_INGREDIENT_NAMES.has(String(ingredient?.name || "").trim().toLowerCase());
 
+const BLOCKED_IMAGE_STATUSES = new Set(["REJECTED", "DEPRECATED"]);
+
+const getCloudinaryIngredientImage = (ingredient) => {
+  if (!ingredient?.image) {
+    return { image: null, imagePublicId: null };
+  }
+
+  if (BLOCKED_IMAGE_STATUSES.has(String(ingredient.imageStatus || "").toUpperCase())) {
+    return { image: null, imagePublicId: null };
+  }
+
+  return {
+    image: ingredient.image,
+    imagePublicId: ingredient.imagePublicId || null,
+  };
+};
+
+const getOperationalIngredientImage = (ingredient) => {
+  return getCloudinaryIngredientImage(ingredient);
+};
+
 const ingredientBaseSelect = {
   id: true,
   name: true,
   category: true,
+  isSystem: true,
   status: true,
   allergens: true,
   unit: true,
@@ -69,6 +91,11 @@ const ingredientBaseSelect = {
   description: true,
   image: true,
   imagePublicId: true,
+  imageStatus: true,
+  imageSource: true,
+  imageReviewedAt: true,
+  imageVersion: true,
+  imagePolicyVersion: true,
 };
 
 const ingredientSemanticSelect = {
@@ -187,6 +214,8 @@ const serializeIngredient = (ing, storeStock, context = {}, extra = {}) => {
   const searchText = [semantic.searchText, mappedSemantic?.searchText]
     .filter(Boolean)
     .join(" ");
+  const ingredientImage = getOperationalIngredientImage(ing);
+  const mappedGlobalImage = getCloudinaryIngredientImage(mappedGlobal);
 
   return {
     id: ing.id,
@@ -228,8 +257,13 @@ const serializeIngredient = (ing, storeStock, context = {}, extra = {}) => {
             semanticTranslations: mappedSemantic.translations,
             searchText: mappedSemantic.searchText,
             allergens: normalizeAllergens(mappedGlobal.allergens),
-            image: mappedGlobal.image || null,
-            imagePublicId: mappedGlobal.imagePublicId || null,
+            image: mappedGlobalImage.image,
+            imagePublicId: mappedGlobalImage.imagePublicId,
+            imageStatus: mappedGlobal.imageStatus || "MISSING",
+            imageSource: mappedGlobal.imageSource || null,
+            imageReviewedAt: mappedGlobal.imageReviewedAt || null,
+            imageVersion: mappedGlobal.imageVersion || 0,
+            imagePolicyVersion: mappedGlobal.imagePolicyVersion || null,
           },
         }
       : null,
@@ -237,8 +271,13 @@ const serializeIngredient = (ing, storeStock, context = {}, extra = {}) => {
     unit: ing.unit,
     costPrice: ing.costPrice,
     description: ing.description || "",
-    image: ing.image || null,
-    imagePublicId: ing.imagePublicId || null,
+    image: ingredientImage.image,
+    imagePublicId: ingredientImage.imagePublicId,
+    imageStatus: ing.imageStatus || "MISSING",
+    imageSource: ing.imageSource || null,
+    imageReviewedAt: ing.imageReviewedAt || null,
+    imageVersion: ing.imageVersion || 0,
+    imagePolicyVersion: ing.imagePolicyVersion || null,
     exists: !!storeStock,
     active: ing.status === "ACTIVE" && isPriced && storeStock?.active === true,
     stock: storeStock ? storeStock.stock : 0,

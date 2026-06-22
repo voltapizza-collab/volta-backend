@@ -313,6 +313,13 @@ model Ingredient {
   description      String?               @db.Text
   image            String?               @db.Text
   imagePublicId    String?
+  imageStatus      String                @default("MISSING")
+  imageSource      String?
+  imagePrompt      String?               @db.Text
+  imageReviewedAt  DateTime?
+  imageReviewedBy  String?
+  imageVersion     Int                   @default(0)
+  imagePolicyVersion String?
   canonicalKey     String?               @unique
   semanticStatus   String                @default("UNREVIEWED")
   semanticCategoryId Int?
@@ -332,6 +339,7 @@ model Ingredient {
 
   @@index([semanticCategoryId])
   @@index([semanticStatus])
+  @@index([imageStatus])
 }
 model IngredientLocalSemanticMapping {
   id                 Int      @id @default(autoincrement())

@@ -62,6 +62,47 @@ const uploadIngredientImage = async (file, ingredientId) => {
   };
 };
 
+const ALLOWED_IMAGE_SOURCES = new Set([
+  "MANUAL_UPLOAD",
+  "AI_GENERATED",
+  "LICENSED_PROVIDER",
+]);
+
+const normalizeImageSource = (source = "MANUAL_UPLOAD") => {
+  const normalized = normalizeText(source, 80).toUpperCase();
+  return ALLOWED_IMAGE_SOURCES.has(normalized) ? normalized : "MANUAL_UPLOAD";
+};
+
+const buildIngredientImageDraftData = (source = "MANUAL_UPLOAD", prompt = "") => ({
+  imageStatus: "GENERATED",
+  imageSource: normalizeImageSource(source),
+  imagePrompt: normalizeText(prompt, 2000) || null,
+  imageReviewedAt: null,
+  imageReviewedBy: null,
+  imageVersion: { increment: 1 },
+  imagePolicyVersion: "v1",
+});
+
+const ALLOWED_IMAGE_STATUSES = new Set([
+  "MISSING",
+  "GENERATED",
+  "REVIEWED",
+  "REJECTED",
+  "DEPRECATED",
+]);
+
+const normalizeImageStatus = (value) => {
+  const status = String(value || "").trim().toUpperCase();
+
+  if (!ALLOWED_IMAGE_STATUSES.has(status)) {
+    const error = new Error("Invalid ingredient image status");
+    error.status = 400;
+    throw error;
+  }
+
+  return status;
+};
+
 const getErrorStatus = (err, fallback = 400) => {
   if (err?.status) return err.status;
   if (["P1001", "P1002", "P1017"].includes(err?.code)) return 503;
@@ -148,6 +189,13 @@ const ingredientLegacySelect = {
   description: true,
   image: true,
   imagePublicId: true,
+  imageStatus: true,
+  imageSource: true,
+  imagePrompt: true,
+  imageReviewedAt: true,
+  imageReviewedBy: true,
+  imageVersion: true,
+  imagePolicyVersion: true,
   status: true,
   createdAt: true,
   updatedAt: true,
@@ -752,6 +800,71 @@ router.patch("/:id/semantics", async (req, res) => {
   }
 });
 
+router.patch("/:id/image-review", async (req, res) => {
+  try {
+    await ensureIngredientMediaColumns(prisma);
+
+    const id = parseIngredientId(req.params.id);
+    const imageStatus = normalizeImageStatus(req.body.imageStatus);
+    const reviewer = normalizeText(req.body.reviewedBy, 160) || "global-manager";
+    const imagePolicyVersion = normalizeText(req.body.imagePolicyVersion, 40) || "v1";
+
+    const existing = await prisma.ingredient.findUnique({
+      where: { id },
+      select: {
+        id: true,
+        isSystem: true,
+        image: true,
+      },
+    });
+
+    if (!existing) {
+      return res.status(404).json({ error: "Ingredient not found" });
+    }
+
+    if (!existing.isSystem) {
+      return res.status(403).json({
+        error: "Only global ingredients can use global image review",
+      });
+    }
+
+    if (imageStatus === "REVIEWED" && !existing.image) {
+      return res.status(400).json({
+        error: "Cannot approve a missing ingredient image",
+      });
+    }
+
+    const reviewData =
+      imageStatus === "REVIEWED"
+        ? {
+            imageReviewedAt: new Date(),
+            imageReviewedBy: reviewer,
+            imagePolicyVersion,
+          }
+        : {
+            imageReviewedAt: null,
+            imageReviewedBy: null,
+            imagePolicyVersion,
+          };
+
+    const ingredient = await prisma.ingredient.update({
+      where: { id },
+      data: {
+        imageStatus,
+        ...reviewData,
+      },
+      select: ingredientLegacySelect,
+    });
+
+    res.json(ingredient);
+  } catch (err) {
+    console.error(err);
+    res.status(getErrorStatus(err, 500)).json({
+      error: err.message || "error updating ingredient image review",
+    });
+  }
+});
+
 router.get("/suggestions", async (req, res) => {
   try {
     const { status } = req.query;
@@ -812,7 +925,13 @@ router.post("/", upload.single("image"), async (req, res) => {
       uploadedImage = await uploadIngredientImage(req.file, ingredient.id);
       const updated = await prisma.ingredient.update({
         where: { id: ingredient.id },
-        data: uploadedImage,
+        data: {
+          ...uploadedImage,
+          ...buildIngredientImageDraftData(
+            req.body.imageSource,
+            req.body.imagePrompt
+          ),
+        },
         select: ingredientLegacySelect,
       });
       return res.json(updated);
@@ -891,7 +1010,11 @@ router.patch("/:id", upload.single("image"), async (req, res) => {
 
     if (req.file) {
       uploadedImage = await uploadIngredientImage(req.file, id);
-      Object.assign(data, uploadedImage);
+      Object.assign(
+        data,
+        uploadedImage,
+        buildIngredientImageDraftData(req.body.imageSource, req.body.imagePrompt)
+      );
     }
 
     if (!Object.keys(data).length) {
