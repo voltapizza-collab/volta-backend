@@ -7,6 +7,8 @@ const SEMANTIC_STATUSES = new Set([
   "REJECTED",
 ]);
 
+export const CORE_REVIEW_LOCALES = ["es", "en", "it"];
+
 const normalizeText = (value, max = 400) =>
   String(value || "")
     .replace(/\s+/g, " ")
@@ -124,4 +126,50 @@ export const normalizeSemanticsPayload = (body = {}) => {
     : [];
 
   return payload;
+};
+
+export const getSemanticReviewGaps = ({
+  canonicalKey,
+  semanticCategoryId,
+  translations = [],
+} = {}) => {
+  const reviewedLocales = new Set(
+    translations
+      .filter(
+        (translation) =>
+          translation?.isReviewed === true &&
+          normalizeText(translation?.name, 160)
+      )
+      .map((translation) => normalizeLocaleCode(translation.locale))
+      .filter(Boolean)
+  );
+  const missingCoreLocales = CORE_REVIEW_LOCALES.filter(
+    (locale) => !reviewedLocales.has(locale)
+  );
+  const gaps = [];
+
+  if (!canonicalKey) gaps.push("canonicalKey");
+  if (!semanticCategoryId) gaps.push("semanticCategoryId");
+  missingCoreLocales.forEach((locale) => gaps.push(`translation:${locale}`));
+
+  return { gaps, missingCoreLocales };
+};
+
+export const resolveProtectedSemanticStatus = ({
+  requestedStatus,
+  canonicalKey,
+  semanticCategoryId,
+  translations = [],
+} = {}) => {
+  const status = requestedStatus || "UNREVIEWED";
+  if (status === "REJECTED") return status;
+
+  const { gaps } = getSemanticReviewGaps({
+    canonicalKey,
+    semanticCategoryId,
+    translations,
+  });
+
+  if (gaps.length > 0) return "NEEDS_REVIEW";
+  return status;
 };

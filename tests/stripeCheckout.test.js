@@ -46,7 +46,7 @@ test("checkout delivery fee falls back to resolved fee for manual delivery cover
   );
 });
 
-test("order checkout sends only card/email-facing Stripe fields and keeps customer data in metadata", async () => {
+test("order checkout sends card and Klarna Stripe fields and keeps customer data in metadata", async () => {
   const previousSecret = process.env.STRIPE_SECRET_KEY;
   const previousKlarna = process.env.STRIPE_ENABLE_KLARNA;
   const previousFetch = globalThis.fetch;
@@ -71,6 +71,9 @@ test("order checkout sends only card/email-facing Stripe fields and keeps custom
           name: "Luigi",
           phone: "+34600111222",
           email: "cliente@example.com",
+          address_1: "Calle Mayor 12, 28013 Madrid",
+          zipCode: "28013",
+          delivery: { method: "COURIER" },
         },
       },
       partner: { id: 3 },
@@ -84,10 +87,14 @@ test("order checkout sends only card/email-facing Stripe fields and keeps custom
     const body = new URLSearchParams(String(requests[0].options.body));
 
     assert.equal(body.get("payment_method_types[0]"), "card");
-    assert.equal(body.has("payment_method_types[1]"), false);
+    assert.equal(body.get("payment_method_types[1]"), "klarna");
     assert.equal(body.get("customer_email"), "cliente@example.com");
     assert.equal(body.get("phone_number_collection[enabled]"), "false");
-    assert.equal(body.has("billing_address_collection"), false);
+    assert.equal(body.get("billing_address_collection"), "required");
+    assert.equal(body.get("shipping_details[name]"), "Luigi");
+    assert.equal(body.get("shipping_details[address][line1]"), "Calle Mayor 12, 28013 Madrid");
+    assert.equal(body.get("shipping_details[address][country]"), "ES");
+    assert.equal(body.get("shipping_details[address][postal_code]"), "28013");
     assert.equal(body.get("metadata[customerName]"), "Luigi");
     assert.equal(body.get("metadata[customerPhone]"), "+34600111222");
     assert.equal(body.get("metadata[customerEmail]"), "cliente@example.com");

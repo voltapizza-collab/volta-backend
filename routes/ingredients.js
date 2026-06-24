@@ -4,7 +4,10 @@ import { v2 as cloudinary } from "cloudinary";
 import { ensureIngredientMediaColumns } from "../services/ingredientMediaColumns.js";
 import { assertCloudinaryConfigured } from "../services/cloudinaryConfig.js";
 import { ensureIngredientSemanticsAvailable } from "../services/ingredientSemanticsColumns.js";
-import { normalizeSemanticsPayload } from "../services/ingredientSemanticAdmin.js";
+import {
+  normalizeSemanticsPayload,
+  resolveProtectedSemanticStatus,
+} from "../services/ingredientSemanticAdmin.js";
 import { resolveIngredientDisplay } from "../services/ingredientSemantics.js";
 import {
   suggestLocalSemanticMapping,
@@ -31,6 +34,15 @@ const normalizeText = (value, max = 400) =>
     .replace(/\s+/g, " ")
     .trim()
     .slice(0, max);
+
+const normalizeIngredientIdentityKey = (value) =>
+  String(value || "")
+    .trim()
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z0-9]+/g, "_")
+    .replace(/^_+|_+$/g, "");
 
 const normalizeLocaleParam = (value) =>
   String(value || "")
@@ -105,6 +117,7 @@ const normalizeImageStatus = (value) => {
 
 const getErrorStatus = (err, fallback = 400) => {
   if (err?.status) return err.status;
+  if (err?.code === "P2002") return 409;
   if (["P1001", "P1002", "P1017"].includes(err?.code)) return 503;
   return fallback;
 };
@@ -258,17 +271,76 @@ router.get("/", async (req, res) => {
       },
     });
 
+    const activeStoreWhere = {
+      active: true,
+      partner: { active: true },
+    };
+    const [activeStoreTotal, usageRows, productUsageRows] = await Promise.all([
+      prisma.store.count({ where: activeStoreWhere }),
+      prisma.storeIngredientStock.groupBy({
+        by: ["ingredientId"],
+        where: {
+          active: true,
+          store: activeStoreWhere,
+          ingredient: { isSystem: true },
+        },
+        _count: {
+          storeId: true,
+        },
+      }),
+      prisma.menuPizzaIngredient.groupBy({
+        by: ["ingredientId"],
+        where: {
+          ingredient: { isSystem: true },
+          menuPizza: {
+            status: "ACTIVE",
+            partner: { active: true },
+          },
+        },
+        _count: {
+          menuPizzaId: true,
+        },
+      }),
+    ]);
+    const usageByIngredientId = new Map(
+      usageRows.map((row) => [
+        row.ingredientId,
+        Number(row._count?.storeId || 0),
+      ])
+    );
+    const productUsageByIngredientId = new Map(
+      productUsageRows.map((row) => [
+        row.ingredientId,
+        Number(row._count?.menuPizzaId || 0),
+      ])
+    );
+    const addUsageStats = (ingredient) => {
+      const usageStoreCount = usageByIngredientId.get(ingredient.id) || 0;
+      const usageStorePercent = activeStoreTotal
+        ? Math.round((usageStoreCount / activeStoreTotal) * 100)
+        : 0;
+      const usageProductCount = productUsageByIngredientId.get(ingredient.id) || 0;
+
+      return {
+        ...ingredient,
+        usageStoreCount,
+        usageStorePercent,
+        usageStoreTotal: activeStoreTotal,
+        usageProductCount,
+      };
+    };
+
     res.json(
       ingredients
         .map((ingredient) => {
           const { _count, translations, aliases, ...rest } = ingredient;
 
-          if (!semanticsEnabled) return rest;
+          if (!semanticsEnabled) return addUsageStats(rest);
           const semantic = resolveIngredientDisplay(ingredient, {
             locale: normalizeLocaleParam(req.query.locale) || "es",
           });
 
-          return {
+          return addUsageStats({
             ...rest,
             displayName: semantic.displayName,
             displayDescription: semantic.displayDescription,
@@ -285,7 +357,7 @@ router.get("/", async (req, res) => {
             semanticAliases: aliases || [],
             translationCount: _count?.translations || 0,
             aliasCount: _count?.aliases || 0,
-          };
+          });
         })
     );
   } catch (err) {
@@ -701,7 +773,20 @@ router.patch("/:id/semantics", async (req, res) => {
 
     const existing = await prisma.ingredient.findUnique({
       where: { id },
-      select: { id: true, isSystem: true },
+      select: {
+        id: true,
+        isSystem: true,
+        canonicalKey: true,
+        semanticStatus: true,
+        semanticCategoryId: true,
+        translations: {
+          select: {
+            locale: true,
+            name: true,
+            isReviewed: true,
+          },
+        },
+      },
     });
 
     if (!existing) {
@@ -725,71 +810,109 @@ router.patch("/:id/semantics", async (req, res) => {
       }
     }
 
+    const mergedTranslations = new Map(
+      (existing.translations || []).map((translation) => [
+        translation.locale,
+        translation,
+      ])
+    );
+    payload.translations.forEach((translation) => {
+      mergedTranslations.set(translation.locale, translation);
+    });
+
+    const finalCanonicalKey = Object.prototype.hasOwnProperty.call(
+      payload,
+      "canonicalKey"
+    )
+      ? payload.canonicalKey
+      : existing.canonicalKey;
+    const finalSemanticCategoryId = Object.prototype.hasOwnProperty.call(
+      payload,
+      "semanticCategoryId"
+    )
+      ? payload.semanticCategoryId
+      : existing.semanticCategoryId;
+    const finalSemanticStatus = resolveProtectedSemanticStatus({
+      requestedStatus: Object.prototype.hasOwnProperty.call(
+        payload,
+        "semanticStatus"
+      )
+        ? payload.semanticStatus
+        : existing.semanticStatus,
+      canonicalKey: finalCanonicalKey,
+      semanticCategoryId: finalSemanticCategoryId,
+      translations: [...mergedTranslations.values()],
+    });
+
     const ingredientData = {};
-    ["canonicalKey", "semanticStatus", "semanticCategoryId"].forEach((field) => {
+    ["canonicalKey", "semanticCategoryId"].forEach((field) => {
       if (Object.prototype.hasOwnProperty.call(payload, field)) {
         ingredientData[field] = payload[field];
       }
     });
+    ingredientData.semanticStatus = finalSemanticStatus;
 
-    const ingredient = await prisma.$transaction(async (tx) => {
-      if (Object.keys(ingredientData).length) {
-        await tx.ingredient.update({
-          where: { id },
-          data: ingredientData,
-        });
-      }
-
-      for (const translation of payload.translations) {
-        await tx.ingredientTranslation.upsert({
-          where: {
-            ingredientId_locale: {
-              ingredientId: id,
-              locale: translation.locale,
-            },
-          },
-          update: {
-            name: translation.name,
-            description: translation.description,
-            isReviewed: translation.isReviewed,
-          },
-          create: {
-            ingredientId: id,
-            ...translation,
-          },
-        });
-      }
-
-      for (const alias of payload.aliases) {
-        const existingAlias = await tx.ingredientAlias.findFirst({
-          where: {
-            ingredientId: id,
-            locale: alias.locale,
-            normalizedAlias: alias.normalizedAlias,
-          },
-          select: { id: true },
-        });
-
-        if (existingAlias) {
-          await tx.ingredientAlias.update({
-            where: { id: existingAlias.id },
-            data: alias,
+    const ingredient = await prisma.$transaction(
+      async (tx) => {
+        if (Object.keys(ingredientData).length) {
+          await tx.ingredient.update({
+            where: { id },
+            data: ingredientData,
           });
-        } else {
-          await tx.ingredientAlias.create({
-            data: {
+        }
+
+        for (const translation of payload.translations) {
+          await tx.ingredientTranslation.upsert({
+            where: {
+              ingredientId_locale: {
+                ingredientId: id,
+                locale: translation.locale,
+              },
+            },
+            update: {
+              name: translation.name,
+              description: translation.description,
+              isReviewed: translation.isReviewed,
+            },
+            create: {
               ingredientId: id,
-              ...alias,
+              ...translation,
             },
           });
         }
-      }
 
-      return tx.ingredient.findUnique({
-        where: { id },
-        include: ingredientSemanticInclude,
-      });
-    });
+        for (const alias of payload.aliases) {
+          const existingAlias = await tx.ingredientAlias.findFirst({
+            where: {
+              ingredientId: id,
+              locale: alias.locale,
+              normalizedAlias: alias.normalizedAlias,
+            },
+            select: { id: true },
+          });
+
+          if (existingAlias) {
+            await tx.ingredientAlias.update({
+              where: { id: existingAlias.id },
+              data: alias,
+            });
+          } else {
+            await tx.ingredientAlias.create({
+              data: {
+                ingredientId: id,
+                ...alias,
+              },
+            });
+          }
+        }
+
+        return tx.ingredient.findUnique({
+          where: { id },
+          include: ingredientSemanticInclude,
+        });
+      },
+      { maxWait: 10000, timeout: 20000 }
+    );
 
     res.json(ingredient);
   } catch (err) {
@@ -900,11 +1023,33 @@ router.post("/", upload.single("image"), async (req, res) => {
       });
     }
 
+    const ingredientName = normalizeText(name, 120);
+    const ingredientCategory = normalizeText(category, 80).toUpperCase();
+    const ingredientIdentityKey = normalizeIngredientIdentityKey(ingredientName);
+    const existingIngredients = await prisma.ingredient.findMany({
+      where: { isSystem: true },
+      select: { id: true, name: true, canonicalKey: true },
+    });
+    const duplicate = existingIngredients.find((ingredient) =>
+      [ingredient.name, ingredient.canonicalKey].some(
+        (value) =>
+          normalizeIngredientIdentityKey(value) &&
+          normalizeIngredientIdentityKey(value) === ingredientIdentityKey
+      )
+    );
+
+    if (duplicate) {
+      return res.status(409).json({
+        error: "Ingredient already exists in the global catalog",
+        ingredientId: duplicate.id,
+      });
+    }
+
     const ingredient = await prisma.$transaction(async (tx) => {
       const created = await tx.ingredient.create({
         data: {
-          name: normalizeText(name, 120),
-          category: normalizeText(category, 80).toUpperCase(),
+          name: ingredientName,
+          category: ingredientCategory,
           allergens: normalizeAllergens(allergens),
           description: normalizeText(description, 420) || null,
           isSystem: true,

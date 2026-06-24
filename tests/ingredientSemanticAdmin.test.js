@@ -6,6 +6,7 @@ import {
   normalizeLocaleCode,
   normalizeSemanticsPayload,
   normalizeTranslationInput,
+  resolveProtectedSemanticStatus,
 } from "../services/ingredientSemanticAdmin.js";
 
 test("normalizeLocaleCode accepts supported platform language shapes", () => {
@@ -98,4 +99,43 @@ test("normalizeSemanticsPayload validates status and category ids", () => {
     () => normalizeSemanticsPayload({ semanticCategoryId: "x" }),
     /Invalid semantic category id/
   );
+});
+
+test("resolveProtectedSemanticStatus only allows reviewed complete core semantics", () => {
+  const completeCoreTranslations = [
+    { locale: "es", name: "Ajo", isReviewed: true },
+    { locale: "en", name: "Garlic", isReviewed: true },
+    { locale: "it", name: "Aglio", isReviewed: true },
+    { locale: "fr", name: "Ail", isReviewed: false },
+  ];
+
+  assert.equal(resolveProtectedSemanticStatus({
+    requestedStatus: "REVIEWED",
+    canonicalKey: "garlic",
+    semanticCategoryId: 7,
+    translations: completeCoreTranslations,
+  }), "REVIEWED");
+
+  assert.equal(resolveProtectedSemanticStatus({
+    requestedStatus: "REVIEWED",
+    canonicalKey: "garlic",
+    semanticCategoryId: 7,
+    translations: completeCoreTranslations.filter(
+      (translation) => translation.locale !== "it"
+    ),
+  }), "NEEDS_REVIEW");
+
+  assert.equal(resolveProtectedSemanticStatus({
+    requestedStatus: "UNREVIEWED",
+    canonicalKey: "",
+    semanticCategoryId: 7,
+    translations: completeCoreTranslations,
+  }), "NEEDS_REVIEW");
+
+  assert.equal(resolveProtectedSemanticStatus({
+    requestedStatus: "REJECTED",
+    canonicalKey: "",
+    semanticCategoryId: null,
+    translations: [],
+  }), "REJECTED");
 });
