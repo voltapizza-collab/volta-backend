@@ -1202,6 +1202,56 @@ router.delete("/:id", async (req, res) => {
       return res.status(404).json({ error: "Ingredient not found" });
     }
 
+    const [
+      storeReferenceCount,
+      activeStoreReferenceCount,
+      productReferenceCount,
+      extraReferenceCount,
+      categoryUseReferenceCount,
+    ] = await Promise.all([
+      prisma.storeIngredientStock.count({
+        where: { ingredientId: id },
+      }),
+      prisma.storeIngredientStock.count({
+        where: {
+          ingredientId: id,
+          active: true,
+          store: {
+            active: true,
+            partner: { active: true },
+          },
+        },
+      }),
+      prisma.menuPizzaIngredient.count({
+        where: { ingredientId: id },
+      }),
+      prisma.ingredientExtra.count({
+        where: { ingredientId: id },
+      }),
+      prisma.ingredientCategoryUse.count({
+        where: { ingredientId: id },
+      }),
+    ]);
+    const hasOperationalReferences =
+      storeReferenceCount > 0 ||
+      productReferenceCount > 0 ||
+      extraReferenceCount > 0 ||
+      categoryUseReferenceCount > 0;
+
+    if (hasOperationalReferences) {
+      return res.status(409).json({
+        error:
+          "Ingredient cannot be deleted because it is used by stores, products, extras, or category rules. Disable it instead.",
+        usage: {
+          stores: storeReferenceCount,
+          activeStores: activeStoreReferenceCount,
+          products: productReferenceCount,
+          extras: extraReferenceCount,
+          categoryUses: categoryUseReferenceCount,
+        },
+      });
+    }
+
     await prisma.$transaction([
       prisma.storeIngredientStock.deleteMany({
         where: { ingredientId: id },
