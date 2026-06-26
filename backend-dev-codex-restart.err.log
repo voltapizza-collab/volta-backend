@@ -375,3 +375,1455 @@
 [db.slow] Store.findMany 799ms
 [db.slow] Sale.findMany 866ms
 [http.slow] GET /api/myorders/summary?period=today 200 1152ms queries=8 db=4518ms slow=Sale.count:399ms,Customer.count:402ms,Sale.findMany:600ms,Store.findMany:603ms
+[db.slow] raw.queryRaw 404ms
+[db.slow] Store.findUnique 808ms
+[db.slow] Ingredient.findMany 2627ms
+[http.slow] GET /stores/1/ingredients?locale=es 200 4062ms queries=4 db=4041ms slow=raw.queryRaw:404ms,Store.findUnique:808ms,Ingredient.findMany:2627ms
+[db.slow] Sale.findMany 400ms
+[db.slow] Store.count 396ms
+[db.slow] Sale.count 402ms
+[http.slow] GET /api/myorders/pending 200 404ms queries=2 db=802ms slow=Sale.findMany:400ms,Sale.count:402ms
+[db.slow] Sale.count 401ms
+[db.slow] Customer.count 413ms
+[db.slow] Sale.findMany 420ms
+[db.slow] Store.findMany 594ms
+[db.slow] Store.findMany 793ms
+[db.slow] Sale.findMany 1046ms
+[http.slow] GET /api/myorders/summary?period=today 200 1318ms queries=8 db=4261ms slow=Store.count:396ms,Sale.count:401ms,Customer.count:413ms,Sale.findMany:420ms
+[db.slow] Customer.count 398ms
+[db.slow] Sale.count 399ms
+[db.slow] Sale.findMany 399ms
+[http.slow] GET /api/myorders/pending 200 400ms queries=2 db=799ms slow=Sale.count:399ms,Sale.findMany:399ms
+[db.slow] Sale.findMany 407ms
+[db.slow] Store.count 409ms
+[db.slow] Sale.count 418ms
+[db.slow] Store.findMany 587ms
+[db.slow] Store.findMany 797ms
+[db.slow] Sale.findMany 826ms
+[http.slow] GET /api/myorders/summary?period=today 200 1079ms queries=8 db=4037ms slow=Customer.count:398ms,Sale.findMany:407ms,Store.count:409ms,Sale.count:418ms
+[db.slow] raw.queryRaw 396ms
+[db.slow] raw.executeRaw 441ms
+[db.slow] IngredientSemanticCategory.findMany 838ms
+[http.slow] GET /ingredients/semantic-categories 304 839ms queries=1 db=838ms slow=IngredientSemanticCategory.findMany:838ms
+[db.slow] Ingredient.findMany 1794ms
+[db.slow] Store.count 391ms
+[db.slow] StoreIngredientStock.groupBy 393ms
+[http.slow] GET /ingredients 200 3036ms queries=6 db=3614ms slow=raw.queryRaw:396ms,raw.executeRaw:441ms,Ingredient.findMany:1794ms,Store.count:391ms
+[db.slow] raw.queryRaw 394ms
+[db.slow] Ingredient.findMany 395ms
+[db.slow] Ingredient.create 785ms
+[http.slow] POST /ingredients 200 2168ms queries=4 db=1772ms slow=raw.queryRaw:394ms,Ingredient.findMany:395ms,Ingredient.create:785ms
+[db.slow] Ingredient.findUnique 784ms
+[db.slow] IngredientSemanticCategory.findUnique 393ms
+[db.slow] Ingredient.update 1179ms
+[db.slow] IngredientTranslation.upsert 1230ms
+[db.slow] IngredientAlias.findFirst 393ms
+[db.slow] IngredientAlias.create 786ms
+[db.slow] IngredientAlias.create 392ms
+[db.slow] IngredientAlias.create 392ms
+[db.slow] IngredientAlias.create 392ms
+[db.slow] Store.count 392ms
+[db.slow] Sale.count 395ms
+[db.slow] Sale.findMany 395ms
+[http.slow] GET /api/myorders/pending 200 396ms queries=2 db=790ms slow=Sale.count:395ms,Sale.findMany:395ms
+[db.slow] Sale.findMany 397ms
+[db.slow] Customer.count 403ms
+[db.slow] Sale.count 418ms
+[db.slow] Store.findMany 796ms
+[db.slow] Sale.findMany 872ms
+[db.slow] Store.findMany 1648ms
+[db.slow] Sale.groupBy 414ms
+[http.slow] GET /api/myorders/summary?period=today 200 2127ms queries=8 db=5339ms slow=Store.count:392ms,Sale.findMany:397ms,Customer.count:403ms,Sale.count:418ms
+[db.slow] Ingredient.findUnique 2068ms
+[http.slow] PATCH /ingredients/133/semantics 200 8997ms queries=13 db=8597ms slow=Ingredient.findUnique:784ms,IngredientSemanticCategory.findUnique:393ms,Ingredient.update:1179ms,IngredientTranslation.upsert:1230ms
+[db.slow] Ingredient.findMany 2275ms
+[db.slow] Store.count 392ms
+[db.slow] StoreIngredientStock.groupBy 393ms
+[db.slow] MenuPizzaIngredient.groupBy 417ms
+[http.slow] GET /ingredients 200 3099ms queries=6 db=3870ms slow=Ingredient.findMany:2275ms,Store.count:392ms,StoreIngredientStock.groupBy:393ms,MenuPizzaIngredient.groupBy:417ms
+[db.slow] Ingredient.findUnique 2247ms
+[http.slow] GET /ingredients/133/semantics 200 2248ms queries=1 db=2247ms slow=Ingredient.findUnique:2247ms
+[db.slow] Sale.findMany 391ms
+[db.slow] Sale.count 391ms
+[db.slow] Sale.count 399ms
+[db.slow] Customer.count 402ms
+[db.slow] Store.count 417ms
+[db.slow] Store.findMany 576ms
+[db.slow] Sale.findMany 587ms
+[http.slow] GET /api/myorders/pending 200 588ms queries=2 db=986ms slow=Sale.count:399ms,Sale.findMany:587ms
+[db.slow] Store.findMany 779ms
+[db.slow] Sale.findMany 825ms
+[http.slow] GET /api/myorders/summary?period=today 200 1093ms queries=8 db=3974ms slow=Sale.findMany:391ms,Sale.count:391ms,Customer.count:402ms,Store.count:417ms
+[db.slow] Ingredient.findUnique 974ms
+[http.slow] GET /ingredients/133/semantics 304 976ms queries=1 db=974ms slow=Ingredient.findUnique:974ms
+[db.slow] Ingredient.findUnique 582ms
+[db.slow] Ingredient.update 592ms
+[db.slow] Sale.count 385ms
+[db.slow] Sale.findMany 388ms
+[db.slow] Sale.count 388ms
+[http.slow] GET /api/myorders/pending 200 389ms queries=2 db=776ms slow=Sale.findMany:388ms,Sale.count:388ms
+[db.slow] Sale.findMany 388ms
+[db.slow] Customer.count 400ms
+[db.slow] Store.count 400ms
+[db.slow] Store.findMany 580ms
+[db.slow] Store.findMany 775ms
+[db.slow] Sale.findMany 1095ms
+[http.slow] GET /api/myorders/summary?period=today 200 1357ms queries=8 db=4229ms slow=Sale.count:385ms,Sale.findMany:388ms,Customer.count:400ms,Store.count:400ms
+[db.slow] IngredientTranslation.upsert 1000ms
+[db.slow] IngredientTranslation.upsert 618ms
+[db.slow] IngredientTranslation.upsert 587ms
+[db.slow] IngredientTranslation.upsert 583ms
+[db.slow] IngredientTranslation.upsert 581ms
+[db.slow] IngredientTranslation.upsert 581ms
+[db.slow] IngredientTranslation.upsert 593ms
+[db.slow] IngredientAlias.update 970ms
+[db.slow] IngredientAlias.update 626ms
+[db.slow] IngredientAlias.update 634ms
+[db.slow] IngredientAlias.update 585ms
+[db.slow] Ingredient.findUnique 974ms
+[http.slow] PATCH /ingredients/133/semantics 200 10936ms queries=19 db=10535ms slow=Ingredient.findUnique:582ms,Ingredient.update:592ms,IngredientTranslation.upsert:1000ms,IngredientTranslation.upsert:618ms
+[db.slow] Ingredient.findMany 1284ms
+[db.slow] MenuPizzaIngredient.groupBy 396ms
+[db.slow] Store.count 415ms
+[http.slow] GET /ingredients 200 2099ms queries=6 db=2678ms slow=Ingredient.findMany:1284ms,MenuPizzaIngredient.groupBy:396ms,Store.count:415ms
+[db.slow] ProductReviewRequest.findMany 417ms
+[db.slow] Sale.findMany 391ms
+[http.slow] GET /api/myorders/pending 200 392ms queries=2 db=598ms slow=Sale.findMany:391ms
+[db.slow] Sale.findMany 391ms
+[db.slow] Customer.count 391ms
+[db.slow] Store.count 391ms
+[db.slow] Sale.count 403ms
+[db.slow] Store.findMany 584ms
+[db.slow] Sale.findMany 856ms
+[db.slow] Store.findMany 968ms
+[http.slow] GET /api/myorders/summary?period=today 200 1219ms queries=8 db=4176ms slow=Sale.findMany:391ms,Customer.count:391ms,Store.count:391ms,Sale.count:403ms
+[db.slow] raw.queryRaw 584ms
+[db.slow] raw.executeRaw 387ms
+[db.slow] Ingredient.findUnique 391ms
+[db.slow] Ingredient.update 1543ms
+[http.slow] PATCH /ingredients/133 200 4883ms queries=0 db=0ms
+[db.slow] Ingredient.findMany 2287ms
+[db.slow] Store.count 400ms
+[db.slow] MenuPizzaIngredient.groupBy 584ms
+[http.slow] GET /ingredients 200 3272ms queries=6 db=3854ms slow=Ingredient.findMany:2287ms,Store.count:400ms,MenuPizzaIngredient.groupBy:584ms
+[db.slow] raw.queryRaw 422ms
+[db.slow] raw.executeRaw 388ms
+[db.slow] Store.findUnique 776ms
+[db.slow] Ingredient.findMany 2875ms
+[http.slow] GET /stores/1/ingredients?locale=es 200 4474ms queries=4 db=4461ms slow=raw.queryRaw:422ms,raw.executeRaw:388ms,Store.findUnique:776ms,Ingredient.findMany:2875ms
+[db.slow] Store.count 390ms
+[db.slow] Sale.count 391ms
+[db.slow] Sale.findMany 390ms
+[db.slow] Sale.findMany 403ms
+[http.slow] GET /api/myorders/pending 200 404ms queries=2 db=794ms slow=Sale.count:391ms,Sale.findMany:403ms
+[db.slow] Sale.count 403ms
+[db.slow] Customer.count 584ms
+[db.slow] Store.findMany 620ms
+[db.slow] Store.findMany 779ms
+[db.slow] Sale.findMany 1027ms
+[http.slow] GET /api/myorders/summary?period=today 200 1277ms queries=8 db=4387ms slow=Store.count:390ms,Sale.findMany:390ms,Sale.count:403ms,Customer.count:584ms
+[db.slow] raw.queryRaw 394ms
+[db.slow] Ingredient.update 1158ms
+[http.slow] PATCH /ingredients/133 200 1941ms queries=0 db=0ms
+[db.slow] Ingredient.findMany 396ms
+[db.slow] StoreIngredientStock.upsert 1551ms
+[http.slow] POST /stores/1/ingredients 200 1949ms queries=2 db=1947ms slow=Ingredient.findMany:396ms,StoreIngredientStock.upsert:1551ms
+[db.slow] Store.findUnique 807ms
+[db.slow] Ingredient.findMany 2561ms
+[http.slow] GET /stores/1/ingredients?locale=es 200 3784ms queries=4 db=3769ms slow=Store.findUnique:807ms,Ingredient.findMany:2561ms
+[db.slow] Sale.findMany 388ms
+[db.slow] Sale.count 388ms
+[db.slow] Sale.findMany 390ms
+[db.slow] Customer.count 400ms
+[db.slow] Store.count 401ms
+[db.slow] Sale.count 582ms
+[http.slow] GET /api/myorders/pending 200 583ms queries=2 db=972ms slow=Sale.findMany:390ms,Sale.count:582ms
+[db.slow] Store.findMany 581ms
+[db.slow] Store.findMany 784ms
+[db.slow] Sale.findMany 886ms
+[http.slow] GET /api/myorders/summary?period=today 200 1166ms queries=8 db=4045ms slow=Sale.findMany:388ms,Sale.count:388ms,Customer.count:400ms,Store.count:401ms
+[db.slow] Sale.count 386ms
+[db.slow] Sale.count 388ms
+[db.slow] Store.count 388ms
+[db.slow] Sale.findMany 387ms
+[http.slow] GET /api/myorders/pending 200 388ms queries=2 db=773ms slow=Sale.count:386ms,Sale.findMany:387ms
+[db.slow] Sale.findMany 402ms
+[db.slow] Customer.count 414ms
+[db.slow] Store.findMany 583ms
+[db.slow] Sale.findMany 822ms
+[db.slow] Store.findMany 1004ms
+[http.slow] GET /api/myorders/summary?period=today 200 1270ms queries=8 db=4205ms slow=Sale.count:388ms,Store.count:388ms,Sale.findMany:402ms,Customer.count:414ms
+[db.slow] Sale.findMany 391ms
+[db.slow] Sale.findMany 391ms
+[db.slow] Customer.count 392ms
+[db.slow] Store.count 402ms
+[db.slow] Sale.count 403ms
+[http.slow] GET /api/myorders/pending 200 404ms queries=2 db=794ms slow=Sale.findMany:391ms,Sale.count:403ms
+[db.slow] Sale.count 413ms
+[db.slow] Store.findMany 581ms
+[db.slow] Store.findMany 774ms
+[db.slow] Sale.findMany 829ms
+[http.slow] GET /api/myorders/summary?period=today 200 1088ms queries=8 db=3977ms slow=Sale.findMany:391ms,Customer.count:392ms,Store.count:402ms,Sale.count:413ms
+[db.slow] ProductReviewRequest.findMany 587ms
+[db.slow] raw.queryRaw 466ms
+[db.slow] raw.executeRaw 416ms
+[db.slow] Store.findUnique 826ms
+[db.slow] Ingredient.findMany 2891ms
+[http.slow] GET /stores/1/ingredients?locale=es 200 4614ms queries=4 db=4599ms slow=raw.queryRaw:466ms,raw.executeRaw:416ms,Store.findUnique:826ms,Ingredient.findMany:2891ms
+[db.slow] Sale.findMany 390ms
+[db.slow] Store.count 389ms
+[db.slow] Sale.findMany 393ms
+[http.slow] GET /api/myorders/pending 200 394ms queries=2 db=589ms slow=Sale.findMany:393ms
+[db.slow] Customer.count 403ms
+[db.slow] Sale.count 415ms
+[db.slow] Store.findMany 604ms
+[db.slow] Store.findMany 777ms
+[db.slow] Sale.findMany 819ms
+[http.slow] GET /api/myorders/summary?period=today 200 1071ms queries=8 db=3992ms slow=Sale.findMany:390ms,Store.count:389ms,Customer.count:403ms,Sale.count:415ms
+[db.slow] raw.queryRaw 394ms
+[db.slow] Store.findUnique 390ms
+[db.slow] Ingredient.findMany 1518ms
+[http.slow] GET /stores/1/ingredients?locale=es 304 2511ms queries=4 db=2495ms slow=raw.queryRaw:394ms,Store.findUnique:390ms,Ingredient.findMany:1518ms
+[db.slow] Sale.findMany 388ms
+[http.slow] GET /api/myorders/pending 200 389ms queries=2 db=581ms slow=Sale.findMany:388ms
+[db.slow] Sale.count 390ms
+[db.slow] Sale.findMany 394ms
+[db.slow] Customer.count 406ms
+[db.slow] Store.count 419ms
+[db.slow] Store.findMany 584ms
+[db.slow] Store.findMany 779ms
+[db.slow] Sale.findMany 865ms
+[http.slow] GET /api/myorders/summary?period=today 200 1124ms queries=8 db=4039ms slow=Sale.count:390ms,Sale.findMany:394ms,Customer.count:406ms,Store.count:419ms
+[db.slow] Store.findUnique 402ms
+[db.slow] Ingredient.findMany 2399ms
+[http.slow] GET /stores/1/ingredients?locale=es 304 3222ms queries=4 db=3206ms slow=Store.findUnique:402ms,Ingredient.findMany:2399ms
+[db.slow] raw.queryRaw 402ms
+[db.slow] Store.findUnique 408ms
+[db.slow] Ingredient.findMany 1591ms
+[http.slow] GET /stores/1/ingredients?locale=es 304 2619ms queries=4 db=2602ms slow=raw.queryRaw:402ms,Store.findUnique:408ms,Ingredient.findMany:1591ms
+[db.slow] raw.queryRaw 400ms
+[db.slow] Store.findUnique 399ms
+[db.slow] Ingredient.findMany 1575ms
+[http.slow] GET /stores/1/ingredients?locale=es 304 2591ms queries=4 db=2573ms slow=raw.queryRaw:400ms,Store.findUnique:399ms,Ingredient.findMany:1575ms
+[db.slow] Store.count 388ms
+[db.slow] Sale.findMany 391ms
+[db.slow] Sale.count 403ms
+[http.slow] GET /api/myorders/pending 200 405ms queries=2 db=794ms slow=Sale.findMany:391ms,Sale.count:403ms
+[db.slow] Customer.count 417ms
+[db.slow] Sale.count 418ms
+[db.slow] Sale.findMany 581ms
+[db.slow] Store.findMany 581ms
+[db.slow] Store.findMany 773ms
+[db.slow] Sale.findMany 824ms
+[http.slow] GET /api/myorders/summary?period=today 200 1082ms queries=8 db=4179ms slow=Store.count:388ms,Customer.count:417ms,Sale.count:418ms,Sale.findMany:581ms
+[db.slow] Sale.count 387ms
+[db.slow] Sale.count 386ms
+[db.slow] Sale.findMany 388ms
+[http.slow] GET /api/myorders/pending 200 389ms queries=2 db=776ms slow=Sale.count:387ms,Sale.findMany:388ms
+[db.slow] Sale.findMany 401ms
+[db.slow] Store.count 403ms
+[db.slow] Customer.count 577ms
+[db.slow] Store.findMany 583ms
+[db.slow] Store.findMany 778ms
+[db.slow] Sale.findMany 858ms
+[http.slow] GET /api/myorders/summary?period=today 200 1115ms queries=8 db=4191ms slow=Sale.count:386ms,Sale.findMany:401ms,Store.count:403ms,Customer.count:577ms
+[db.slow] Sale.findMany 385ms
+[db.slow] Sale.count 385ms
+[db.slow] Sale.findMany 390ms
+[db.slow] Store.count 396ms
+[db.slow] Sale.count 398ms
+[http.slow] GET /api/myorders/pending 200 399ms queries=2 db=788ms slow=Sale.findMany:390ms,Sale.count:398ms
+[db.slow] Customer.count 403ms
+[db.slow] Store.findMany 582ms
+[db.slow] Store.findMany 770ms
+[db.slow] Sale.findMany 820ms
+[http.slow] GET /api/myorders/summary?period=today 200 1082ms queries=8 db=3936ms slow=Sale.findMany:385ms,Sale.count:385ms,Store.count:396ms,Customer.count:403ms
+[db.slow] ProductReviewRequest.findMany 585ms
+[db.slow] Sale.findMany 390ms
+[http.slow] GET /api/myorders/pending 200 391ms queries=2 db=588ms slow=Sale.findMany:390ms
+[db.slow] Sale.findMany 392ms
+[db.slow] Customer.count 400ms
+[db.slow] Store.count 400ms
+[db.slow] Sale.count 404ms
+[db.slow] Store.findMany 579ms
+[db.slow] Store.findMany 778ms
+[db.slow] Sale.findMany 828ms
+[http.slow] GET /api/myorders/summary?period=today 200 1079ms queries=8 db=3975ms slow=Sale.findMany:392ms,Customer.count:400ms,Store.count:400ms,Sale.count:404ms
+[db.slow] Customer.count 447ms
+[db.slow] Sale.count 450ms
+[db.slow] Sale.count 448ms
+[db.slow] Store.count 448ms
+[db.slow] Sale.findMany 449ms
+[db.slow] Sale.findMany 451ms
+[http.slow] GET /api/myorders/pending 200 452ms queries=2 db=901ms slow=Sale.count:450ms,Sale.findMany:451ms
+[db.slow] Store.findMany 640ms
+[db.slow] Store.findMany 836ms
+[db.slow] Sale.findMany 856ms
+[http.slow] GET /api/myorders/summary?period=today 200 1102ms queries=8 db=4319ms slow=Customer.count:447ms,Sale.count:448ms,Store.count:448ms,Sale.findMany:449ms
+[db.slow] Sale.count 441ms
+[db.slow] Sale.count 443ms
+[db.slow] Sale.findMany 444ms
+[http.slow] GET /api/myorders/pending 200 444ms queries=2 db=887ms slow=Sale.count:443ms,Sale.findMany:444ms
+[db.slow] Store.count 451ms
+[db.slow] Sale.findMany 456ms
+[db.slow] Customer.count 671ms
+[db.slow] Store.findMany 672ms
+[db.slow] Sale.findMany 877ms
+[db.slow] Store.findMany 888ms
+[http.slow] GET /api/myorders/summary?period=today 200 1147ms queries=8 db=4657ms slow=Sale.count:441ms,Store.count:451ms,Sale.findMany:456ms,Customer.count:671ms
+[db.slow] Sale.findMany 387ms
+[db.slow] Sale.findMany 386ms
+[db.slow] Sale.count 391ms
+[db.slow] Sale.count 402ms
+[http.slow] GET /api/myorders/pending 200 403ms queries=2 db=789ms slow=Sale.findMany:387ms,Sale.count:402ms
+[db.slow] Customer.count 403ms
+[db.slow] Store.count 438ms
+[db.slow] Store.findMany 585ms
+[db.slow] Store.findMany 771ms
+[db.slow] Sale.findMany 820ms
+[http.slow] GET /api/myorders/summary?period=today 200 1064ms queries=8 db=3989ms slow=Sale.findMany:386ms,Sale.count:391ms,Customer.count:403ms,Store.count:438ms
+[db.slow] Sale.findMany 386ms
+[db.slow] Sale.count 386ms
+[http.slow] GET /api/myorders/pending 200 387ms queries=2 db=773ms slow=Sale.findMany:386ms,Sale.count:386ms
+[db.slow] Sale.findMany 391ms
+[db.slow] Customer.count 404ms
+[db.slow] Store.count 404ms
+[db.slow] Sale.count 413ms
+[db.slow] Store.findMany 582ms
+[db.slow] Store.findMany 777ms
+[db.slow] Sale.findMany 825ms
+[http.slow] GET /api/myorders/summary?period=today 200 1079ms queries=8 db=3993ms slow=Sale.findMany:391ms,Customer.count:404ms,Store.count:404ms,Sale.count:413ms
+[db.slow] ProductReviewRequest.findMany 585ms
+[db.slow] Store.count 388ms
+[db.slow] Sale.findMany 389ms
+[http.slow] GET /api/myorders/pending 200 390ms queries=2 db=583ms slow=Sale.findMany:389ms
+[db.slow] Sale.findMany 408ms
+[db.slow] Customer.count 408ms
+[db.slow] Sale.count 412ms
+[db.slow] Store.findMany 579ms
+[db.slow] Store.findMany 775ms
+[db.slow] Sale.findMany 822ms
+[http.slow] GET /api/myorders/summary?period=today 200 1068ms queries=8 db=3986ms slow=Store.count:388ms,Sale.findMany:408ms,Customer.count:408ms,Sale.count:412ms
+[db.slow] Sale.count 388ms
+[db.slow] Sale.findMany 388ms
+[http.slow] GET /api/myorders/pending 200 389ms queries=2 db=776ms slow=Sale.count:388ms,Sale.findMany:388ms
+[db.slow] Sale.findMany 388ms
+[db.slow] Store.count 402ms
+[db.slow] Customer.count 403ms
+[db.slow] Sale.count 410ms
+[db.slow] Store.findMany 581ms
+[db.slow] Store.findMany 777ms
+[db.slow] Sale.findMany 818ms
+[http.slow] GET /api/myorders/summary?period=today 200 1084ms queries=8 db=3975ms slow=Sale.findMany:388ms,Store.count:402ms,Customer.count:403ms,Sale.count:410ms
+[db.slow] Sale.count 386ms
+[db.slow] Sale.findMany 389ms
+[db.slow] Sale.findMany 395ms
+[http.slow] GET /api/myorders/pending 200 396ms queries=2 db=781ms slow=Sale.count:386ms,Sale.findMany:395ms
+[db.slow] Customer.count 400ms
+[db.slow] Sale.count 401ms
+[db.slow] Store.count 401ms
+[db.slow] Store.findMany 583ms
+[db.slow] Store.findMany 788ms
+[db.slow] Sale.findMany 825ms
+[http.slow] GET /api/myorders/summary?period=today 200 1071ms queries=8 db=3981ms slow=Sale.findMany:389ms,Customer.count:400ms,Sale.count:401ms,Store.count:401ms
+[db.slow] Sale.count 390ms
+[db.slow] Sale.findMany 392ms
+[db.slow] Sale.findMany 394ms
+[http.slow] GET /api/myorders/pending 200 395ms queries=2 db=784ms slow=Sale.count:390ms,Sale.findMany:394ms
+[db.slow] Store.count 400ms
+[db.slow] Sale.count 402ms
+[db.slow] Customer.count 404ms
+[db.slow] Store.findMany 585ms
+[db.slow] Store.findMany 778ms
+[db.slow] Sale.findMany 829ms
+[http.slow] GET /api/myorders/summary?period=today 200 1087ms queries=8 db=3989ms slow=Sale.findMany:392ms,Store.count:400ms,Sale.count:402ms,Customer.count:404ms
+[db.slow] Sale.findMany 388ms
+[db.slow] Sale.count 390ms
+[http.slow] GET /api/myorders/pending 200 391ms queries=2 db=778ms slow=Sale.findMany:388ms,Sale.count:390ms
+[db.slow] Sale.findMany 390ms
+[db.slow] Store.count 400ms
+[db.slow] Customer.count 401ms
+[db.slow] Sale.count 406ms
+[db.slow] Store.findMany 583ms
+[db.slow] Store.findMany 779ms
+[db.slow] Sale.findMany 824ms
+[http.slow] GET /api/myorders/summary?period=today 200 1071ms queries=8 db=3978ms slow=Sale.findMany:390ms,Store.count:400ms,Customer.count:401ms,Sale.count:406ms
+[db.slow] ProductReviewRequest.findMany 595ms
+[db.slow] Sale.findMany 389ms
+[http.slow] GET /api/myorders/pending 200 390ms queries=2 db=581ms slow=Sale.findMany:389ms
+[db.slow] Sale.findMany 390ms
+[db.slow] Store.count 400ms
+[db.slow] Customer.count 400ms
+[db.slow] Sale.count 405ms
+[db.slow] Store.findMany 584ms
+[db.slow] Store.findMany 780ms
+[db.slow] Sale.findMany 825ms
+[http.slow] GET /api/myorders/summary?period=today 200 1075ms queries=8 db=3979ms slow=Sale.findMany:390ms,Store.count:400ms,Customer.count:400ms,Sale.count:405ms
+[db.slow] Sale.count 389ms
+[db.slow] Sale.findMany 390ms
+[http.slow] GET /api/myorders/pending 200 391ms queries=2 db=779ms slow=Sale.count:389ms,Sale.findMany:390ms
+[db.slow] Sale.findMany 391ms
+[db.slow] Customer.count 403ms
+[db.slow] Store.count 403ms
+[db.slow] Sale.count 409ms
+[db.slow] Store.findMany 580ms
+[db.slow] Store.findMany 779ms
+[db.slow] Sale.findMany 823ms
+[http.slow] GET /api/myorders/summary?period=today 200 1068ms queries=8 db=3983ms slow=Sale.findMany:391ms,Customer.count:403ms,Store.count:403ms,Sale.count:409ms
+[db.slow] Sale.count 395ms
+[db.slow] Sale.findMany 396ms
+[http.slow] GET /api/myorders/pending 200 397ms queries=2 db=791ms slow=Sale.count:395ms,Sale.findMany:396ms
+[db.slow] Sale.findMany 396ms
+[db.slow] Customer.count 402ms
+[db.slow] Store.count 406ms
+[db.slow] Sale.count 406ms
+[db.slow] Store.findMany 590ms
+[db.slow] Store.findMany 784ms
+[db.slow] Sale.findMany 829ms
+[http.slow] GET /api/myorders/summary?period=today 200 1076ms queries=8 db=4007ms slow=Sale.findMany:396ms,Customer.count:402ms,Store.count:406ms,Sale.count:406ms
+[db.slow] Sale.count 391ms
+[db.slow] Sale.findMany 398ms
+[http.slow] GET /api/myorders/pending 200 399ms queries=2 db=790ms slow=Sale.count:391ms,Sale.findMany:398ms
+[db.slow] Sale.findMany 414ms
+[db.slow] Sale.count 414ms
+[db.slow] Customer.count 414ms
+[db.slow] Store.count 647ms
+[db.slow] Store.findMany 678ms
+[db.slow] Store.findMany 805ms
+[db.slow] Sale.findMany 834ms
+[http.slow] GET /api/myorders/summary?period=today 200 1090ms queries=8 db=4404ms slow=Sale.findMany:414ms,Sale.count:414ms,Customer.count:414ms,Store.count:647ms
+[db.slow] Sale.count 391ms
+[db.slow] Sale.count 392ms
+[db.slow] Sale.findMany 396ms
+[http.slow] GET /api/myorders/pending 200 397ms queries=2 db=788ms slow=Sale.count:392ms,Sale.findMany:396ms
+[db.slow] Sale.findMany 398ms
+[db.slow] Store.count 403ms
+[db.slow] Customer.count 409ms
+[db.slow] Store.findMany 586ms
+[db.slow] Store.findMany 785ms
+[db.slow] Sale.findMany 876ms
+[http.slow] GET /api/myorders/summary?period=today 200 1136ms queries=8 db=4053ms slow=Sale.count:391ms,Sale.findMany:398ms,Store.count:403ms,Customer.count:409ms
+[db.slow] ProductReviewRequest.findMany 410ms
+[db.slow] Sale.findMany 395ms
+[http.slow] GET /api/myorders/pending 200 396ms queries=2 db=601ms slow=Sale.findMany:395ms
+[db.slow] Sale.count 394ms
+[db.slow] Sale.findMany 395ms
+[db.slow] Store.count 400ms
+[db.slow] Customer.count 406ms
+[db.slow] Store.findMany 599ms
+[db.slow] Store.findMany 785ms
+[db.slow] Sale.findMany 871ms
+[http.slow] GET /api/myorders/summary?period=today 200 1132ms queries=8 db=4055ms slow=Sale.count:394ms,Sale.findMany:395ms,Store.count:400ms,Customer.count:406ms
+[db.slow] Sale.findMany 391ms
+[db.slow] Sale.findMany 393ms
+[db.slow] Customer.count 394ms
+[db.slow] Store.count 399ms
+[db.slow] Sale.count 399ms
+[db.slow] Sale.count 409ms
+[http.slow] GET /api/myorders/pending 200 410ms queries=2 db=800ms slow=Sale.findMany:391ms,Sale.count:409ms
+[db.slow] Store.findMany 589ms
+[db.slow] Store.findMany 816ms
+[db.slow] Sale.findMany 867ms
+[http.slow] GET /api/myorders/summary?period=today 200 1125ms queries=8 db=4058ms slow=Sale.findMany:393ms,Customer.count:394ms,Store.count:399ms,Sale.count:399ms
+[db.slow] Customer.count 398ms
+[db.slow] Store.count 398ms
+[db.slow] Sale.findMany 399ms
+[db.slow] Sale.count 403ms
+[db.slow] Sale.count 408ms
+[db.slow] Store.findMany 593ms
+[db.slow] Sale.findMany 624ms
+[http.slow] GET /api/myorders/pending 200 626ms queries=2 db=1027ms slow=Sale.count:403ms,Sale.findMany:624ms
+[db.slow] Store.findMany 788ms
+[db.slow] Sale.findMany 844ms
+[http.slow] GET /api/myorders/summary?period=today 200 1100ms queries=8 db=4030ms slow=Customer.count:398ms,Store.count:398ms,Sale.findMany:399ms,Sale.count:408ms
+[db.slow] Sale.findMany 392ms
+[db.slow] Sale.count 395ms
+[http.slow] GET /api/myorders/pending 200 396ms queries=2 db=787ms slow=Sale.findMany:392ms,Sale.count:395ms
+[db.slow] Sale.count 395ms
+[db.slow] Sale.findMany 395ms
+[db.slow] Store.count 402ms
+[db.slow] Customer.count 408ms
+[db.slow] Store.findMany 595ms
+[db.slow] Store.findMany 784ms
+[db.slow] Sale.findMany 891ms
+[http.slow] GET /api/myorders/summary?period=today 200 1155ms queries=8 db=4079ms slow=Sale.count:395ms,Sale.findMany:395ms,Store.count:402ms,Customer.count:408ms
+[db.slow] Sale.findMany 392ms
+[db.slow] Sale.findMany 392ms
+[db.slow] Sale.count 398ms
+[db.slow] Store.count 404ms
+[db.slow] Customer.count 410ms
+[db.slow] Sale.count 413ms
+[http.slow] GET /api/myorders/pending 200 414ms queries=2 db=805ms slow=Sale.findMany:392ms,Sale.count:413ms
+[db.slow] Store.findMany 596ms
+[db.slow] Store.findMany 787ms
+[db.slow] Sale.findMany 834ms
+[http.slow] GET /api/myorders/summary?period=today 200 1084ms queries=8 db=4020ms slow=Sale.findMany:392ms,Sale.count:398ms,Store.count:404ms,Customer.count:410ms
+[db.slow] ProductReviewRequest.findMany 597ms
+[db.slow] Sale.findMany 396ms
+[http.slow] GET /api/myorders/pending 200 397ms queries=2 db=594ms slow=Sale.findMany:396ms
+[db.slow] Sale.findMany 395ms
+[db.slow] Sale.count 407ms
+[db.slow] Customer.count 412ms
+[db.slow] Store.count 419ms
+[db.slow] Store.findMany 599ms
+[db.slow] Store.findMany 783ms
+[db.slow] Sale.findMany 848ms
+[http.slow] GET /api/myorders/summary?period=today 200 1100ms queries=8 db=4062ms slow=Sale.findMany:395ms,Sale.count:407ms,Customer.count:412ms,Store.count:419ms
+[db.slow] Sale.findMany 442ms
+[db.slow] Sale.findMany 444ms
+[db.slow] Sale.count 446ms
+[http.slow] GET /api/myorders/pending 200 448ms queries=2 db=891ms slow=Sale.findMany:444ms,Sale.count:446ms
+[db.slow] Store.count 449ms
+[db.slow] Sale.count 451ms
+[db.slow] Customer.count 454ms
+[db.slow] Store.findMany 643ms
+[db.slow] Store.findMany 842ms
+[db.slow] Sale.findMany 891ms
+[http.slow] GET /api/myorders/summary?period=today 200 1140ms queries=8 db=4371ms slow=Sale.findMany:442ms,Store.count:449ms,Sale.count:451ms,Customer.count:454ms
+[db.slow] Sale.findMany 394ms
+[db.slow] Sale.count 394ms
+[db.slow] Sale.findMany 396ms
+[db.slow] Sale.count 398ms
+[http.slow] GET /api/myorders/pending 200 399ms queries=2 db=794ms slow=Sale.findMany:396ms,Sale.count:398ms
+[db.slow] Store.count 433ms
+[db.slow] Customer.count 434ms
+[db.slow] Store.findMany 595ms
+[db.slow] Store.findMany 785ms
+[db.slow] Sale.findMany 892ms
+[http.slow] GET /api/myorders/summary?period=today 200 1157ms queries=8 db=4138ms slow=Sale.findMany:394ms,Sale.count:394ms,Store.count:433ms,Customer.count:434ms
+[db.slow] Sale.findMany 399ms
+[db.slow] Store.count 399ms
+[db.slow] Sale.findMany 399ms
+[db.slow] Customer.count 418ms
+[db.slow] Sale.count 419ms
+[db.slow] Sale.count 426ms
+[http.slow] GET /api/myorders/pending 200 428ms queries=2 db=826ms slow=Sale.findMany:399ms,Sale.count:426ms
+[db.slow] Store.findMany 597ms
+[db.slow] Store.findMany 798ms
+[db.slow] Sale.findMany 850ms
+[http.slow] GET /api/myorders/summary?period=today 200 1100ms queries=8 db=4080ms slow=Store.count:399ms,Sale.findMany:399ms,Customer.count:418ms,Sale.count:419ms
+[db.slow] Sale.findMany 395ms
+[db.slow] Sale.count 396ms
+[http.slow] GET /api/myorders/pending 200 397ms queries=2 db=791ms slow=Sale.findMany:395ms,Sale.count:396ms
+[db.slow] Sale.count 446ms
+[db.slow] Sale.findMany 446ms
+[db.slow] Store.count 454ms
+[db.slow] Customer.count 460ms
+[db.slow] Store.findMany 641ms
+[db.slow] Store.findMany 837ms
+[db.slow] Sale.findMany 919ms
+[http.slow] GET /api/myorders/summary?period=today 200 1193ms queries=8 db=4423ms slow=Sale.count:446ms,Sale.findMany:446ms,Store.count:454ms,Customer.count:460ms
+[db.slow] ProductReviewRequest.findMany 408ms
+[db.slow] Customer.count 407ms
+[db.slow] Sale.findMany 409ms
+[http.slow] GET /api/myorders/pending 200 410ms queries=2 db=626ms slow=Sale.findMany:409ms
+[db.slow] Sale.findMany 409ms
+[db.slow] Store.count 420ms
+[db.slow] Sale.count 426ms
+[db.slow] Store.findMany 605ms
+[db.slow] Store.findMany 805ms
+[db.slow] Sale.findMany 847ms
+[http.slow] GET /api/myorders/summary?period=today 200 1098ms queries=8 db=4117ms slow=Customer.count:407ms,Sale.findMany:409ms,Store.count:420ms,Sale.count:426ms
+[db.slow] Sale.findMany 398ms
+[db.slow] Sale.count 400ms
+[db.slow] Customer.count 399ms
+[db.slow] Sale.findMany 404ms
+[http.slow] GET /api/myorders/pending 200 405ms queries=2 db=804ms slow=Sale.count:400ms,Sale.findMany:404ms
+[db.slow] Store.count 412ms
+[db.slow] Sale.count 425ms
+[db.slow] Store.findMany 595ms
+[db.slow] Store.findMany 817ms
+[db.slow] Sale.findMany 845ms
+[http.slow] GET /api/myorders/summary?period=today 200 1098ms queries=8 db=4090ms slow=Sale.findMany:398ms,Customer.count:399ms,Store.count:412ms,Sale.count:425ms
+[db.slow] Sale.count 391ms
+[db.slow] Sale.findMany 398ms
+[db.slow] Customer.count 398ms
+[db.slow] Sale.count 400ms
+[db.slow] Store.count 410ms
+[db.slow] Sale.findMany 419ms
+[http.slow] GET /api/myorders/pending 200 420ms queries=2 db=819ms slow=Sale.count:400ms,Sale.findMany:419ms
+[db.slow] Store.findMany 589ms
+[db.slow] Store.findMany 811ms
+[db.slow] Sale.findMany 888ms
+[http.slow] GET /api/myorders/summary?period=today 200 1153ms queries=8 db=4098ms slow=Sale.count:391ms,Sale.findMany:398ms,Customer.count:398ms,Store.count:410ms
+[db.slow] Sale.findMany 392ms
+[db.slow] Store.count 392ms
+[db.slow] Sale.count 393ms
+[db.slow] Sale.findMany 413ms
+[http.slow] GET /api/myorders/pending 200 414ms queries=2 db=806ms slow=Sale.count:393ms,Sale.findMany:413ms
+[db.slow] Sale.count 415ms
+[db.slow] Customer.count 419ms
+[db.slow] Store.findMany 588ms
+[db.slow] Store.findMany 826ms
+[db.slow] Sale.findMany 842ms
+[http.slow] GET /api/myorders/summary?period=today 200 1104ms queries=8 db=4078ms slow=Sale.findMany:392ms,Store.count:392ms,Sale.count:415ms,Customer.count:419ms
+[db.slow] Sale.findMany 400ms
+[db.slow] Sale.count 403ms
+[db.slow] Sale.findMany 403ms
+[http.slow] GET /api/myorders/pending 200 404ms queries=2 db=806ms slow=Sale.count:403ms,Sale.findMany:403ms
+[db.slow] Store.count 415ms
+[db.slow] Customer.count 415ms
+[db.slow] Sale.count 421ms
+[db.slow] Store.findMany 598ms
+[db.slow] Store.findMany 794ms
+[db.slow] Sale.findMany 843ms
+[http.slow] GET /api/myorders/summary?period=today 200 1091ms queries=8 db=4085ms slow=Sale.findMany:400ms,Store.count:415ms,Customer.count:415ms,Sale.count:421ms
+[db.slow] ProductReviewRequest.findMany 427ms
+[db.slow] Sale.findMany 403ms
+[db.slow] Sale.findMany 406ms
+[http.slow] GET /api/myorders/pending 200 407ms queries=2 db=612ms slow=Sale.findMany:406ms
+[db.slow] Store.count 420ms
+[db.slow] Sale.count 421ms
+[db.slow] Customer.count 427ms
+[db.slow] Store.findMany 601ms
+[db.slow] Store.findMany 804ms
+[db.slow] Sale.findMany 842ms
+[http.slow] GET /api/myorders/summary?period=today 200 1089ms queries=8 db=4113ms slow=Sale.findMany:403ms,Store.count:420ms,Sale.count:421ms,Customer.count:427ms
+[db.slow] Sale.count 390ms
+[db.slow] Sale.findMany 393ms
+[db.slow] Sale.count 394ms
+[db.slow] Sale.findMany 399ms
+[http.slow] GET /api/myorders/pending 200 400ms queries=2 db=789ms slow=Sale.count:390ms,Sale.findMany:399ms
+[db.slow] Customer.count 410ms
+[db.slow] Store.count 410ms
+[db.slow] Store.findMany 589ms
+[db.slow] Store.findMany 787ms
+[db.slow] Sale.findMany 897ms
+[http.slow] GET /api/myorders/summary?period=today 200 1157ms queries=8 db=4091ms slow=Sale.findMany:393ms,Sale.count:394ms,Customer.count:410ms,Store.count:410ms
+[db.slow] Sale.findMany 398ms
+[db.slow] Store.count 400ms
+[db.slow] Sale.findMany 401ms
+[db.slow] Customer.count 414ms
+[db.slow] Sale.count 414ms
+[db.slow] Sale.count 421ms
+[http.slow] GET /api/myorders/pending 200 422ms queries=2 db=822ms slow=Sale.findMany:401ms,Sale.count:421ms
+[db.slow] Store.findMany 592ms
+[db.slow] Store.findMany 799ms
+[db.slow] Sale.findMany 840ms
+[http.slow] GET /api/myorders/summary?period=today 200 1094ms queries=8 db=4054ms slow=Sale.findMany:398ms,Store.count:400ms,Customer.count:414ms,Sale.count:414ms
+[db.slow] Sale.count 388ms
+[db.slow] Sale.findMany 389ms
+[http.slow] GET /api/myorders/pending 200 390ms queries=2 db=776ms slow=Sale.count:388ms,Sale.findMany:389ms
+[db.slow] Sale.findMany 390ms
+[db.slow] Store.count 409ms
+[db.slow] Customer.count 410ms
+[db.slow] Sale.count 415ms
+[db.slow] Store.findMany 584ms
+[db.slow] Store.findMany 780ms
+[db.slow] Sale.findMany 816ms
+[http.slow] GET /api/myorders/summary?period=today 200 1058ms queries=8 db=3997ms slow=Sale.findMany:390ms,Store.count:409ms,Customer.count:410ms,Sale.count:415ms
+[db.slow] Sale.count 387ms
+[db.slow] Sale.findMany 388ms
+[db.slow] Sale.findMany 390ms
+[http.slow] GET /api/myorders/pending 200 390ms queries=2 db=776ms slow=Sale.count:387ms,Sale.findMany:390ms
+[db.slow] Customer.count 406ms
+[db.slow] Store.count 406ms
+[db.slow] Sale.count 413ms
+[db.slow] Store.findMany 578ms
+[db.slow] Store.findMany 775ms
+[db.slow] Sale.findMany 824ms
+[http.slow] GET /api/myorders/summary?period=today 200 1072ms queries=8 db=3986ms slow=Sale.findMany:388ms,Customer.count:406ms,Store.count:406ms,Sale.count:413ms
+[db.slow] ProductReviewRequest.findMany 393ms
+[db.slow] Sale.findMany 388ms
+[db.slow] Customer.count 389ms
+[db.slow] Store.count 390ms
+[db.slow] Sale.count 389ms
+[http.slow] GET /api/myorders/pending 200 390ms queries=2 db=776ms slow=Sale.findMany:388ms,Sale.count:389ms
+[db.slow] Sale.count 391ms
+[db.slow] Sale.findMany 412ms
+[db.slow] Store.findMany 620ms
+[db.slow] Sale.findMany 631ms
+[db.slow] Store.findMany 815ms
+[http.slow] GET /api/myorders/summary?period=today 200 1071ms queries=8 db=3852ms slow=Customer.count:389ms,Store.count:390ms,Sale.count:391ms,Sale.findMany:412ms
+[db.slow] Sale.findMany 393ms
+[db.slow] Customer.count 391ms
+[db.slow] Store.count 391ms
+[db.slow] Sale.findMany 399ms
+[db.slow] Sale.count 407ms
+[db.slow] Sale.count 420ms
+[http.slow] GET /api/myorders/pending 200 421ms queries=2 db=812ms slow=Sale.findMany:393ms,Sale.count:420ms
+[db.slow] Store.findMany 578ms
+[db.slow] Store.findMany 777ms
+[db.slow] Sale.findMany 886ms
+[http.slow] GET /api/myorders/summary?period=today 200 1165ms queries=8 db=4054ms slow=Customer.count:391ms,Store.count:391ms,Sale.findMany:399ms,Sale.count:407ms
+[db.slow] Sale.findMany 390ms
+[db.slow] Sale.findMany 390ms
+[db.slow] Sale.count 395ms
+[db.slow] Store.count 400ms
+[db.slow] Sale.count 412ms
+[http.slow] GET /api/myorders/pending 200 413ms queries=2 db=802ms slow=Sale.findMany:390ms,Sale.count:412ms
+[db.slow] Customer.count 415ms
+[db.slow] Store.findMany 586ms
+[db.slow] Store.findMany 783ms
+[db.slow] Sale.findMany 817ms
+[http.slow] GET /api/myorders/summary?period=today 200 1059ms queries=8 db=3979ms slow=Sale.findMany:390ms,Sale.count:395ms,Store.count:400ms,Customer.count:415ms
+[db.slow] Sale.count 387ms
+[db.slow] Sale.findMany 391ms
+[http.slow] GET /api/myorders/pending 200 392ms queries=2 db=778ms slow=Sale.count:387ms,Sale.findMany:391ms
+[db.slow] Sale.findMany 391ms
+[db.slow] Store.count 403ms
+[db.slow] Customer.count 416ms
+[db.slow] Sale.count 419ms
+[db.slow] Store.findMany 583ms
+[db.slow] Store.findMany 778ms
+[db.slow] Sale.findMany 828ms
+[http.slow] GET /api/myorders/summary?period=today 200 1077ms queries=8 db=4015ms slow=Sale.findMany:391ms,Store.count:403ms,Customer.count:416ms,Sale.count:419ms
+[db.slow] Sale.count 389ms
+[db.slow] Sale.findMany 390ms
+[http.slow] GET /api/myorders/pending 200 391ms queries=2 db=779ms slow=Sale.count:389ms,Sale.findMany:390ms
+[db.slow] Customer.count 399ms
+[db.slow] Sale.findMany 400ms
+[db.slow] Store.count 418ms
+[db.slow] Sale.count 420ms
+[db.slow] Store.findMany 594ms
+[db.slow] Store.findMany 782ms
+[db.slow] Sale.findMany 823ms
+[http.slow] GET /api/myorders/summary?period=today 200 1068ms queries=8 db=4030ms slow=Customer.count:399ms,Sale.findMany:400ms,Store.count:418ms,Sale.count:420ms
+[db.slow] ProductReviewRequest.findMany 387ms
+[db.slow] Sale.findMany 388ms
+[http.slow] GET /api/myorders/pending 200 389ms queries=2 db=584ms slow=Sale.findMany:388ms
+[db.slow] Store.count 395ms
+[db.slow] Sale.findMany 398ms
+[db.slow] Sale.count 412ms
+[db.slow] Customer.count 413ms
+[db.slow] Store.findMany 585ms
+[db.slow] Store.findMany 780ms
+[db.slow] Sale.findMany 825ms
+[http.slow] GET /api/myorders/summary?period=today 200 1073ms queries=8 db=4003ms slow=Store.count:395ms,Sale.findMany:398ms,Sale.count:412ms,Customer.count:413ms
+[db.slow] Sale.findMany 410ms
+[db.slow] Sale.count 412ms
+[db.slow] Sale.findMany 413ms
+[http.slow] GET /api/myorders/pending 200 415ms queries=2 db=825ms slow=Sale.count:412ms,Sale.findMany:413ms
+[db.slow] Store.count 415ms
+[db.slow] Customer.count 421ms
+[db.slow] Sale.count 421ms
+[db.slow] Store.findMany 605ms
+[db.slow] Store.findMany 796ms
+[db.slow] Sale.findMany 846ms
+[http.slow] GET /api/myorders/summary?period=today 200 1091ms queries=8 db=4109ms slow=Sale.findMany:410ms,Store.count:415ms,Customer.count:421ms,Sale.count:421ms
+[db.slow] Sale.findMany 389ms
+[db.slow] Sale.count 389ms
+[http.slow] GET /api/myorders/pending 200 390ms queries=2 db=778ms slow=Sale.findMany:389ms,Sale.count:389ms
+[db.slow] Sale.findMany 389ms
+[db.slow] Sale.count 402ms
+[db.slow] Customer.count 409ms
+[db.slow] Store.count 409ms
+[db.slow] Store.findMany 585ms
+[db.slow] Store.findMany 773ms
+[db.slow] Sale.findMany 826ms
+[http.slow] GET /api/myorders/summary?period=today 200 1074ms queries=8 db=3988ms slow=Sale.findMany:389ms,Sale.count:402ms,Customer.count:409ms,Store.count:409ms
+[db.slow] Sale.findMany 473ms
+[db.slow] Sale.count 475ms
+[db.slow] Sale.findMany 475ms
+[http.slow] GET /api/myorders/pending 200 477ms queries=2 db=951ms slow=Sale.count:475ms,Sale.findMany:475ms
+[db.slow] Store.count 475ms
+[db.slow] Customer.count 476ms
+[db.slow] Sale.count 476ms
+[db.slow] Store.findMany 690ms
+[db.slow] Sale.findMany 884ms
+[db.slow] Store.findMany 886ms
+[http.slow] GET /api/myorders/summary?period=today 200 1134ms queries=8 db=4556ms slow=Sale.findMany:473ms,Store.count:475ms,Customer.count:476ms,Sale.count:476ms
+[db.slow] raw.queryRaw 586ms
+[db.slow] raw.queryRaw 391ms
+[db.slow] Store.findMany 389ms
+[http.slow] GET /partners/mycrushpizza 304 1373ms queries=3 db=1366ms slow=raw.queryRaw:586ms,raw.queryRaw:391ms,Store.findMany:389ms
+[db.slow] Sale.findMany 387ms
+[db.slow] Sale.findMany 390ms
+[http.slow] GET /api/myorders/pending 200 391ms queries=2 db=586ms slow=Sale.findMany:390ms
+[db.slow] Sale.count 404ms
+[db.slow] Customer.count 410ms
+[db.slow] Store.count 411ms
+[db.slow] Store.findMany 582ms
+[db.slow] Store.findMany 775ms
+[db.slow] Sale.findMany 825ms
+[http.slow] GET /api/myorders/summary?period=today 200 1079ms queries=8 db=3989ms slow=Sale.findMany:387ms,Sale.count:404ms,Customer.count:410ms,Store.count:411ms
+[db.slow] raw.queryRaw 385ms
+[db.slow] raw.queryRaw 390ms
+[db.slow] Store.findMany 388ms
+[http.slow] GET /api/stores?partnerId=1 200 775ms queries=2 db=773ms slow=raw.queryRaw:385ms,Store.findMany:388ms
+[db.slow] Partner.findMany 772ms
+[http.slow] GET /partners 200 1164ms queries=2 db=1162ms slow=raw.queryRaw:390ms,Partner.findMany:772ms
+[db.slow] Store.findMany 385ms
+[http.slow] GET /api/stores?partnerId=1 304 580ms queries=2 db=578ms slow=Store.findMany:385ms
+[db.slow] Partner.findMany 783ms
+[http.slow] GET /partners 304 978ms queries=2 db=977ms slow=Partner.findMany:783ms
+[db.slow] Store.findUnique 388ms
+[db.slow] Store.update 1938ms
+[db.slow] raw.queryRaw 388ms
+[http.slow] PATCH /api/stores/1/active 200 2720ms queries=3 db=2714ms slow=Store.findUnique:388ms,Store.update:1938ms,raw.queryRaw:388ms
+[db.slow] raw.queryRaw 585ms
+[db.slow] raw.queryRaw 390ms
+[db.slow] Store.findMany 780ms
+[http.slow] GET /partners/mycrushpizza 200 1759ms queries=3 db=1755ms slow=raw.queryRaw:585ms,raw.queryRaw:390ms,Store.findMany:780ms
+[db.slow] Partner.findUnique 412ms
+[db.slow] raw.queryRaw 605ms
+[db.slow] raw.queryRaw 405ms
+[db.slow] raw.queryRaw 407ms
+[db.slow] Store.findFirst 388ms
+[db.slow] Store.findMany 778ms
+[http.slow] GET /partners/mycrushpizza 304 1793ms queries=3 db=1790ms slow=raw.queryRaw:605ms,raw.queryRaw:407ms,Store.findMany:778ms
+[db.slow] MenuPizza.findMany 2337ms
+[db.slow] raw.queryRaw 388ms
+[db.slow] ProductReviewVote.groupBy 390ms
+[db.slow] DirectDiscount.findMany 438ms
+[db.slow] Sale.findMany 854ms
+[db.slow] BoostSetting.findUnique 406ms
+[db.slow] Promo.findMany 392ms
+[db.slow] Sale.aggregate 390ms
+[http.slow] GET /stores/mycrushpizza/plaza-diario/menu 200 6828ms queries=11 db=6800ms slow=Partner.findUnique:412ms,raw.queryRaw:405ms,Store.findFirst:388ms,MenuPizza.findMany:2337ms
+[db.slow] Sale.count 389ms
+[db.slow] Sale.findMany 588ms
+[http.slow] GET /api/myorders/pending?partnerId=1&storeId=1&take=200 200 589ms queries=2 db=977ms slow=Sale.count:389ms,Sale.findMany:588ms
+[db.slow] Incentive.findMany 782ms
+[http.slow] GET /api/incentives/active/one?partnerId=1 200 786ms queries=1 db=782ms slow=Incentive.findMany:782ms
+[db.slow] Coupon.findMany 1200ms
+[http.slow] GET /api/coupons/gallery-pools?partnerId=1 200 1205ms queries=1 db=1200ms slow=Coupon.findMany:1200ms
+[db.slow] ProductReviewRequest.findMany 413ms
+[db.slow] Incentive.findMany 584ms
+[http.slow] GET /api/incentives/active/one?partnerId=1 304 586ms queries=1 db=584ms slow=Incentive.findMany:584ms
+[db.slow] Store.count 389ms
+[db.slow] Customer.count 389ms
+[db.slow] Sale.count 388ms
+[db.slow] Sale.findMany 392ms
+[http.slow] GET /api/myorders/pending 200 393ms queries=2 db=780ms slow=Sale.count:388ms,Sale.findMany:392ms
+[db.slow] Sale.findMany 413ms
+[db.slow] Store.findMany 590ms
+[db.slow] Sale.findMany 678ms
+[db.slow] Store.findMany 809ms
+[http.slow] GET /api/myorders/summary?period=today 200 1082ms queries=8 db=3666ms slow=Store.count:389ms,Customer.count:389ms,Sale.findMany:413ms,Store.findMany:590ms
+[db.slow] Incentive.findMany 804ms
+[http.slow] GET /api/incentives/active/one?partnerId=1 304 805ms queries=1 db=804ms slow=Incentive.findMany:804ms
+[db.slow] Incentive.findMany 607ms
+[http.slow] GET /api/incentives/active/one?partnerId=1 200 609ms queries=1 db=607ms slow=Incentive.findMany:607ms
+[db.slow] Incentive.findMany 607ms
+[http.slow] GET /api/incentives/active/one?partnerId=1 304 609ms queries=1 db=607ms slow=Incentive.findMany:607ms
+[db.slow] Sale.findMany 394ms
+[db.slow] Store.count 397ms
+[db.slow] Customer.count 397ms
+[db.slow] Sale.findMany 412ms
+[http.slow] GET /api/myorders/pending 200 414ms queries=2 db=613ms slow=Sale.findMany:412ms
+[db.slow] Sale.count 418ms
+[db.slow] Store.findMany 589ms
+[db.slow] Store.findMany 815ms
+[db.slow] Sale.findMany 831ms
+[http.slow] GET /api/myorders/summary?period=today 200 1093ms queries=8 db=4040ms slow=Sale.findMany:394ms,Store.count:397ms,Customer.count:397ms,Sale.count:418ms
+[db.slow] Incentive.findMany 782ms
+[http.slow] GET /api/incentives/active/one?partnerId=1 304 784ms queries=1 db=782ms slow=Incentive.findMany:782ms
+[db.slow] Incentive.findMany 586ms
+[http.slow] GET /api/incentives/active/one?partnerId=1 200 588ms queries=1 db=586ms slow=Incentive.findMany:586ms
+[db.slow] Incentive.findMany 585ms
+[http.slow] GET /api/incentives/active/one?partnerId=1 304 587ms queries=1 db=585ms slow=Incentive.findMany:585ms
+[db.slow] Sale.findMany 391ms
+[http.slow] GET /api/myorders/pending 200 392ms queries=2 db=590ms slow=Sale.findMany:391ms
+[db.slow] Store.count 392ms
+[db.slow] Customer.count 401ms
+[db.slow] Sale.findMany 415ms
+[db.slow] Sale.count 415ms
+[db.slow] Store.findMany 584ms
+[db.slow] Sale.findMany 833ms
+[db.slow] Store.findMany 833ms
+[http.slow] GET /api/myorders/summary?period=today 200 1103ms queries=8 db=4084ms slow=Store.count:392ms,Customer.count:401ms,Sale.findMany:415ms,Sale.count:415ms
+[db.slow] Incentive.findMany 774ms
+[http.slow] GET /api/incentives/active/one?partnerId=1 304 776ms queries=1 db=774ms slow=Incentive.findMany:774ms
+[db.slow] Incentive.findMany 583ms
+[http.slow] GET /api/incentives/active/one?partnerId=1 200 586ms queries=1 db=583ms slow=Incentive.findMany:583ms
+[db.slow] Store.findMany 438ms
+[db.slow] Sale.findMany 1223ms
+[db.slow] MenuPizza.findMany 1561ms
+[http.slow] GET /api/pizzas/overview?partnerId=1 200 1566ms queries=3 db=3222ms slow=Store.findMany:438ms,Sale.findMany:1223ms,MenuPizza.findMany:1561ms
+[db.slow] Store.findUnique 393ms
+[db.slow] Ingredient.findMany 2377ms
+[http.slow] GET /stores/1/ingredients?locale=es 304 3177ms queries=4 db=3162ms slow=Store.findUnique:393ms,Ingredient.findMany:2377ms
+[db.slow] Incentive.findMany 970ms
+[http.slow] GET /api/incentives/active/one?partnerId=1 304 973ms queries=1 db=970ms slow=Incentive.findMany:970ms
+[db.slow] Sale.findMany 391ms
+[http.slow] GET /api/myorders/pending 200 403ms queries=2 db=586ms slow=Sale.findMany:391ms
+[db.slow] Sale.count 403ms
+[db.slow] Sale.findMany 404ms
+[db.slow] Customer.count 405ms
+[db.slow] Store.count 406ms
+[db.slow] Store.findMany 615ms
+[db.slow] Store.findMany 972ms
+[db.slow] Sale.findMany 975ms
+[http.slow] GET /api/myorders/summary?period=today 200 1273ms queries=8 db=4386ms slow=Sale.count:403ms,Sale.findMany:404ms,Customer.count:405ms,Store.count:406ms
+[db.slow] Incentive.findMany 413ms
+[http.slow] GET /api/incentives/active/one?partnerId=1 304 417ms queries=1 db=413ms slow=Incentive.findMany:413ms
+[db.slow] Ingredient.findUnique 2056ms
+[http.slow] GET /ingredients/126/semantics 200 2062ms queries=1 db=2056ms slow=Ingredient.findUnique:2056ms
+[db.slow] Incentive.findMany 619ms
+[http.slow] GET /api/incentives/active/one?partnerId=1 200 621ms queries=1 db=619ms slow=Incentive.findMany:619ms
+[db.slow] Store.count 389ms
+[db.slow] Sale.findMany 431ms
+[db.slow] Sale.findMany 451ms
+[db.slow] Sale.count 450ms
+[db.slow] Customer.count 450ms
+[db.slow] Sale.count 452ms
+[http.slow] GET /api/myorders/pending 200 454ms queries=2 db=904ms slow=Sale.findMany:451ms,Sale.count:452ms
+[db.slow] Store.findMany 601ms
+[db.slow] Store.findMany 775ms
+[db.slow] Sale.findMany 830ms
+[http.slow] GET /api/myorders/summary?period=today 200 1142ms queries=8 db=4170ms slow=Store.count:389ms,Sale.findMany:431ms,Sale.count:450ms,Customer.count:450ms
+[db.slow] Incentive.findMany 1743ms
+[http.slow] GET /api/incentives/active/one?partnerId=1 304 1745ms queries=1 db=1743ms slow=Incentive.findMany:1743ms
+[db.slow] ProductReviewRequest.findMany 658ms
+[db.slow] Sale.count 389ms
+[db.slow] Sale.findMany 391ms
+[db.slow] Store.count 401ms
+[db.slow] Sale.findMany 401ms
+[db.slow] Sale.count 410ms
+[http.slow] GET /api/myorders/pending 200 412ms queries=2 db=802ms slow=Sale.findMany:391ms,Sale.count:410ms
+[db.slow] Customer.count 412ms
+[db.slow] Store.findMany 582ms
+[db.slow] Store.findMany 776ms
+[db.slow] Sale.findMany 822ms
+[db.slow] Incentive.findMany 968ms
+[http.slow] GET /api/incentives/active/one?partnerId=1 200 970ms queries=1 db=968ms slow=Incentive.findMany:968ms
+[http.slow] GET /api/myorders/summary?period=today 200 1077ms queries=8 db=3978ms slow=Sale.count:389ms,Store.count:401ms,Sale.findMany:401ms,Customer.count:412ms
+[db.slow] Sale.count 386ms
+[db.slow] Sale.findMany 387ms
+[http.slow] GET /api/myorders/pending 200 388ms queries=2 db=773ms slow=Sale.count:386ms,Sale.findMany:387ms
+[db.slow] Sale.findMany 400ms
+[db.slow] Customer.count 400ms
+[db.slow] Sale.count 411ms
+[db.slow] Incentive.findMany 581ms
+[http.slow] GET /api/incentives/active/one?partnerId=1 200 583ms queries=1 db=581ms slow=Incentive.findMany:581ms
+[db.slow] Store.findMany 584ms
+[db.slow] Store.count 615ms
+[db.slow] Store.findMany 779ms
+[db.slow] Sale.findMany 824ms
+[http.slow] GET /api/myorders/summary?period=today 200 1071ms queries=8 db=4210ms slow=Sale.findMany:400ms,Customer.count:400ms,Sale.count:411ms,Store.findMany:584ms
+[db.slow] Sale.findMany 390ms
+[db.slow] Sale.count 390ms
+[http.slow] GET /api/myorders/pending 200 392ms queries=2 db=780ms slow=Sale.findMany:390ms,Sale.count:390ms
+[db.slow] Sale.count 389ms
+[db.slow] Customer.count 392ms
+[db.slow] Sale.findMany 405ms
+[db.slow] Store.count 405ms
+[db.slow] Incentive.findMany 579ms
+[http.slow] GET /api/incentives/active/one?partnerId=1 200 580ms queries=1 db=579ms slow=Incentive.findMany:579ms
+[db.slow] Store.findMany 606ms
+[db.slow] Store.findMany 783ms
+[db.slow] Sale.findMany 1085ms
+[db.slow] Sale.groupBy 411ms
+[http.slow] GET /api/myorders/summary?period=today 200 1550ms queries=8 db=4477ms slow=Sale.count:389ms,Customer.count:392ms,Sale.findMany:405ms,Store.count:405ms
+[db.slow] Sale.findMany 388ms
+[db.slow] Sale.count 387ms
+[db.slow] Customer.count 390ms
+[db.slow] Sale.findMany 390ms
+[db.slow] Store.count 402ms
+[db.slow] Sale.count 409ms
+[http.slow] GET /api/myorders/pending 200 411ms queries=2 db=798ms slow=Sale.findMany:388ms,Sale.count:409ms
+[db.slow] Store.findMany 579ms
+[db.slow] Store.findMany 775ms
+[db.slow] Sale.findMany 858ms
+[db.slow] Incentive.findMany 1014ms
+[http.slow] GET /api/incentives/active/one?partnerId=1 200 1015ms queries=1 db=1014ms slow=Incentive.findMany:1014ms
+[http.slow] GET /api/myorders/summary?period=today 200 1114ms queries=8 db=3981ms slow=Sale.count:387ms,Customer.count:390ms,Sale.findMany:390ms,Store.count:402ms
+[db.slow] Customer.count 386ms
+[db.slow] Sale.findMany 392ms
+[db.slow] Sale.count 400ms
+[db.slow] Sale.findMany 405ms
+[http.slow] GET /api/myorders/pending 200 407ms queries=2 db=806ms slow=Sale.count:400ms,Sale.findMany:405ms
+[db.slow] Store.count 403ms
+[db.slow] Sale.count 421ms
+[db.slow] Store.findMany 578ms
+[db.slow] Incentive.findMany 580ms
+[http.slow] GET /api/incentives/active/one?partnerId=1 200 582ms queries=1 db=580ms slow=Incentive.findMany:580ms
+[db.slow] Store.findMany 771ms
+[db.slow] Sale.findMany 820ms
+[http.slow] GET /api/myorders/summary?period=today 200 1064ms queries=8 db=3963ms slow=Customer.count:386ms,Sale.findMany:392ms,Store.count:403ms,Sale.count:421ms
+[db.slow] ProductReviewRequest.findMany 606ms
+[db.slow] Sale.findMany 388ms
+[http.slow] GET /api/myorders/pending 200 389ms queries=2 db=582ms slow=Sale.findMany:388ms
+[db.slow] Customer.count 386ms
+[db.slow] Sale.count 402ms
+[db.slow] Sale.findMany 403ms
+[db.slow] Store.count 408ms
+[db.slow] Incentive.findMany 580ms
+[http.slow] GET /api/incentives/active/one?partnerId=1 200 581ms queries=1 db=580ms slow=Incentive.findMany:580ms
+[db.slow] Store.findMany 579ms
+[db.slow] Store.findMany 780ms
+[db.slow] Sale.findMany 878ms
+[http.slow] GET /api/myorders/summary?period=today 200 1137ms queries=8 db=4042ms slow=Customer.count:386ms,Sale.count:402ms,Sale.findMany:403ms,Store.count:408ms
+[db.slow] Incentive.findMany 618ms
+[http.slow] GET /api/incentives/active/one?partnerId=1 200 620ms queries=1 db=618ms slow=Incentive.findMany:618ms
+[db.slow] Partner.findUnique 416ms
+[db.slow] raw.queryRaw 619ms
+[db.slow] raw.queryRaw 428ms
+[db.slow] raw.queryRaw 415ms
+[db.slow] Store.findFirst 436ms
+[db.slow] Store.findMany 831ms
+[http.slow] GET /partners/mycrushpizza 304 1868ms queries=3 db=1865ms slow=raw.queryRaw:619ms,raw.queryRaw:415ms,Store.findMany:831ms
+[db.slow] MenuPizza.findMany 2468ms
+[db.slow] raw.queryRaw 410ms
+[db.slow] ProductReviewVote.groupBy 412ms
+[db.slow] DirectDiscount.findMany 413ms
+[db.slow] Sale.findMany 889ms
+[db.slow] BoostSetting.findUnique 417ms
+[db.slow] Promo.findMany 411ms
+[db.slow] Sale.aggregate 414ms
+[http.slow] GET /stores/mycrushpizza/plaza-diario/menu 200 7133ms queries=11 db=7114ms slow=Partner.findUnique:416ms,raw.queryRaw:428ms,Store.findFirst:436ms,MenuPizza.findMany:2468ms
+[db.slow] Incentive.findMany 411ms
+[http.slow] GET /api/incentives/active/one?partnerId=1 304 413ms queries=1 db=411ms slow=Incentive.findMany:411ms
+[db.slow] Sale.count 393ms
+[db.slow] Sale.findMany 581ms
+[http.slow] GET /api/myorders/pending?partnerId=1&storeId=1&take=200 200 582ms queries=2 db=974ms slow=Sale.count:393ms,Sale.findMany:581ms
+[db.slow] Coupon.findMany 1113ms
+[http.slow] GET /api/coupons/gallery-pools?partnerId=1 200 1115ms queries=1 db=1113ms slow=Coupon.findMany:1113ms
+[db.slow] Sale.findMany 404ms
+[db.slow] Customer.count 404ms
+[db.slow] Store.count 408ms
+[db.slow] Sale.count 410ms
+[db.slow] Store.findMany 584ms
+[db.slow] Sale.findMany 633ms
+[db.slow] Store.findMany 777ms
+[http.slow] GET /api/myorders/summary?period=today 200 1046ms queries=8 db=3819ms slow=Sale.findMany:404ms,Customer.count:404ms,Store.count:408ms,Sale.count:410ms
+[db.slow] Incentive.findMany 403ms
+[http.slow] GET /api/incentives/active/one?partnerId=1 304 405ms queries=1 db=403ms slow=Incentive.findMany:403ms
+[db.slow] Store.findUnique 388ms
+[db.slow] IngredientExtra.findMany 788ms
+[http.slow] GET /api/ingredient-extras?categoryId=1&storeId=1 200 1179ms queries=2 db=1176ms slow=Store.findUnique:388ms,IngredientExtra.findMany:788ms
+[db.slow] Incentive.findMany 586ms
+[http.slow] GET /api/incentives/active/one?partnerId=1 200 587ms queries=1 db=586ms slow=Incentive.findMany:586ms
+[db.slow] Incentive.findMany 582ms
+[http.slow] GET /api/incentives/active/one?partnerId=1 304 584ms queries=1 db=582ms slow=Incentive.findMany:582ms
+[db.slow] Sale.count 385ms
+[db.slow] Sale.findMany 392ms
+[http.slow] GET /api/myorders/pending 200 393ms queries=2 db=586ms slow=Sale.findMany:392ms
+[db.slow] Sale.findMany 391ms
+[db.slow] Store.count 406ms
+[db.slow] Customer.count 406ms
+[db.slow] Store.findMany 606ms
+[db.slow] Store.findMany 780ms
+[db.slow] Sale.findMany 883ms
+[http.slow] GET /api/myorders/summary?period=today 200 1149ms queries=8 db=4064ms slow=Sale.count:385ms,Sale.findMany:391ms,Store.count:406ms,Customer.count:406ms
+[db.slow] Incentive.findMany 402ms
+[http.slow] GET /api/incentives/active/one?partnerId=1 304 406ms queries=1 db=402ms slow=Incentive.findMany:402ms
+[db.slow] Incentive.findMany 611ms
+[http.slow] GET /api/incentives/active/one?partnerId=1 200 612ms queries=1 db=611ms slow=Incentive.findMany:611ms
+[db.slow] raw.queryRaw 591ms
+[db.slow] raw.queryRaw 404ms
+[db.slow] Store.findMany 782ms
+[http.slow] GET /partners/mycrushpizza 304 1781ms queries=3 db=1777ms slow=raw.queryRaw:591ms,raw.queryRaw:404ms,Store.findMany:782ms
+[db.slow] MenuPizza.findMany 1215ms
+[db.slow] raw.queryRaw 408ms
+[db.slow] Sale.findMany 669ms
+[http.slow] GET /stores/mycrushpizza/plaza-diario/menu 304 3926ms queries=11 db=3910ms slow=MenuPizza.findMany:1215ms,raw.queryRaw:408ms,Sale.findMany:669ms
+[db.slow] Incentive.findMany 402ms
+[http.slow] GET /api/incentives/active/one?partnerId=1 304 404ms queries=1 db=402ms slow=Incentive.findMany:402ms
+[db.slow] Sale.count 388ms
+[db.slow] Sale.findMany 616ms
+[http.slow] GET /api/myorders/pending?partnerId=1&storeId=1&take=200 200 618ms queries=2 db=1004ms slow=Sale.count:388ms,Sale.findMany:616ms
+[db.slow] Coupon.findMany 783ms
+[http.slow] GET /api/coupons/gallery-pools?partnerId=1 304 787ms queries=1 db=783ms slow=Coupon.findMany:783ms
+[db.slow] Store.count 394ms
+[db.slow] Customer.count 395ms
+[db.slow] Sale.findMany 416ms
+[db.slow] Store.findMany 588ms
+[db.slow] Sale.findMany 635ms
+[db.slow] Store.findMany 787ms
+[http.slow] GET /api/myorders/summary?period=today 200 1089ms queries=8 db=3616ms slow=Store.count:394ms,Customer.count:395ms,Sale.findMany:416ms,Store.findMany:588ms
+[db.slow] raw.queryRaw 390ms
+[db.slow] raw.queryRaw 388ms
+[db.slow] Store.findMany 783ms
+[http.slow] GET /partners/mycrushpizza 304 1565ms queries=3 db=1561ms slow=raw.queryRaw:390ms,raw.queryRaw:388ms,Store.findMany:783ms
+[db.slow] Incentive.findMany 390ms
+[http.slow] GET /api/incentives/active/one?partnerId=1 304 393ms queries=1 db=390ms slow=Incentive.findMany:390ms
+[db.slow] Sale.findMany 391ms
+[http.slow] GET /api/myorders/pending?partnerId=1&storeId=1&take=200 200 394ms queries=2 db=588ms slow=Sale.findMany:391ms
+[db.slow] Coupon.findMany 984ms
+[http.slow] GET /api/coupons/gallery-pools?partnerId=1 304 987ms queries=1 db=984ms slow=Coupon.findMany:984ms
+[db.slow] Sale.findMany 405ms
+[db.slow] Sale.count 406ms
+[http.slow] GET /api/myorders/pending?partnerId=1&storeId=1&take=200 200 407ms queries=2 db=810ms slow=Sale.findMany:405ms,Sale.count:406ms
+[db.slow] raw.queryRaw 409ms
+[db.slow] Coupon.findMany 747ms
+[http.slow] GET /api/coupons/gallery-pools?partnerId=1 304 750ms queries=1 db=747ms slow=Coupon.findMany:747ms
+[db.slow] raw.queryRaw 412ms
+[db.slow] Store.findMany 841ms
+[http.slow] GET /partners/mycrushpizza 304 1667ms queries=3 db=1663ms slow=raw.queryRaw:409ms,raw.queryRaw:412ms,Store.findMany:841ms
+[db.slow] Incentive.findMany 884ms
+[http.slow] GET /api/incentives/active/one?partnerId=1 304 889ms queries=1 db=884ms slow=Incentive.findMany:884ms
+[db.slow] Incentive.findMany 621ms
+[http.slow] GET /api/incentives/active/one?partnerId=1 200 627ms queries=1 db=621ms slow=Incentive.findMany:621ms
+[db.slow] Sale.findMany 430ms
+[db.slow] Sale.count 435ms
+[http.slow] GET /api/myorders/pending?partnerId=1&storeId=1&take=200 200 437ms queries=2 db=865ms slow=Sale.findMany:430ms,Sale.count:435ms
+[db.slow] raw.queryRaw 440ms
+[db.slow] Partner.findUnique 653ms
+[db.slow] raw.queryRaw 441ms
+[db.slow] Store.findMany 445ms
+[http.slow] GET /partners/mycrushpizza 304 1099ms queries=3 db=1096ms slow=raw.queryRaw:440ms,Store.findMany:445ms
+[db.slow] Coupon.findMany 1163ms
+[http.slow] GET /api/coupons/gallery-pools?partnerId=1 304 1167ms queries=1 db=1163ms slow=Coupon.findMany:1163ms
+[db.slow] Store.findFirst 410ms
+[db.slow] MenuPizza.findMany 2467ms
+[db.slow] raw.queryRaw 415ms
+[db.slow] ProductReviewVote.groupBy 416ms
+[db.slow] DirectDiscount.findMany 437ms
+[db.slow] Sale.findMany 905ms
+[db.slow] BoostSetting.findUnique 411ms
+[db.slow] Promo.findMany 417ms
+[db.slow] Sale.aggregate 414ms
+[http.slow] GET /stores/mycrushpizza/plaza-diario/menu 304 7456ms queries=11 db=7385ms slow=Partner.findUnique:653ms,raw.queryRaw:441ms,Store.findFirst:410ms,MenuPizza.findMany:2467ms
+[db.slow] Incentive.findMany 415ms
+[http.slow] GET /api/incentives/active/one?partnerId=1 304 419ms queries=1 db=415ms slow=Incentive.findMany:415ms
+[db.slow] Sale.count 393ms
+[db.slow] Sale.findMany 397ms
+[db.slow] Customer.count 396ms
+[db.slow] Sale.findMany 396ms
+[db.slow] Store.count 403ms
+[db.slow] Sale.count 413ms
+[http.slow] GET /api/myorders/pending 200 415ms queries=2 db=810ms slow=Sale.findMany:397ms,Sale.count:413ms
+[db.slow] Store.findMany 603ms
+[db.slow] Sale.findMany 825ms
+[db.slow] Store.findMany 1015ms
+[http.slow] GET /api/myorders/summary?period=today 200 1293ms queries=8 db=4234ms slow=Sale.count:393ms,Customer.count:396ms,Sale.findMany:396ms,Store.count:403ms
+[db.slow] Incentive.findMany 406ms
+[http.slow] GET /api/incentives/active/one?partnerId=1 304 410ms queries=1 db=406ms slow=Incentive.findMany:406ms
+[db.slow] Incentive.findMany 625ms
+[http.slow] GET /api/incentives/active/one?partnerId=1 200 626ms queries=1 db=625ms slow=Incentive.findMany:625ms
+[db.slow] Incentive.findMany 610ms
+[http.slow] GET /api/incentives/active/one?partnerId=1 304 612ms queries=1 db=610ms slow=Incentive.findMany:610ms
+[db.slow] Sale.findMany 390ms
+[db.slow] Store.count 390ms
+[db.slow] Sale.findMany 393ms
+[db.slow] Sale.count 406ms
+[http.slow] GET /api/myorders/pending 200 408ms queries=2 db=799ms slow=Sale.findMany:393ms,Sale.count:406ms
+[db.slow] Sale.count 411ms
+[db.slow] Store.findMany 584ms
+[db.slow] Customer.count 605ms
+[db.slow] Store.findMany 781ms
+[db.slow] Sale.findMany 863ms
+[http.slow] GET /api/myorders/summary?period=today 200 1129ms queries=8 db=4232ms slow=Sale.findMany:390ms,Store.count:390ms,Sale.count:411ms,Store.findMany:584ms
+[db.slow] Incentive.findMany 405ms
+[http.slow] GET /api/incentives/active/one?partnerId=1 304 406ms queries=1 db=405ms slow=Incentive.findMany:405ms
+[db.slow] Incentive.findMany 639ms
+[http.slow] GET /api/incentives/active/one?partnerId=1 200 641ms queries=1 db=639ms slow=Incentive.findMany:639ms
+[db.slow] Incentive.findMany 610ms
+[http.slow] GET /api/incentives/active/one?partnerId=1 304 611ms queries=1 db=610ms slow=Incentive.findMany:610ms
+[db.slow] Sale.findMany 414ms
+[db.slow] Sale.findMany 416ms
+[db.slow] Sale.count 427ms
+[http.slow] GET /api/myorders/pending 200 428ms queries=2 db=843ms slow=Sale.findMany:416ms,Sale.count:427ms
+[db.slow] Sale.count 426ms
+[db.slow] Store.count 427ms
+[db.slow] Customer.count 432ms
+[db.slow] Store.findMany 608ms
+[db.slow] Store.findMany 797ms
+[db.slow] Sale.findMany 846ms
+[http.slow] GET /api/myorders/summary?period=today 200 1110ms queries=8 db=4151ms slow=Sale.findMany:414ms,Sale.count:426ms,Store.count:427ms,Customer.count:432ms
+[db.slow] Incentive.findMany 392ms
+[http.slow] GET /api/incentives/active/one?partnerId=1 304 393ms queries=1 db=392ms slow=Incentive.findMany:392ms
+[db.slow] Incentive.findMany 583ms
+[http.slow] GET /api/incentives/active/one?partnerId=1 200 584ms queries=1 db=583ms slow=Incentive.findMany:583ms
+[db.slow] Incentive.findMany 590ms
+[http.slow] GET /api/incentives/active/one?partnerId=1 304 592ms queries=1 db=590ms slow=Incentive.findMany:590ms
+[db.slow] Sale.findMany 448ms
+[db.slow] Sale.count 448ms
+[http.slow] GET /api/myorders/pending 200 450ms queries=2 db=896ms slow=Sale.findMany:448ms,Sale.count:448ms
+[db.slow] Customer.count 453ms
+[db.slow] Store.count 454ms
+[db.slow] Sale.count 459ms
+[db.slow] Store.findMany 639ms
+[db.slow] Sale.findMany 653ms
+[db.slow] Store.findMany 832ms
+[db.slow] Sale.findMany 884ms
+[http.slow] GET /api/myorders/summary?period=today 200 1144ms queries=8 db=4571ms slow=Customer.count:453ms,Store.count:454ms,Sale.count:459ms,Store.findMany:639ms
+[db.slow] Incentive.findMany 390ms
+[http.slow] GET /api/incentives/active/one?partnerId=1 304 392ms queries=1 db=390ms slow=Incentive.findMany:390ms
+[db.slow] Incentive.findMany 588ms
+[http.slow] GET /api/incentives/active/one?partnerId=1 200 590ms queries=1 db=588ms slow=Incentive.findMany:588ms
+[db.slow] Incentive.findMany 583ms
+[http.slow] GET /api/incentives/active/one?partnerId=1 304 585ms queries=1 db=583ms slow=Incentive.findMany:583ms
+[db.slow] Sale.count 387ms
+[db.slow] Sale.findMany 386ms
+[db.slow] Customer.count 390ms
+[db.slow] Sale.count 394ms
+[http.slow] GET /api/myorders/pending 200 396ms queries=2 db=780ms slow=Sale.findMany:386ms,Sale.count:394ms
+[db.slow] Sale.findMany 402ms
+[db.slow] Store.count 402ms
+[db.slow] Store.findMany 615ms
+[db.slow] Sale.findMany 824ms
+[db.slow] Store.findMany 825ms
+[http.slow] GET /api/myorders/summary?period=today 200 1092ms queries=8 db=4050ms slow=Sale.count:387ms,Customer.count:390ms,Sale.findMany:402ms,Store.count:402ms
+[db.slow] Incentive.findMany 408ms
+[http.slow] GET /api/incentives/active/one?partnerId=1 304 410ms queries=1 db=408ms slow=Incentive.findMany:408ms
+[db.slow] Incentive.findMany 612ms
+[db.slow] Sale.findMany 387ms
+[db.slow] Sale.findMany 391ms
+[db.slow] Store.count 392ms
+[db.slow] Customer.count 403ms
+[db.slow] Sale.count 404ms
+[db.slow] Sale.count 407ms
+[http.slow] GET /api/myorders/pending 200 408ms queries=2 db=798ms slow=Sale.findMany:391ms,Sale.count:407ms
+[db.slow] Store.findMany 587ms
+[db.slow] Store.findMany 779ms
+[db.slow] Sale.findMany 858ms
+[http.slow] GET /api/myorders/summary?period=today 200 1109ms queries=8 db=4010ms slow=Sale.findMany:387ms,Store.count:392ms,Customer.count:403ms,Sale.count:404ms
+[db.slow] ProductReviewRequest.findMany 402ms
+[db.slow] Sale.findMany 384ms
+[db.slow] Sale.count 390ms
+[http.slow] GET /api/myorders/pending 200 391ms queries=2 db=774ms slow=Sale.findMany:384ms,Sale.count:390ms
+[db.slow] Store.count 392ms
+[db.slow] Customer.count 403ms
+[db.slow] Sale.findMany 410ms
+[db.slow] Store.findMany 598ms
+[db.slow] Sale.findMany 823ms
+[db.slow] Store.findMany 1419ms
+[http.slow] GET /api/myorders/summary?period=today 200 1673ms queries=8 db=4447ms slow=Store.count:392ms,Customer.count:403ms,Sale.findMany:410ms,Store.findMany:598ms
+[db.slow] Sale.findMany 389ms
+[db.slow] Store.count 392ms
+[db.slow] Customer.count 393ms
+[db.slow] Sale.count 402ms
+[http.slow] GET /api/myorders/pending 200 404ms queries=2 db=791ms slow=Sale.findMany:389ms,Sale.count:402ms
+[db.slow] Sale.count 405ms
+[db.slow] Sale.findMany 412ms
+[db.slow] Store.findMany 596ms
+[db.slow] Store.findMany 807ms
+[db.slow] Sale.findMany 832ms
+[http.slow] GET /api/myorders/summary?period=today 200 1109ms queries=8 db=4034ms slow=Store.count:392ms,Customer.count:393ms,Sale.count:405ms,Sale.findMany:412ms
+[db.slow] Sale.findMany 405ms
+[db.slow] Store.count 406ms
+[db.slow] Sale.count 406ms
+[db.slow] Sale.count 408ms
+[db.slow] Customer.count 406ms
+[db.slow] Sale.findMany 408ms
+[http.slow] GET /api/myorders/pending 200 409ms queries=2 db=816ms slow=Sale.count:408ms,Sale.findMany:408ms
+[db.slow] Store.findMany 599ms
+[db.slow] Store.findMany 821ms
+[db.slow] Sale.findMany 876ms
+[http.slow] GET /api/myorders/summary?period=today 200 1139ms queries=8 db=4125ms slow=Sale.findMany:405ms,Store.count:406ms,Sale.count:406ms,Customer.count:406ms
+[db.slow] Store.count 390ms
+[db.slow] Sale.findMany 392ms
+[db.slow] Sale.count 427ms
+[db.slow] Sale.count 429ms
+[http.slow] GET /api/myorders/pending 200 430ms queries=2 db=822ms slow=Sale.findMany:392ms,Sale.count:429ms
+[db.slow] Customer.count 429ms
+[db.slow] Sale.findMany 429ms
+[db.slow] Store.findMany 593ms
+[db.slow] Store.findMany 815ms
+[db.slow] Sale.findMany 823ms
+[http.slow] GET /api/myorders/summary?period=today 200 1089ms queries=8 db=4118ms slow=Store.count:390ms,Sale.count:427ms,Customer.count:429ms,Sale.findMany:429ms
+[db.slow] raw.queryRaw 387ms
+[db.slow] Store.findMany 388ms
+[http.slow] GET /partners/mycrushpizza 304 972ms queries=3 db=969ms slow=raw.queryRaw:387ms,Store.findMany:388ms
+[db.slow] Partner.findUnique 599ms
+[db.slow] Store.findMany 386ms
+[http.slow] GET /partners/mycrushpizza 304 778ms queries=3 db=776ms slow=Store.findMany:386ms
+[db.slow] raw.queryRaw 390ms
+[db.slow] Store.findFirst 388ms
+[db.slow] Sale.findMany 392ms
+[http.slow] GET /api/myorders/pending 200 394ms queries=2 db=588ms slow=Sale.findMany:392ms
+[db.slow] Store.count 392ms
+[db.slow] Customer.count 402ms
+[db.slow] Sale.count 403ms
+[db.slow] Store.findMany 590ms
+[db.slow] Store.findMany 831ms
+[db.slow] Sale.findMany 892ms
+[db.slow] Sale.findMany 1325ms
+[db.slow] Sale.groupBy 412ms
+[http.slow] GET /api/myorders/summary?period=today 200 1812ms queries=8 db=5248ms slow=Store.count:392ms,Customer.count:402ms,Sale.count:403ms,Store.findMany:590ms
+[db.slow] MenuPizza.findMany 2438ms
+[db.slow] raw.queryRaw 399ms
+[db.slow] ProductReviewVote.groupBy 400ms
+[db.slow] DirectDiscount.findMany 390ms
+[db.slow] Sale.findMany 843ms
+[db.slow] BoostSetting.findUnique 389ms
+[db.slow] Promo.findMany 430ms
+[db.slow] Sale.aggregate 432ms
+[http.slow] GET /stores/mycrushpizza/plaza-diario/menu 304 7525ms queries=11 db=7097ms slow=Partner.findUnique:599ms,raw.queryRaw:390ms,Store.findFirst:388ms,MenuPizza.findMany:2438ms
+[db.slow] Incentive.findMany 431ms
+[http.slow] GET /api/incentives/active/one?partnerId=1 200 433ms queries=1 db=431ms slow=Incentive.findMany:431ms
+[db.slow] Sale.findMany 413ms
+[db.slow] Sale.count 413ms
+[http.slow] GET /api/myorders/pending?partnerId=1&storeId=1&take=200 200 415ms queries=2 db=826ms slow=Sale.findMany:413ms,Sale.count:413ms
+[db.slow] Coupon.findMany 582ms
+[http.slow] GET /api/coupons/gallery-pools?partnerId=1 304 625ms queries=1 db=582ms slow=Coupon.findMany:582ms
+[db.slow] Incentive.findMany 658ms
+[http.slow] GET /api/incentives/active/one?partnerId=1 200 659ms queries=1 db=658ms slow=Incentive.findMany:658ms
+[db.slow] Incentive.findMany 612ms
+[http.slow] GET /api/incentives/active/one?partnerId=1 304 614ms queries=1 db=612ms slow=Incentive.findMany:612ms
+[db.slow] Sale.count 399ms
+[db.slow] Store.count 399ms
+[db.slow] Sale.findMany 410ms
+[db.slow] Customer.count 410ms
+[db.slow] Sale.findMany 580ms
+[http.slow] GET /api/myorders/pending 200 582ms queries=2 db=785ms slow=Sale.findMany:580ms
+[db.slow] Store.findMany 588ms
+[db.slow] Store.findMany 790ms
+[db.slow] Sale.findMany 859ms
+[http.slow] GET /api/myorders/summary?period=today 200 1124ms queries=8 db=4061ms slow=Sale.count:399ms,Store.count:399ms,Sale.findMany:410ms,Customer.count:410ms
+[db.slow] Incentive.findMany 414ms
+[http.slow] GET /api/incentives/active/one?partnerId=1 304 416ms queries=1 db=414ms slow=Incentive.findMany:414ms
+[db.slow] Incentive.findMany 617ms
+[http.slow] GET /api/incentives/active/one?partnerId=1 200 618ms queries=1 db=617ms slow=Incentive.findMany:617ms
+[db.slow] Incentive.findMany 603ms
+[http.slow] GET /api/incentives/active/one?partnerId=1 304 605ms queries=1 db=603ms slow=Incentive.findMany:603ms
+[db.slow] Sale.count 390ms
+[db.slow] Sale.findMany 402ms
+[http.slow] GET /api/myorders/pending 200 404ms queries=2 db=607ms slow=Sale.findMany:402ms
+[db.slow] Store.count 404ms
+[db.slow] Sale.findMany 414ms
+[db.slow] Customer.count 581ms
+[db.slow] Store.findMany 588ms
+[db.slow] Store.findMany 783ms
+[db.slow] Sale.findMany 865ms
+[http.slow] GET /api/myorders/summary?period=today 200 1134ms queries=8 db=4226ms slow=Sale.count:390ms,Store.count:404ms,Sale.findMany:414ms,Customer.count:581ms
+[db.slow] Incentive.findMany 445ms
+[http.slow] GET /api/incentives/active/one?partnerId=1 304 447ms queries=1 db=445ms slow=Incentive.findMany:445ms
+[db.slow] Incentive.findMany 606ms
+[http.slow] GET /api/incentives/active/one?partnerId=1 200 610ms queries=1 db=606ms slow=Incentive.findMany:606ms
+[db.slow] Incentive.findMany 611ms
+[http.slow] GET /api/incentives/active/one?partnerId=1 304 617ms queries=1 db=611ms slow=Incentive.findMany:611ms
+[db.slow] Customer.count 385ms
+[db.slow] Sale.findMany 394ms
+[db.slow] Sale.findMany 396ms
+[http.slow] GET /api/myorders/pending 200 398ms queries=2 db=602ms slow=Sale.findMany:396ms
+[db.slow] Store.count 405ms
+[db.slow] Sale.count 406ms
+[db.slow] Store.findMany 576ms
+[db.slow] Store.findMany 806ms
+[db.slow] Sale.findMany 828ms
+[http.slow] GET /api/myorders/summary?period=today 200 1106ms queries=8 db=3995ms slow=Customer.count:385ms,Sale.findMany:394ms,Store.count:405ms,Sale.count:406ms
+[db.slow] Incentive.findMany 419ms
+[http.slow] GET /api/incentives/active/one?partnerId=1 304 422ms queries=1 db=419ms slow=Incentive.findMany:419ms
+[db.slow] Incentive.findMany 585ms
+[http.slow] GET /api/incentives/active/one?partnerId=1 200 586ms queries=1 db=585ms slow=Incentive.findMany:585ms
+[db.slow] Incentive.findMany 634ms
+[http.slow] GET /api/incentives/active/one?partnerId=1 304 635ms queries=1 db=634ms slow=Incentive.findMany:634ms
+[db.slow] Store.count 392ms
+[db.slow] Customer.count 404ms
+[db.slow] Sale.count 404ms
+[db.slow] Sale.findMany 405ms
+[db.slow] Store.findMany 584ms
+[db.slow] Sale.findMany 607ms
+[http.slow] GET /api/myorders/pending 200 608ms queries=2 db=801ms slow=Sale.findMany:607ms
+[db.slow] Sale.findMany 836ms
+[db.slow] Store.findMany 1347ms
+[http.slow] GET /api/myorders/summary?period=today 200 1593ms queries=8 db=4563ms slow=Store.count:392ms,Customer.count:404ms,Sale.count:404ms,Sale.findMany:405ms
+[db.slow] Incentive.findMany 772ms
+[http.slow] GET /api/incentives/active/one?partnerId=1 304 773ms queries=1 db=772ms slow=Incentive.findMany:772ms
+[db.slow] Incentive.findMany 580ms
+[http.slow] GET /api/incentives/active/one?partnerId=1 200 582ms queries=1 db=580ms slow=Incentive.findMany:580ms
+[db.slow] Incentive.findMany 575ms
+[http.slow] GET /api/incentives/active/one?partnerId=1 304 577ms queries=1 db=575ms slow=Incentive.findMany:575ms
+[db.slow] Sale.findMany 385ms
+[db.slow] Sale.count 385ms
+[http.slow] GET /api/myorders/pending 200 387ms queries=2 db=771ms slow=Sale.findMany:385ms,Sale.count:385ms
+[db.slow] Sale.count 391ms
+[db.slow] Sale.findMany 404ms
+[db.slow] Store.count 404ms
+[db.slow] Customer.count 404ms
+[db.slow] Store.findMany 587ms
+[db.slow] Store.findMany 782ms
+[db.slow] Sale.findMany 859ms
+[http.slow] GET /api/myorders/summary?period=today 200 1121ms queries=8 db=4032ms slow=Sale.count:391ms,Sale.findMany:404ms,Store.count:404ms,Customer.count:404ms
+[db.slow] Incentive.findMany 403ms
+[http.slow] GET /api/incentives/active/one?partnerId=1 304 405ms queries=1 db=403ms slow=Incentive.findMany:403ms
+[db.slow] Incentive.findMany 608ms
+[http.slow] GET /api/incentives/active/one?partnerId=1 200 609ms queries=1 db=608ms slow=Incentive.findMany:608ms
+[db.slow] Incentive.findMany 603ms
+[http.slow] GET /api/incentives/active/one?partnerId=1 304 605ms queries=1 db=603ms slow=Incentive.findMany:603ms
+[db.slow] Sale.findMany 390ms
+[db.slow] Sale.count 391ms
+[db.slow] Sale.findMany 394ms
+[http.slow] GET /api/myorders/pending 200 395ms queries=2 db=600ms slow=Sale.findMany:394ms
+[db.slow] Customer.count 406ms
+[db.slow] Store.count 406ms
+[db.slow] Store.findMany 579ms
+[db.slow] Store.findMany 770ms
+[db.slow] Sale.findMany 869ms
+[http.slow] GET /api/myorders/summary?period=today 200 1128ms queries=8 db=4012ms slow=Sale.findMany:390ms,Sale.count:391ms,Customer.count:406ms,Store.count:406ms
+[db.slow] Incentive.findMany 405ms
+[http.slow] GET /api/incentives/active/one?partnerId=1 304 407ms queries=1 db=405ms slow=Incentive.findMany:405ms
+[db.slow] Incentive.findMany 606ms
+[http.slow] GET /api/incentives/active/one?partnerId=1 200 608ms queries=1 db=606ms slow=Incentive.findMany:606ms
+[db.slow] Incentive.findMany 608ms
+[http.slow] GET /api/incentives/active/one?partnerId=1 304 610ms queries=1 db=608ms slow=Incentive.findMany:608ms
+[db.slow] Sale.count 384ms
+[db.slow] Sale.findMany 394ms
+[db.slow] Sale.count 393ms
+[db.slow] Sale.findMany 402ms
+[http.slow] GET /api/myorders/pending 200 403ms queries=2 db=795ms slow=Sale.count:393ms,Sale.findMany:402ms
+[db.slow] Customer.count 405ms
+[db.slow] Store.count 575ms
+[db.slow] Store.findMany 604ms
+[db.slow] Sale.findMany 658ms
+[db.slow] Store.findMany 777ms
+[http.slow] GET /api/myorders/summary?period=today 200 1037ms queries=8 db=3998ms slow=Sale.count:384ms,Sale.findMany:394ms,Customer.count:405ms,Store.count:575ms
+[db.slow] Incentive.findMany 388ms
+[http.slow] GET /api/incentives/active/one?partnerId=1 304 389ms queries=1 db=388ms slow=Incentive.findMany:388ms
+[db.slow] Incentive.findMany 585ms
+[http.slow] GET /api/incentives/active/one?partnerId=1 200 587ms queries=1 db=585ms slow=Incentive.findMany:585ms
+[db.slow] Incentive.findMany 584ms
+[http.slow] GET /api/incentives/active/one?partnerId=1 304 585ms queries=1 db=584ms slow=Incentive.findMany:584ms
+[db.slow] Sale.findMany 385ms
+[db.slow] Customer.count 387ms
+[db.slow] Sale.count 395ms
+[http.slow] GET /api/myorders/pending 200 396ms queries=2 db=780ms slow=Sale.findMany:385ms,Sale.count:395ms
+[db.slow] Sale.findMany 406ms
+[db.slow] Store.count 406ms
+[db.slow] Store.findMany 587ms
+[db.slow] Store.findMany 809ms
+[db.slow] Sale.findMany 869ms
+[http.slow] GET /api/myorders/summary?period=today 200 1136ms queries=8 db=3867ms slow=Customer.count:387ms,Sale.findMany:406ms,Store.count:406ms,Store.findMany:587ms
+[db.slow] Incentive.findMany 405ms
+[http.slow] GET /api/incentives/active/one?partnerId=1 304 406ms queries=1 db=405ms slow=Incentive.findMany:405ms
+[db.slow] Incentive.findMany 613ms
+[http.slow] GET /api/incentives/active/one?partnerId=1 200 614ms queries=1 db=613ms slow=Incentive.findMany:613ms
+[db.slow] Incentive.findMany 610ms
+[http.slow] GET /api/incentives/active/one?partnerId=1 304 611ms queries=1 db=610ms slow=Incentive.findMany:610ms
+[db.slow] Sale.findMany 400ms
+[db.slow] Store.count 400ms
+[db.slow] Sale.count 400ms
+[db.slow] Sale.findMany 410ms
+[http.slow] GET /api/myorders/pending 200 411ms queries=2 db=617ms slow=Sale.findMany:410ms
+[db.slow] Customer.count 409ms
+[db.slow] Store.findMany 597ms
+[db.slow] Store.findMany 794ms
+[db.slow] Sale.findMany 882ms
+[http.slow] GET /api/myorders/summary?period=today 200 1151ms queries=8 db=4087ms slow=Sale.findMany:400ms,Store.count:400ms,Sale.count:400ms,Customer.count:409ms
+[db.slow] Incentive.findMany 411ms
+[http.slow] GET /api/incentives/active/one?partnerId=1 304 412ms queries=1 db=411ms slow=Incentive.findMany:411ms
+[db.slow] Incentive.findMany 617ms
+[http.slow] GET /api/incentives/active/one?partnerId=1 200 619ms queries=1 db=617ms slow=Incentive.findMany:617ms
+[db.slow] Store.count 393ms
+[db.slow] Sale.findMany 394ms
+[db.slow] Sale.findMany 395ms
+[db.slow] Customer.count 405ms
+[db.slow] Sale.count 407ms
+[db.slow] Sale.count 411ms
+[http.slow] GET /api/myorders/pending 200 412ms queries=2 db=807ms slow=Sale.findMany:395ms,Sale.count:411ms
+[db.slow] Store.findMany 608ms
+[db.slow] Store.findMany 796ms
+[db.slow] Sale.findMany 1033ms
+[http.slow] GET /api/myorders/summary?period=today 200 1285ms queries=8 db=4233ms slow=Store.count:393ms,Sale.findMany:394ms,Customer.count:405ms,Sale.count:407ms
+[db.slow] Incentive.findMany 1610ms
+[http.slow] GET /api/incentives/active/one?partnerId=1 304 1611ms queries=1 db=1610ms slow=Incentive.findMany:1610ms
+[db.slow] ProductReviewRequest.findMany 585ms
+[db.slow] Sale.count 391ms
+[db.slow] Sale.findMany 394ms
+[http.slow] GET /api/myorders/pending 200 396ms queries=2 db=785ms slow=Sale.count:391ms,Sale.findMany:394ms
+[db.slow] Sale.findMany 394ms
+[db.slow] Store.count 418ms
+[db.slow] Sale.count 418ms
+[db.slow] Customer.count 418ms
+[db.slow] Store.findMany 586ms
+[db.slow] Incentive.findMany 596ms
+[http.slow] GET /api/incentives/active/one?partnerId=1 200 598ms queries=1 db=596ms slow=Incentive.findMany:596ms
+[db.slow] Store.findMany 788ms
+[db.slow] Sale.findMany 870ms
+[http.slow] GET /api/myorders/summary?period=today 200 1128ms queries=8 db=4096ms slow=Sale.findMany:394ms,Store.count:418ms,Sale.count:418ms,Customer.count:418ms
+[db.slow] ProductReviewRequest.findMany 402ms
+[db.slow] ProductReviewRequest.findMany 414ms
+[db.slow] ProductReviewRequest.findMany 409ms
+[db.slow] ProductReviewRequest.findMany 412ms
+[db.slow] ProductReviewRequest.findMany 419ms
+[db.slow] ProductReviewRequest.findMany 422ms
+[db.slow] ProductReviewRequest.findMany 412ms
+[db.slow] ProductReviewRequest.findMany 403ms
+[db.slow] ProductReviewRequest.findMany 416ms
+[db.slow] ProductReviewRequest.findMany 408ms
+[db.slow] ProductReviewRequest.findMany 404ms
+[db.slow] ProductReviewRequest.findMany 412ms

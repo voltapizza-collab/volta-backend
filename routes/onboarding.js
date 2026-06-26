@@ -457,7 +457,7 @@ const buildContractEmail = (request, contractUrl) => {
   return { text, html };
 };
 
-const CONTRACT_DOCUMENT_VERSION = "volta-adhesion-comercial-v1";
+const CONTRACT_DOCUMENT_VERSION = "volta-adhesion-comercial-v2";
 
 const normalizeIp = (value) =>
   String(value || "")
@@ -502,6 +502,7 @@ const buildSignedContractSnapshot = (request, signature, activation = null) => {
     "",
     "2. Definiciones",
     '"Plataforma": el sitio web, aplicaciones, paneles, herramientas y canales operados por Volta para la gestion comercial y operativa.',
+    '"Ruta de Acceso StoreGate": enlace, URL, boton, codigo QR o punto de entrada digital que Volta entregue o habilite para que los Clientes accedan al motor de ventas del Comerciante dentro de la Plataforma.',
     '"Comerciante": la persona fisica o juridica que se adhiere a este contrato y ofrece productos de restauracion a traves de Volta.',
     '"Cliente": el usuario final que realiza pedidos o interactua con la oferta comercial del Comerciante.',
     '"Pedido": solicitud de productos realizada por un Cliente y recibida por el Comerciante a traves de la Plataforma.',
@@ -516,6 +517,7 @@ const buildSignedContractSnapshot = (request, signature, activation = null) => {
     "",
     "5. Modelo operativo",
     "El modelo operativo de Volta consiste en poner a disposicion del Comerciante una plataforma de ventas, gestion comercial, comunicacion con clientes, creacion de ofertas, segmentacion de clientes, gestion de precios, seguimiento de pedidos, acciones promocionales y herramientas de administracion asociadas a su actividad de restauracion.",
+    "Cuando Volta entregue o habilite una Ruta de Acceso StoreGate, dicha entrega consistira en facilitar al Comerciante un acceso operativo al motor de ventas dentro de la Plataforma. Salvo pacto escrito especifico, esta entrega no implica que Volta deba integrar, instalar, insertar o conectar botones, enlaces, iframes, scripts u otros elementos en paginas web, redes sociales, aplicaciones, perfiles, marketplaces o canales digitales del Comerciante o de terceros.",
     "El Comerciante conserva la direccion de su negocio, la definicion final de su oferta, la preparacion de los productos, la atencion de incidencias propias de su actividad y el cumplimiento de las obligaciones legales, fiscales, sanitarias y laborales que le correspondan.",
     "",
     "6. Comisiones y liquidaciones",
@@ -525,9 +527,11 @@ const buildSignedContractSnapshot = (request, signature, activation = null) => {
     "",
     "7. Obligaciones del Comerciante",
     "El Comerciante debera preparar los pedidos aceptados, mantener actualizada su oferta, precios, horarios, disponibilidad, informacion alimentaria y alergenos, atender incidencias, cumplir la normativa sanitaria, fiscal, laboral, de consumo y proteccion de datos que le resulte aplicable, y no utilizar la Plataforma para fines distintos de los autorizados.",
+    "El Comerciante sera responsable de difundir, publicar y mantener visible la Ruta de Acceso StoreGate en sus canales propios o autorizados, incluyendo su pagina web, redes sociales, perfiles digitales, codigos QR, materiales comerciales o comunicaciones con clientes, cuando desee dirigir trafico al motor de ventas habilitado por Volta. La falta de difusion por parte del Comerciante no constituira incumplimiento de Volta ni generara derecho a reclamar volumen minimo de pedidos o resultados economicos.",
     "",
     "8. Obligaciones de Volta",
     "Volta pondra a disposicion del Comerciante los medios tecnicos y comerciales razonables para la gestion de su presencia en la Plataforma, sin garantizar volumen minimo de pedidos, facturacion, posicionamiento, continuidad absoluta del servicio ni resultados economicos.",
+    "Respecto de la Ruta de Acceso StoreGate, la obligacion de Volta se limitara a habilitar o comunicar al Comerciante una ruta funcional de acceso a la Plataforma, salvo que las partes acuerden expresamente por escrito servicios adicionales de integracion, desarrollo, publicacion, marketing o gestion de canales externos.",
     "",
     "9. Suspension y resolucion",
     "Volta podra suspender el alta, la publicacion, la recepcion de pedidos o las liquidaciones cuando existan datos incompletos, documentacion no validada, riesgo de fraude, incumplimiento legal, incidencias graves, impagos, reclamaciones relevantes o riesgo para clientes, repartidores, terceros o para la Plataforma. Cualquiera de las partes podra resolver el contrato mediante comunicacion escrita con treinta dias naturales de preaviso, sin perjuicio de las cantidades devengadas y obligaciones pendientes.",
