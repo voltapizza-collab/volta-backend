@@ -113,6 +113,7 @@ export default function stockRoutes(prisma) {
             id: pizza.id,
             name: pizza.name,
             category: pizza.category,
+            image: pizza.image || "",
             ingredients: (pizza.ingredients || []).map((rel) => ({
               id: rel.ingredient?.id,
               name: rel.ingredient?.name,

@@ -29,6 +29,53 @@ const asArray = (value) => {
   return Array.isArray(second) ? second : [];
 };
 
+const normalizePaymentChannel = (sale, customerData = {}) => {
+  const signal = [
+    sale?.paymentMode,
+    sale?.paymentMethod,
+    sale?.paymentStatus,
+    customerData.paymentMode,
+    customerData.paymentMethod,
+    customerData.paymentStatus,
+    customerData.payment_type,
+    customerData.paymentChannel,
+  ]
+    .filter(Boolean)
+    .map((value) => String(value).trim().toLowerCase())
+    .join(" ");
+
+  if (signal.includes("cash") || signal.includes("efectivo")) return "cash";
+  if (signal.includes("paypal") || signal.includes("pay pal")) return "paypal";
+  if (
+    signal.includes("crypto") ||
+    signal.includes("cripto") ||
+    signal.includes("bitcoin") ||
+    signal.includes("btc") ||
+    signal.includes("usdt")
+  ) {
+    return "crypto";
+  }
+  if (
+    signal.includes("card") ||
+    signal.includes("tarjeta") ||
+    signal.includes("stripe") ||
+    sale?.stripePaymentIntentId ||
+    sale?.stripeCheckoutSessionId
+  ) {
+    return "card";
+  }
+
+  return "unknown";
+};
+
+const paymentChannelLabel = (channel) => {
+  if (channel === "cash") return "Efectivo";
+  if (channel === "paypal") return "PayPal";
+  if (channel === "crypto") return "Cripto";
+  if (channel === "card") return "Tarjeta";
+  return "Sin canal";
+};
+
 const toRate = (value, fallback) => {
   const parsed = Number(value);
   return Number.isFinite(parsed) && parsed >= 0 ? parsed : fallback;
@@ -126,12 +173,15 @@ const formatBillingSale = (sale, partner = {}, movementOrderCount = null) => {
   const totalOrderCount = Number(sale.customer?._count?.sales || customerData.orderCount || 0);
   const orderCount = Number(movementOrderCount || customerData.movementOrderCount || totalOrderCount || 0);
   const partnerCurrency = partner.currency || "EUR";
+  const paymentChannel = normalizePaymentChannel(sale, customerData);
 
   return {
     id: sale.id,
     code: sale.code,
     date: sale.date,
     status: sale.status,
+    paymentChannel,
+    paymentChannelLabel: paymentChannelLabel(paymentChannel),
     storeId: sale.store?.id || null,
     storeName: sale.store?.storeName || "Sin tienda",
     partnerId: partner.id || sale.partnerId || null,
@@ -210,6 +260,8 @@ export default function billingRoutes(prisma) {
           extras: true,
           notes: true,
           address_1: true,
+          stripePaymentIntentId: true,
+          stripeCheckoutSessionId: true,
           boostActive: true,
           boostAmount: true,
           boostMeta: true,
