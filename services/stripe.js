@@ -26,19 +26,6 @@ const appendPaymentMethodTypes = (params, { includeKlarna = true } = {}) => {
 
 const shouldEnableKlarna = () => process.env.STRIPE_ENABLE_KLARNA !== "0";
 
-const appendShippingDetails = (params, customerData = {}) => {
-  const delivery = customerData.delivery && typeof customerData.delivery === "object" ? customerData.delivery : {};
-  const addressLine = String(customerData.address_1 || delivery.address || "").trim();
-  const customerName = String(customerData.name || "").trim();
-
-  if (!addressLine || String(delivery.method || "").toUpperCase() !== "COURIER") return;
-
-  appendParam(params, "shipping_details[name]", customerName || "Cliente Volta");
-  appendParam(params, "shipping_details[address][line1]", addressLine);
-  appendParam(params, "shipping_details[address][country]", "ES");
-  appendParam(params, "shipping_details[address][postal_code]", customerData.zipCode);
-};
-
 const stripeApiRequest = async ({ method = "POST", path, params, idempotencyKey }) => {
   if (!globalThis.fetch) {
     throw new Error("fetch_not_available");
@@ -147,7 +134,6 @@ export const createOrderCheckoutSession = async ({
   appendPaymentMethodTypes(params);
   if (shouldEnableKlarna()) {
     appendParam(params, "billing_address_collection", "required");
-    appendShippingDetails(params, customerData);
   }
   appendParam(params, "success_url", successUrl);
   appendParam(params, "cancel_url", cancelUrl);
