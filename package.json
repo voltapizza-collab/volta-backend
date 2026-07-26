@@ -6,6 +6,7 @@
   "type": "module",
   "scripts": {
     "start": "node scripts/prepareProductionDatabase.js && node scripts/deployProductionMigrations.js && node index.js",
+    "backup:critical": "node scripts/backupCriticalData.js",
     "map:ingredient-semantics": "node scripts/mapIngredientSemanticCategories.js",
     "seed:ingredient-final-cleanup": "node scripts/seedIngredientSemanticFinalCleanup.js",
     "seed:ingredient-batch5": "node scripts/seedIngredientSemanticBatch5.js",
