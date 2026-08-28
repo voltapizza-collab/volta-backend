@@ -1,6 +1,11 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { calculateCouponDiscount, getEligibleCouponSubtotal } from "../routes/checkout.js";
+import {
+  calculateCouponDiscount,
+  getCouponLines,
+  getEligibleCouponSubtotal,
+  validateCouponForCheckout,
+} from "../routes/checkout.js";
 
 test("coupon subtotal excludes promos, top deals, boosts and rewards", () => {
   const lines = [
@@ -66,4 +71,69 @@ test("delivery free coupon discounts the delivery fee", () => {
 
   assert.equal(calculateCouponDiscount(coupon, 0, { deliveryFee: 2.5 }), 2.5);
   assert.equal(calculateCouponDiscount(coupon, 30, { deliveryFee: 0 }), 0);
+});
+
+test("channel shift QR coupons do not stack with top deals or other coupon lines", () => {
+  const activeTopDeals = [
+    {
+      id: 9,
+      status: "ACTIVE",
+      targetType: "PRODUCT",
+      productIds: [44],
+      storeIds: [3],
+    },
+  ];
+  const lines = [
+    { cartLineId: "normal-1", pizzaId: 12, category: "Pizzas", subtotal: 12 },
+    { cartLineId: "top-deal-1", pizzaId: 44, category: "Pizzas", subtotal: 8 },
+    { cartLineId: "coupon-QR", type: "COUPON", source: "coupon", couponCode: "CAMBIO_CANAL", subtotal: -5 },
+    { cartLineId: "coupon-OTHER", type: "COUPON", source: "coupon", couponCode: "OTRO", subtotal: -5 },
+  ];
+
+  assert.equal(getEligibleCouponSubtotal(lines, { activeTopDeals, storeId: 3 }), 12);
+  assert.equal(getCouponLines(lines).length, 2);
+});
+
+test("channel shift QR coupons are reusable until their expiration date", () => {
+  const reference = new Date("2026-08-28T10:00:00.000Z");
+  const coupon = {
+    status: "ACTIVE",
+    kind: "AMOUNT",
+    variant: "FIXED",
+    amount: "5.00",
+    usageLimit: 1,
+    usageUnlimited: true,
+    usedCount: 25,
+    activeFrom: new Date("2026-08-27T10:00:00.000Z"),
+    expiresAt: new Date("2026-08-29T10:00:00.000Z"),
+    meta: {
+      channelShiftQr: true,
+      targeting: {
+        storeIds: [3],
+      },
+    },
+  };
+
+  assert.equal(
+    validateCouponForCheckout(coupon, {
+      eligibleSubtotal: 20,
+      deliveryFee: 0,
+      store: { id: 3, zipCode: "28001" },
+      reference,
+    }),
+    null
+  );
+
+  assert.equal(
+    validateCouponForCheckout(
+      { ...coupon, expiresAt: new Date("2026-08-28T09:59:59.000Z") },
+      {
+        eligibleSubtotal: 20,
+        deliveryFee: 0,
+        store: { id: 3, zipCode: "28001" },
+        reference,
+      }
+    ),
+    "coupon_not_available"
+  );
 });

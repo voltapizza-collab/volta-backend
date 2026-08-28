@@ -110,7 +110,8 @@ export const buildAlert = ({
 };
 
 export default function trackingAlertsRoutes(prisma) {
-  const router = express.Router();
+const router = express.Router();
+const CHANNEL_SHIFT_CAMPAIGN = "CHANNEL_SHIFT";
 
   router.get("/", async (req, res) => {
     const partnerId = parsePositiveInt(req.query.partnerId);
@@ -303,7 +304,9 @@ export default function trackingAlertsRoutes(prisma) {
         }));
       });
 
-      couponRedemptions.forEach((redemption) => {
+      couponRedemptions
+        .filter((redemption) => String(redemption.coupon?.campaign || redemption.campaign || "").toUpperCase() !== CHANNEL_SHIFT_CAMPAIGN)
+        .forEach((redemption) => {
         alerts.push(buildAlert({
           id: `coupon-redemption-${redemption.id}`,
           type: "coupon_gallery_redeemed",

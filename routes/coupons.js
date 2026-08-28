@@ -24,6 +24,7 @@ const PREFIX = {
 const SURPRISE_AMOUNT_CAMPAIGN = "SURPRISE_AMOUNT";
 const SURPRISE_AMOUNT_CAMPAIGNS = [SURPRISE_AMOUNT_CAMPAIGN, "PIZZA_GRATIS_QR"];
 const DELIVERY_FREE_CAMPAIGN = "DELIVERY_FREE";
+const CHANNEL_SHIFT_CAMPAIGN = "CHANNEL_SHIFT";
 const SURPRISE_DISTRIBUTION = [
   { key: "min", weight: 75 },
   { key: "mid", weight: 15 },
@@ -552,11 +553,24 @@ const serializeCouponValidation = (coupon) => ({
   expiresAt: coupon.expiresAt,
   activeFrom: coupon.activeFrom,
   usageLimit: toNum(coupon.usageLimit),
+  usageUnlimited: Boolean(coupon.usageUnlimited),
   usedCount: toNum(coupon.usedCount) || 0,
   acquisition: coupon.acquisition,
   channel: coupon.channel,
   campaign: coupon.campaign,
 });
+
+const calculateCouponPotentialDiscount = (coupon, { deliveryFee = 0 } = {}) => {
+  if (isDeliveryFreeCoupon(coupon)) {
+    return deliveryFee > 0 ? numberFromCents(Math.round(deliveryFee * 100)) : 0;
+  }
+
+  if (coupon.kind === "AMOUNT") {
+    return couponAmountNumber(coupon.amount);
+  }
+
+  return 0;
+};
 
 const buildGalleryPoolCards = (rows, now = nowInTZ()) => {
   const groups = new Map();
@@ -569,13 +583,14 @@ const buildGalleryPoolCards = (rows, now = nowInTZ()) => {
     const galleryOrder = Number.isFinite(rawGalleryOrder) ? rawGalleryOrder : null;
     const gameScoped = coupon.acquisition === "GAME" || coupon.channel === "GAME" || coupon.gameId;
     const mapKey = `${gameScoped ? `GAME:${coupon.gameId || "unknown"}:` : ""}${type}:${key}`;
-    const usedCount = toNum(coupon.usedCount) ?? 0;
-    const usageLimit = toNum(coupon.usageLimit);
-    const available =
-      coupon.assignedToId == null &&
-      isActiveByDate(coupon, now) &&
-      isWithinWindow(coupon, now) &&
-      (usageLimit == null || usageLimit > usedCount);
+  const usedCount = toNum(coupon.usedCount) ?? 0;
+  const usageLimit = toNum(coupon.usageLimit);
+  const usageUnlimited = Boolean(coupon.usageUnlimited);
+  const available =
+    coupon.assignedToId == null &&
+    isActiveByDate(coupon, now) &&
+    isWithinWindow(coupon, now) &&
+    (usageUnlimited || usageLimit == null || usageLimit > usedCount);
 
     const current = groups.get(mapKey) || {
       type,
@@ -606,6 +621,7 @@ const buildGalleryPoolCards = (rows, now = nowInTZ()) => {
     if (coupon.status === "ACTIVE") current.active += 1;
 
     if (available) {
+      if (usageUnlimited) current.remaining = null;
       if (usageLimit == null) current.remaining = null;
       else if (current.remaining !== null) current.remaining += Math.max(0, usageLimit - usedCount);
     }
@@ -680,6 +696,14 @@ const buildGalleryPoolCards = (rows, now = nowInTZ()) => {
 
 const normalizeCouponInputCode = (value = "") =>
   String(value || "").trim().toUpperCase().replace(/\s+/g, "");
+
+const normalizeQrCouponCode = (value = "") =>
+  String(value || "")
+    .trim()
+    .toUpperCase()
+    .replace(/\s+/g, "_")
+    .replace(/[^A-Z0-9_-]/g, "")
+    .slice(0, 80);
 
 const buildCouponLookupCodes = (code) => {
   const normalized = normalizeCouponInputCode(code);
@@ -942,6 +966,19 @@ async function genCouponCode(prisma, prefix) {
   return code;
 }
 
+async function genManualCouponCode(prisma, requestedCode, fallbackPrefix = "QR") {
+  const normalized = normalizeQrCouponCode(requestedCode);
+  if (normalized && !(await prisma.coupon.findUnique({ where: { code: normalized } }))) {
+    return normalized;
+  }
+
+  let code;
+  do {
+    code = `${fallbackPrefix}-${pick(8)}`;
+  } while (await prisma.coupon.findUnique({ where: { code } }));
+  return code;
+}
+
 async function genCustomerCode(prisma) {
   let code;
   do {
@@ -1101,6 +1138,9 @@ export const resolveCouponFrontendBaseUrl = (env = process.env) => {
 };
 
 const frontendBaseUrl = () => resolveCouponFrontendBaseUrl();
+
+export const buildCouponShortUrl = (coupon, env = process.env) =>
+  coupon?.code ? `${resolveCouponFrontendBaseUrl(env)}/c/${encodeURIComponent(coupon.code)}` : null;
 
 const safeCouponRedeemUrlForSms = (value) => {
   const url = cleanFrontendBaseUrl(value);
@@ -1466,6 +1506,300 @@ async function sendPrivateCouponSmsBatch(prisma, { coupons, recipients, partnerN
 }
 
 export default function couponsRoutes(prisma) {
+  const serializeChannelShiftCoupon = async (coupon) => {
+    const meta = readCouponMeta(coupon);
+    const targeting = readCouponTargeting(coupon);
+    const redeemUrl = buildCouponShortUrl(coupon) || await buildCouponRedeemUrl(prisma, { coupon });
+
+    return {
+      id: coupon.id,
+      code: coupon.code,
+      campaign: coupon.campaign,
+      campaignName: meta.campaignName || coupon.campaign || "",
+      amount: toNum(coupon.amount),
+      activeFrom: coupon.activeFrom,
+      expiresAt: coupon.expiresAt,
+      status: coupon.status,
+      usageUnlimited: Boolean(coupon.usageUnlimited),
+      usedCount: toNum(coupon.usedCount) || 0,
+      visibility: coupon.visibility,
+      storeIds: targeting.storeIds,
+      targetStores: Array.isArray(meta.targetStores) ? meta.targetStores : [],
+      redeemUrl,
+    };
+  };
+
+  router.get("/channel-shift-qr", async (req, res) => {
+    const partnerId = parsePositiveInt(req.query.partnerId);
+
+    if (!partnerId) {
+      return res.status(400).json({ ok: false, error: "partnerId required" });
+    }
+
+    try {
+      const coupons = await prisma.coupon.findMany({
+        where: {
+          partnerId,
+          campaign: CHANNEL_SHIFT_CAMPAIGN,
+        },
+        orderBy: { createdAt: "desc" },
+      });
+
+      const items = await Promise.all(coupons.map(serializeChannelShiftCoupon));
+      return res.json({ ok: true, partnerId, items });
+    } catch (error) {
+      console.error("[coupons.channel-shift-qr.get] error:", error);
+      return res.status(500).json({ ok: false, error: "server" });
+    }
+  });
+
+  router.post("/channel-shift-qr", async (req, res) => {
+    const partnerId = parsePositiveInt(req.body.partnerId);
+    const requestedStoreIds = Array.isArray(req.body.storeIds)
+      ? req.body.storeIds
+      : [req.body.storeId];
+    const storeIds = [
+      ...new Set(requestedStoreIds.map(parsePositiveInt).filter((id) => id > 0)),
+    ];
+    const amount = parseDecimal(req.body.amount);
+    const campaignName = String(req.body.campaignName || "").trim();
+    const requestedCode = normalizeQrCouponCode(req.body.code || campaignName);
+    const activeFrom = req.body.activeFrom ? new Date(req.body.activeFrom) : null;
+    const expiresAt = req.body.expiresAt ? new Date(req.body.expiresAt) : null;
+
+    if (!partnerId || !storeIds.length || !campaignName) {
+      return res.status(400).json({ ok: false, error: "bad_payload" });
+    }
+
+    if (amount == null || amount <= 0) {
+      return res.status(400).json({ ok: false, error: "bad_amount" });
+    }
+
+    if (activeFrom && Number.isNaN(activeFrom.getTime())) {
+      return res.status(400).json({ ok: false, error: "bad_active_from" });
+    }
+
+    if (expiresAt && Number.isNaN(expiresAt.getTime())) {
+      return res.status(400).json({ ok: false, error: "bad_expires_at" });
+    }
+
+    if (activeFrom && expiresAt && expiresAt <= activeFrom) {
+      return res.status(400).json({ ok: false, error: "bad_date_range" });
+    }
+
+    try {
+      const stores = await prisma.store.findMany({
+        where: {
+          id: { in: storeIds },
+          partnerId,
+        },
+        select: {
+          id: true,
+          storeName: true,
+          city: true,
+          zipCode: true,
+          active: true,
+          acceptingOrders: true,
+        },
+        orderBy: { storeName: "asc" },
+      });
+
+      if (stores.length !== storeIds.length) {
+        return res.status(404).json({ ok: false, error: "store_not_found" });
+      }
+
+      if (requestedCode && await prisma.coupon.findUnique({ where: { code: requestedCode } })) {
+        return res.status(409).json({ ok: false, error: "code_already_exists" });
+      }
+
+      const code = await genManualCouponCode(prisma, requestedCode || campaignName);
+      const zipCodes = [
+        ...new Set(stores.map((store) => normalizeZipCode(store.zipCode)).filter(Boolean)),
+      ];
+      const coupon = await prisma.coupon.create({
+        data: {
+          partnerId,
+          code,
+          kind: "AMOUNT",
+          variant: "FIXED",
+          amount: String(amount.toFixed(2)),
+          visibility: "RESERVED",
+          assignedToId: null,
+          status: "ACTIVE",
+          acquisition: "DIRECT",
+          channel: "WEB",
+          campaign: CHANNEL_SHIFT_CAMPAIGN,
+          activeFrom,
+          expiresAt,
+          usageLimit: 1,
+          usageUnlimited: true,
+          usedCount: 0,
+          meta: {
+            channelShiftQr: true,
+            campaignName,
+            targeting: {
+              storeIds: stores.map((store) => store.id),
+              zipCodes,
+            },
+            targetStores: stores.map((store) => ({
+              id: store.id,
+              storeName: store.storeName,
+              city: store.city,
+              zipCode: store.zipCode,
+              active: store.active,
+              acceptingOrders: store.acceptingOrders,
+            })),
+            ...(req.body.notes ? { notes: String(req.body.notes) } : {}),
+          },
+        },
+      });
+
+      return res.json({
+        ok: true,
+        coupon: await serializeChannelShiftCoupon(coupon),
+      });
+    } catch (error) {
+      console.error("[coupons.channel-shift-qr.post] error:", error);
+      return res.status(500).json({ ok: false, error: "server" });
+    }
+  });
+
+  router.patch("/channel-shift-qr/:id/stop", async (req, res) => {
+    const id = parsePositiveInt(req.params.id);
+    const partnerId = parsePositiveInt(req.body.partnerId || req.query.partnerId);
+
+    if (!id || !partnerId) {
+      return res.status(400).json({ ok: false, error: "bad_payload" });
+    }
+
+    try {
+      const coupon = await prisma.coupon.findFirst({
+        where: {
+          id,
+          partnerId,
+          campaign: CHANNEL_SHIFT_CAMPAIGN,
+        },
+      });
+
+      if (!coupon) {
+        return res.status(404).json({ ok: false, error: "coupon_not_found" });
+      }
+
+      const updated = await prisma.coupon.update({
+        where: { id: coupon.id },
+        data: { status: "DISABLED" },
+      });
+
+      return res.json({
+        ok: true,
+        coupon: await serializeChannelShiftCoupon(updated),
+      });
+    } catch (error) {
+      console.error("[coupons.channel-shift-qr.stop] error:", error);
+      return res.status(500).json({ ok: false, error: "server" });
+    }
+  });
+
+  router.patch("/channel-shift-qr/:id/reactivate", async (req, res) => {
+    const id = parsePositiveInt(req.params.id);
+    const partnerId = parsePositiveInt(req.body.partnerId || req.query.partnerId);
+
+    if (!id || !partnerId) {
+      return res.status(400).json({ ok: false, error: "bad_payload" });
+    }
+
+    try {
+      const coupon = await prisma.coupon.findFirst({
+        where: {
+          id,
+          partnerId,
+          campaign: CHANNEL_SHIFT_CAMPAIGN,
+        },
+      });
+
+      if (!coupon) {
+        return res.status(404).json({ ok: false, error: "coupon_not_found" });
+      }
+
+      const updated = await prisma.coupon.update({
+        where: { id: coupon.id },
+        data: { status: "ACTIVE" },
+      });
+
+      return res.json({
+        ok: true,
+        coupon: await serializeChannelShiftCoupon(updated),
+      });
+    } catch (error) {
+      console.error("[coupons.channel-shift-qr.reactivate] error:", error);
+      return res.status(500).json({ ok: false, error: "server" });
+    }
+  });
+
+  router.delete("/channel-shift-qr/:id", async (req, res) => {
+    const id = parsePositiveInt(req.params.id);
+    const partnerId = parsePositiveInt(req.body.partnerId || req.query.partnerId);
+    const confirmCode = normalizeCouponInputCode(req.body.confirmCode || req.query.confirmCode);
+
+    if (!id || !partnerId || !confirmCode) {
+      return res.status(400).json({ ok: false, error: "bad_delete_payload" });
+    }
+
+    try {
+      const coupon = await prisma.coupon.findFirst({
+        where: {
+          id,
+          partnerId,
+          campaign: CHANNEL_SHIFT_CAMPAIGN,
+        },
+        select: {
+          id: true,
+          code: true,
+          usedCount: true,
+        },
+      });
+
+      if (!coupon) {
+        return res.status(404).json({ ok: false, error: "coupon_not_found" });
+      }
+
+      if (coupon.code !== confirmCode) {
+        return res.status(409).json({ ok: false, error: "confirm_code_mismatch" });
+      }
+
+      const redemptionCount = await prisma.couponRedemption.count({
+        where: {
+          couponId: coupon.id,
+        },
+      });
+
+      if (redemptionCount > 0 || Number(coupon.usedCount || 0) > 0) {
+        await prisma.coupon.update({
+          where: { id: coupon.id },
+          data: { status: "DISABLED" },
+        });
+        return res.status(409).json({
+          ok: false,
+          error: "coupon_has_redemptions",
+          redemptionCount,
+        });
+      }
+
+      await prisma.coupon.delete({
+        where: { id: coupon.id },
+      });
+
+      return res.json({
+        ok: true,
+        deleted: true,
+        id: coupon.id,
+      });
+    } catch (error) {
+      console.error("[coupons.channel-shift-qr.delete] error:", error);
+      return res.status(500).json({ ok: false, error: "server" });
+    }
+  });
+
   router.get("/resolve-link/:code", async (req, res) => {
     const code = normalizeCouponInputCode(req.params.code);
 
@@ -1545,6 +1879,7 @@ export default function couponsRoutes(prisma) {
       }
 
       const usageLimit = toNum(coupon.usageLimit);
+      const usageUnlimited = Boolean(coupon.usageUnlimited);
       const usedCount = toNum(coupon.usedCount) || 0;
       const minAmount = toNum(coupon.minAmount) || 0;
       const deliveryFree = isDeliveryFreeCoupon(coupon);
@@ -1568,7 +1903,7 @@ export default function couponsRoutes(prisma) {
             : coupon.status === "USED"
               ? "Este cupon ya fue usado o alcanzo su limite."
               : "Este cupon no esta activo.";
-      } else if (usageLimit != null && usedCount >= usageLimit) {
+      } else if (!usageUnlimited && usageLimit != null && usedCount >= usageLimit) {
         status = "used";
         message = "Este cupon ya fue usado o alcanzo su limite.";
       } else if (!isActiveByDate(coupon, now)) {
@@ -1591,7 +1926,7 @@ export default function couponsRoutes(prisma) {
         message = "Este cupon elimina el envio cuando hay tarifa de delivery.";
       } else if (!deliveryFree && subtotal <= 0) {
         status = "empty_cart";
-        message = "Agrega productos sin promocion ni Top Deal para aplicar el cupon.";
+        message = "Codigo listo. Agrega productos elegibles para activar el descuento.";
       } else if (minAmount > 0 && subtotal < minAmount) {
         status = "min_not_met";
         message = `Este cupon requiere un minimo de EUR ${minAmount.toFixed(2)} en productos.`;
@@ -1622,6 +1957,7 @@ export default function couponsRoutes(prisma) {
         message,
         subtotal,
         discount,
+        discountPotential: calculateCouponPotentialDiscount(coupon, { deliveryFee }),
         coupon: serializeCouponValidation(coupon),
       });
     } catch (error) {

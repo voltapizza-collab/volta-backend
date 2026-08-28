@@ -755,6 +755,7 @@ model Coupon {
   windowStart  Int?
   windowEnd    Int?
   usageLimit   Int                  @default(1)
+  usageUnlimited Boolean            @default(false)
   usedCount    Int                  @default(0)
   status       CouponStatus         @default(ACTIVE)
   usedAt       DateTime?

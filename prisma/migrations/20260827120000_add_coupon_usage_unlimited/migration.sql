@@ -1,0 +1,1 @@
+ALTER TABLE `Coupon` ADD COLUMN `usageUnlimited` BOOLEAN NOT NULL DEFAULT false;

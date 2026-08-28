@@ -427,6 +427,8 @@ export const getEligibleCouponSubtotal = (lines, { activeTopDeals = [], storeId 
     })
     .reduce((sum, line) => sum + Math.max(0, getLineTotal(line)), 0);
 
+export const getCouponLines = (lines) => lines.filter(isCouponLine);
+
 const isDeliveryFreeCoupon = (coupon) => {
   const campaign = String(coupon?.campaign || "").toUpperCase();
   const meta =
@@ -434,6 +436,37 @@ const isDeliveryFreeCoupon = (coupon) => {
       ? coupon.meta
       : {};
   return campaign === "DELIVERY_FREE" || Boolean(meta.deliveryFree);
+};
+
+const readCouponMeta = (coupon) => {
+  const meta = parseMaybeJson(coupon?.meta, {});
+  return meta && typeof meta === "object" && !Array.isArray(meta) ? meta : {};
+};
+
+const readCouponTargeting = (coupon) => {
+  const meta = readCouponMeta(coupon);
+  const targeting =
+    meta.targeting && typeof meta.targeting === "object" && !Array.isArray(meta.targeting)
+      ? meta.targeting
+      : {};
+
+  return {
+    storeIds: normalizePositiveIds(targeting.storeIds),
+    zipCodes: asArray(targeting.zipCodes)
+      .map(extractZipCode)
+      .filter(Boolean),
+  };
+};
+
+const couponMatchesStoreScope = (coupon, store) => {
+  const { storeIds, zipCodes } = readCouponTargeting(coupon);
+  if (!storeIds.length && !zipCodes.length) return true;
+
+  const storeId = Number(store?.id);
+  if (Number.isInteger(storeId) && storeIds.includes(storeId)) return true;
+
+  const storeZipCode = extractZipCode(store?.zipCode);
+  return Boolean(storeZipCode && zipCodes.includes(storeZipCode));
 };
 
 export const calculateCouponDiscount = (coupon, eligibleSubtotal, { deliveryFee = 0 } = {}) => {
@@ -455,6 +488,24 @@ export const calculateCouponDiscount = (coupon, eligibleSubtotal, { deliveryFee 
   }
 
   return 0;
+};
+
+export const validateCouponForCheckout = (coupon, { eligibleSubtotal, deliveryFee, store, reference }) => {
+  const usageLimit = Number(coupon?.usageLimit || 1);
+  const usedCount = Number(coupon?.usedCount || 0);
+  const minAmount = Number(coupon?.minAmount || 0);
+  const deliveryFree = isDeliveryFreeCoupon(coupon);
+
+  if (!isDirectDiscountActive(coupon, reference)) return "coupon_not_available";
+  if (!coupon.usageUnlimited && Number.isFinite(usageLimit) && usedCount >= usageLimit) {
+    return "coupon_not_available";
+  }
+  if (!couponMatchesStoreScope(coupon, store)) return "coupon_not_available";
+  if (deliveryFree && Number(deliveryFee || 0) <= 0) return "coupon_not_applicable";
+  if (!deliveryFree && Number(eligibleSubtotal || 0) <= 0) return "coupon_not_applicable";
+  if (minAmount > 0 && Number(eligibleSubtotal || 0) < minAmount) return "coupon_not_applicable";
+
+  return null;
 };
 
 const buildReturnUrl = (req, status, fallbackPath = "/", extraParams = {}) => {
@@ -663,12 +714,13 @@ const createCouponRedemptionsForSale = async (tx, sale) => {
 
     const nextUsedCount = Number(coupon.usedCount || 0) + 1;
     const usageLimit = Number(coupon.usageLimit || 1);
+    const usageUnlimited = Boolean(coupon.usageUnlimited);
     await tx.coupon.update({
       where: { id: coupon.id },
       data: {
         usedCount: nextUsedCount,
         usedAt: new Date(),
-        status: nextUsedCount >= usageLimit ? "USED" : coupon.status,
+        status: usageUnlimited ? coupon.status : nextUsedCount >= usageLimit ? "USED" : coupon.status,
       },
     });
   }
@@ -790,8 +842,17 @@ export default function checkoutRoutes(prisma) {
         .filter(Boolean)
         .join(", ");
 
-      const couponLine = lines.find(isCouponLine);
+      const couponLines = getCouponLines(lines);
+      if (couponLines.length > 1) {
+        return res.status(409).json({ ok: false, error: "coupon_not_stackable" });
+      }
+
+      const couponLine = couponLines[0] || null;
       const eligibleSubtotal = getEligibleCouponSubtotal(lines, { activeTopDeals, storeId });
+
+      if (couponLine && !couponLine.couponCode) {
+        return res.status(409).json({ ok: false, error: "coupon_not_available" });
+      }
 
       if (couponLine?.couponCode) {
         const coupon = await prisma.coupon.findFirst({
@@ -804,6 +865,16 @@ export default function checkoutRoutes(prisma) {
 
         if (!coupon) {
           return res.status(409).json({ ok: false, error: "coupon_not_available" });
+        }
+
+        const couponCheckoutError = validateCouponForCheckout(coupon, {
+          eligibleSubtotal,
+          deliveryFee,
+          store,
+          reference: nowInTZ(),
+        });
+        if (couponCheckoutError) {
+          return res.status(409).json({ ok: false, error: couponCheckoutError });
         }
 
         const expectedDiscount = calculateCouponDiscount(coupon, eligibleSubtotal, { deliveryFee });

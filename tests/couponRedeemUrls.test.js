@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { buildPrivateCouponSms, resolveCouponFrontendBaseUrl } from "../routes/coupons.js";
+import { buildCouponShortUrl, buildPrivateCouponSms, resolveCouponFrontendBaseUrl } from "../routes/coupons.js";
 import { buildGameCouponSms } from "../routes/games.js";
 import { estimateSmsParts } from "../services/telnyx.js";
 
@@ -27,6 +27,15 @@ test("coupon redeem URLs can still use a non-local FRONT_BASE_URL", () => {
   });
 
   assert.equal(baseUrl, "https://example-storefront.com");
+});
+
+test("channel shift QR coupons use a short redeem URL", () => {
+  const url = buildCouponShortUrl(
+    { code: "CAMBIO_CANAL" },
+    { PUBLIC_FRONTEND_URL: "https://voltapizza.com/" }
+  );
+
+  assert.equal(url, "https://voltapizza.com/c/CAMBIO_CANAL");
 });
 
 test("private coupon SMS never includes a local redeem URL", () => {
