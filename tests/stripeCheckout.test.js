@@ -1,6 +1,9 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { computeCheckoutDeliveryFee } from "../routes/checkout.js";
+import {
+  canStoreFulfillDeliveryMethod,
+  computeCheckoutDeliveryFee,
+} from "../routes/checkout.js";
 import { createOrderCheckoutSession } from "../services/stripe.js";
 
 test("checkout delivery fee uses fixed courier pricing", () => {
@@ -43,6 +46,25 @@ test("checkout delivery fee falls back to resolved fee for manual delivery cover
       { method: "PICKUP", deliveryFee: 2.5 }
     ),
     0
+  );
+});
+
+test("checkout validates store delivery method availability", () => {
+  assert.equal(
+    canStoreFulfillDeliveryMethod({ pickupEnabled: true, deliveryEnabled: false }, "PICKUP"),
+    true
+  );
+  assert.equal(
+    canStoreFulfillDeliveryMethod({ pickupEnabled: true, deliveryEnabled: false }, "COURIER"),
+    false
+  );
+  assert.equal(
+    canStoreFulfillDeliveryMethod({ pickupEnabled: false, deliveryEnabled: true }, "PICKUP"),
+    false
+  );
+  assert.equal(
+    canStoreFulfillDeliveryMethod({ pickupEnabled: false, deliveryEnabled: true }, "COURIER"),
+    true
   );
 });
 

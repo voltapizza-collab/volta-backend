@@ -543,6 +543,13 @@ const resolveDeliveryMethod = (value) => {
   return "PICKUP";
 };
 
+export const canStoreFulfillDeliveryMethod = (store, method) => {
+  const normalizedMethod = resolveDeliveryMethod(method);
+  if (normalizedMethod === "PICKUP") return store?.pickupEnabled !== false;
+  if (normalizedMethod === "COURIER") return store?.deliveryEnabled !== false;
+  return true;
+};
+
 const parseNonNegativeMoney = (value) => {
   const amount = Number(value);
   return Number.isFinite(amount) && amount > 0 ? roundMoney(amount) : 0;
@@ -768,6 +775,8 @@ export default function checkoutRoutes(prisma) {
             zipCode: true,
             latitude: true,
             longitude: true,
+            pickupEnabled: true,
+            deliveryEnabled: true,
           },
         }),
       ]);
@@ -833,6 +842,9 @@ export default function checkoutRoutes(prisma) {
         lng: Number.isFinite(Number(delivery.lng)) ? Number(delivery.lng) : null,
         distanceKm: Number.isFinite(Number(delivery.distanceKm)) ? Number(delivery.distanceKm) : null,
       };
+      if (!canStoreFulfillDeliveryMethod(store, sanitizedDelivery.method)) {
+        return res.status(403).json({ ok: false, error: "delivery_method_not_allowed" });
+      }
       const deliveryFee = computeCheckoutDeliveryFee(partner, {
         ...sanitizedDelivery,
         deliveryFee: delivery.deliveryFee,

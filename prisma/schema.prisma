@@ -203,6 +203,8 @@ model Store {
   email                String?
   active               Boolean            @default(true)
   acceptingOrders      Boolean            @default(true)
+  pickupEnabled        Boolean            @default(true)
+  deliveryEnabled      Boolean            @default(true)
   acceptsReservations  Boolean            @default(false)
   reservationCapacity  Int?
   posPinHash           String?            @db.Text

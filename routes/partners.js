@@ -56,6 +56,8 @@ const sanitizeSummaryStore = (store) => {
   const { posPinHash, posPinEncrypted, ...safeStore } = store || {};
   return {
     ...safeStore,
+    pickupEnabled: store?.pickupEnabled !== false,
+    deliveryEnabled: store?.deliveryEnabled !== false,
     posCredentialsConfigured: Boolean(posPinHash),
     posCredentialsRecoverable: Boolean(posPinEncrypted),
     posCredentialsEnabled: store?.posCredentialsEnabled !== false,
@@ -173,7 +175,9 @@ const filterOperationalStores = (stores = [], now = getStoreClockNow()) =>
   );
 
 export const selectDeliveryCoverageStores = (stores = [], now = getStoreClockNow()) => {
-  const activeStores = stores.filter((store) => store?.active !== false);
+  const activeStores = stores.filter(
+    (store) => store?.active !== false && store?.deliveryEnabled !== false
+  );
   const operationalStores = filterOperationalStores(activeStores, now);
 
   return operationalStores.length ? operationalStores : activeStores;

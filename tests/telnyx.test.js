@@ -137,6 +137,15 @@ test("estimateSmsParts counts multipart GSM messages", () => {
   assert.equal(result.parts, 5);
 });
 
+test("estimateSmsParts keeps review URLs with underscores in GSM-7", () => {
+  const result = estimateSmsParts(
+    "MyCrushPizza: valora tu pedido WEB-MTETTI1A-1282: https://voltapizza.com/review/4TW6YB-Wq_GbCHegOBwtjGCe"
+  );
+
+  assert.equal(result.encoding, "GSM-7");
+  assert.equal(result.parts, 1);
+});
+
 test("SMS credits quote packages as one-part SMS credits", () => {
   assert.equal(creditsFromAmount(10), 133);
   assert.equal(creditsFromAmount("10,00"), 133);

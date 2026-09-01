@@ -14,10 +14,6 @@ const GSM_EXTENDED = "^{}\\[~]|€";
 const cleanEnv = (value) => String(value || "").trim();
 const SMS_MAX_PARTS = 1;
 const OBSERVED_SMS_PART_COST_EUR = "0.0620";
-const SMS_GSM_BASIC =
-  "\n\r !\"#$%&'()*+,-./0123456789:;<=>?" +
-  "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
-const SMS_GSM_EXTENDED = "^{}\\[~]|";
 
 const telnyxConfig = () => ({
   apiKey: cleanEnv(process.env.TELNYX_API_KEY),
@@ -119,8 +115,8 @@ export const normalizeE164Phone = (value = "") => {
 
 export function estimateSmsParts(text = "") {
   const value = String(text || "");
-  const isGsm = [...value].every((char) => SMS_GSM_BASIC.includes(char) || SMS_GSM_EXTENDED.includes(char));
-  const length = [...value].reduce((total, char) => total + (SMS_GSM_EXTENDED.includes(char) ? 2 : 1), 0);
+  const isGsm = [...value].every((char) => GSM_BASIC.includes(char) || GSM_EXTENDED.includes(char));
+  const length = [...value].reduce((total, char) => total + (GSM_EXTENDED.includes(char) ? 2 : 1), 0);
   const singleLimit = isGsm ? 160 : 70;
   const multipartLimit = isGsm ? 153 : 67;
   const parts = length <= singleLimit ? 1 : Math.ceil(length / multipartLimit);

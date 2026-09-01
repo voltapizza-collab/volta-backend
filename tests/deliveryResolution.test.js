@@ -105,3 +105,30 @@ test("delivery coverage keeps active stores when schedule filtering would leave 
     ["centro"]
   );
 });
+
+test("delivery coverage ignores stores without delivery enabled", () => {
+  const pickupOnlyStore = {
+    ...store,
+    active: true,
+    pickupEnabled: true,
+    deliveryEnabled: false,
+  };
+  const deliveryStore = {
+    ...store,
+    id: 13,
+    slug: "delivery",
+    active: true,
+    pickupEnabled: false,
+    deliveryEnabled: true,
+  };
+
+  const selectedStores = selectDeliveryCoverageStores(
+    [pickupOnlyStore, deliveryStore],
+    new Date("2026-06-01T12:00:00")
+  );
+
+  assert.deepEqual(
+    selectedStores.map((item) => item.slug),
+    ["delivery"]
+  );
+});

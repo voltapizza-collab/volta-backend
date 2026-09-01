@@ -53,6 +53,19 @@ const positiveInt = (value) => {
 };
 
 const cleanName = (value) => String(value || "").trim().replace(/\s+/g, " ").slice(0, 160);
+const reviewSmsBrand = (value) => cleanName(value) || "VoltaPizza";
+
+export const buildProductReviewRequestSms = ({ partnerName, reviewUrl }) => {
+  const safeReviewUrl = String(reviewUrl || "").trim();
+  const brand = reviewSmsBrand(partnerName);
+  const candidates = [
+    `${brand}: valora tu pedido: ${safeReviewUrl}`,
+    `Valora tu pedido: ${safeReviewUrl}`,
+    safeReviewUrl,
+  ].filter(Boolean);
+
+  return candidates.find((candidate) => estimateSmsParts(candidate).parts <= 1) || candidates[candidates.length - 1] || "";
+};
 
 const getLineQty = (line) => Math.max(1, Math.trunc(Number(line?.quantity || line?.qty || 1)));
 
@@ -288,7 +301,7 @@ export async function sendProductReviewRequestSms(prisma, request) {
 
   const reviewUrl = buildProductReviewUrl(loaded);
   const partnerName = cleanName(sale?.partner?.name || "VoltaPizza");
-  const text = `${partnerName}: valora tu pedido ${sale.code}: ${reviewUrl}`;
+  const text = buildProductReviewRequestSms({ partnerName, reviewUrl });
   const smsEstimate = estimateSmsParts(text);
 
   const reservation = await reserveSmsCreditForMessage(prisma, {

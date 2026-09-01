@@ -140,7 +140,7 @@ export default function productReviewsRoutes(prisma) {
         }),
         prisma.productReviewVote.findMany({
           where: voteWhere,
-          take: 16,
+          take: 5,
           orderBy: { createdAt: "desc" },
           include: {
             customer: { select: { id: true, name: true, phone: true, email: true } },
@@ -202,7 +202,7 @@ export default function productReviewsRoutes(prisma) {
             right.total - left.total ||
             left.productName.localeCompare(right.productName)
         )
-        .slice(0, 8);
+        .slice(0, 5);
 
       const productsToReview = [...productMap.values()]
         .map((item) => ({
@@ -349,9 +349,51 @@ export default function productReviewsRoutes(prisma) {
       }
 
       const voteByLine = mapVotesByLine(request.votes);
-      const items = getReviewItemsFromSale(request.sale).map((item) => ({
+      const reviewItems = getReviewItemsFromSale(request.sale);
+      const productIds = Array.from(
+        new Set(reviewItems.map((item) => positiveInt(item.productId)).filter(Boolean))
+      );
+      const productNames = Array.from(
+        new Set(reviewItems.map((item) => String(item.name || "").trim()).filter(Boolean))
+      );
+      const previousLikeRows =
+        productIds.length || productNames.length
+          ? await prisma.productReviewVote.groupBy({
+              by: ["productId", "productName"],
+              where: {
+                partnerId: request.partnerId,
+                vote: "LIKE",
+                requestId: { not: request.id },
+                OR: [
+                  ...(productIds.length ? [{ productId: { in: productIds } }] : []),
+                  ...(productNames.length ? [{ productName: { in: productNames } }] : []),
+                ],
+              },
+              _count: { _all: true },
+            })
+          : [];
+      const previousLikesByProductId = new Map();
+      const previousLikesByName = new Map();
+      previousLikeRows.forEach((row) => {
+        const count = row._count?._all || 0;
+        if (row.productId) {
+          previousLikesByProductId.set(
+            row.productId,
+            (previousLikesByProductId.get(row.productId) || 0) + count
+          );
+          return;
+        }
+
+        if (row.productName) {
+          previousLikesByName.set(row.productName, (previousLikesByName.get(row.productName) || 0) + count);
+        }
+      });
+      const items = reviewItems.map((item) => ({
         ...item,
         vote: voteByLine.get(item.lineKey) || null,
+        previousLikes: item.productId
+          ? previousLikesByProductId.get(item.productId) || 0
+          : previousLikesByName.get(item.name) || 0,
       }));
 
       return res.json({

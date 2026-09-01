@@ -1,0 +1,3 @@
+ALTER TABLE `Store`
+  ADD COLUMN `pickupEnabled` BOOLEAN NOT NULL DEFAULT true,
+  ADD COLUMN `deliveryEnabled` BOOLEAN NOT NULL DEFAULT true;

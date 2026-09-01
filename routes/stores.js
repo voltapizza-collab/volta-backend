@@ -78,11 +78,32 @@ const slugify = (value) =>
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/^-+|-+$/g, "");
 
-const buildStorePayload = (body) => {
+export const resolveStoreDeliveryMethods = (body = {}, existing = null) => {
+  const pickupEnabled =
+    typeof body.pickupEnabled === "boolean"
+      ? body.pickupEnabled
+      : existing
+        ? existing.pickupEnabled !== false
+        : true;
+  const deliveryEnabled =
+    typeof body.deliveryEnabled === "boolean"
+      ? body.deliveryEnabled
+      : existing
+        ? existing.deliveryEnabled !== false
+        : true;
+
+  return { pickupEnabled, deliveryEnabled };
+};
+
+export const buildStorePayload = (body, existing = null) => {
   const acceptsReservations = Boolean(body.acceptsReservations);
   const reservationCapacity = acceptsReservations
     ? toNullableInt(body.reservationCapacity) ?? 0
     : null;
+  const { pickupEnabled, deliveryEnabled } = resolveStoreDeliveryMethods(
+    body,
+    existing
+  );
 
   const latitude = toNullableFloat(body.latitude);
   const longitude = toNullableFloat(body.longitude);
@@ -102,6 +123,8 @@ const buildStorePayload = (body) => {
     active: explicitActive ? body.active : hasCoordinates,
     acceptingOrders:
       typeof body.acceptingOrders === "boolean" ? body.acceptingOrders : true,
+    pickupEnabled,
+    deliveryEnabled,
     acceptsReservations,
     reservationCapacity,
   };
@@ -950,6 +973,8 @@ const attachStorePublicMenu = (router, prisma) => {
           address: store.address,
           city: store.city,
           tlf: store.tlf,
+          pickupEnabled: store.pickupEnabled !== false,
+          deliveryEnabled: store.deliveryEnabled !== false,
           acceptsReservations: store.acceptsReservations,
         },
         menu: baseMenu,
@@ -1403,6 +1428,10 @@ export default function storesRoutes(prisma) {
       return res.status(400).json({ error: "slug required" });
     }
 
+    if (!payload.pickupEnabled && !payload.deliveryEnabled) {
+      return res.status(400).json({ error: "delivery_method_required" });
+    }
+
     if (req.body.active === true && !hasUsableStoreCoordinates(payload)) {
       return storeCoordinatesRequiredResponse(res);
     }
@@ -1494,8 +1523,6 @@ export default function storesRoutes(prisma) {
       return res.status(400).json({ error: "Valid id required" });
     }
 
-    const payload = buildStorePayload(req.body);
-
     try {
       const existing = await prisma.store.findUnique({
         where: { id },
@@ -1503,6 +1530,12 @@ export default function storesRoutes(prisma) {
 
       if (!existing) {
         return res.status(404).json({ error: "Store not found" });
+      }
+
+      const payload = buildStorePayload(req.body, existing);
+
+      if (!payload.pickupEnabled && !payload.deliveryEnabled) {
+        return res.status(400).json({ error: "delivery_method_required" });
       }
 
       const nextActive =
@@ -1535,6 +1568,8 @@ export default function storesRoutes(prisma) {
             typeof req.body.acceptingOrders === "boolean"
               ? payload.acceptingOrders
               : existing.acceptingOrders,
+          pickupEnabled: payload.pickupEnabled,
+          deliveryEnabled: payload.deliveryEnabled,
           acceptsReservations: payload.acceptsReservations,
           reservationCapacity: payload.reservationCapacity,
         },

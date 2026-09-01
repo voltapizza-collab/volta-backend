@@ -1,6 +1,11 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { getReviewItemsFromSale, isReviewableProductName } from "../services/productReviews.js";
+import { estimateSmsParts } from "../services/telnyx.js";
+import {
+  buildProductReviewRequestSms,
+  getReviewItemsFromSale,
+  isReviewableProductName,
+} from "../services/productReviews.js";
 
 test("product reviews include only purchased reviewable food products", () => {
   const items = getReviewItemsFromSale({
@@ -34,4 +39,26 @@ test("product review analytics name filter excludes non-product labels", () => {
   assert.equal(isReviewableProductName("Cupon VOL-RCUUAEXK"), false);
   assert.equal(isReviewableProductName("Bebida cola"), false);
   assert.equal(isReviewableProductName("Sweet Hawaiian"), true);
+});
+
+test("product review SMS keeps the review request inside one SMS part", () => {
+  const reviewUrl = "https://voltapizza.com/review/4TW6YB-Wq_GbCHegOBwtjGCe";
+  const text = buildProductReviewRequestSms({
+    partnerName: "MyCrushPizza",
+    reviewUrl,
+  });
+
+  assert.equal(text, `MyCrushPizza: valora tu pedido: ${reviewUrl}`);
+  assert.equal(estimateSmsParts(text).parts, 1);
+});
+
+test("product review SMS falls back when the partner name is too long", () => {
+  const reviewUrl = "https://voltapizza.com/review/4TW6YB-Wq_GbCHegOBwtjGCe";
+  const text = buildProductReviewRequestSms({
+    partnerName: "Pizzeria familiar artesanal con un nombre comercial demasiado largo para un SMS corto ".repeat(3),
+    reviewUrl,
+  });
+
+  assert.equal(text, `Valora tu pedido: ${reviewUrl}`);
+  assert.equal(estimateSmsParts(text).parts, 1);
 });
