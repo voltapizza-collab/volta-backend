@@ -534,6 +534,7 @@ export async function ensureBackofficeDemoSession(prisma) {
       status: "ACTIVE",
       activeFrom: daysAgo(1),
       expiresAt: daysAgo(-10),
+      usageLimit: 50,
     };
     const existingDirectDiscount = await tx.directDiscount.findFirst({
       where: { partnerId: partner.id, title: directDiscountPayload.title },

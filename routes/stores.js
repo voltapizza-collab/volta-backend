@@ -8,6 +8,14 @@ import {
   ensureStorePosCredentialColumns,
   generateSixDigitPin,
 } from "../services/posCredentials.js";
+import {
+  attachDirectDiscountUsage,
+  ensureDirectDiscountUsageLimitColumn,
+  fetchDirectDiscountUsageCounts,
+  getDirectDiscountRemainingQuantity,
+  getDirectDiscountUsageLimit,
+  isDirectDiscountSoldOut,
+} from "../services/directDiscountUsage.js";
 
 const TZ = process.env.TIMEZONE || "Europe/Madrid";
 const TRENDING_PRICE_BAND = 0.5;
@@ -622,6 +630,9 @@ const applyDirectDiscountToPizza = (pizza, discount) => {
       windowStart: discount.windowStart,
       windowEnd: discount.windowEnd,
       daysActive: normalizePromoDaysActive(discount.daysActive),
+      usageLimit: getDirectDiscountUsageLimit(discount),
+      usedCount: Number(discount.usedCount || 0),
+      remainingQuantity: getDirectDiscountRemainingQuantity(discount, discount.usedCount),
     },
   };
 };
@@ -806,6 +817,7 @@ const attachStorePublicMenu = (router, prisma) => {
       const now = new Date();
       let directDiscountRows = [];
       try {
+        await ensureDirectDiscountUsageLimitColumn(prisma);
         directDiscountRows = await prisma.directDiscount.findMany({
           where: {
             partnerId: store.partnerId,
@@ -832,8 +844,22 @@ const attachStorePublicMenu = (router, prisma) => {
         directDiscountRows = [];
       }
       const directDiscountWindowNow = nowInTZ();
-      const activeDirectDiscounts = directDiscountRows.filter((discount) =>
-        isPromoWithinWindow(discount, directDiscountWindowNow)
+      let directDiscountUsageCounts = new Map();
+      if (directDiscountRows.length) {
+        try {
+          directDiscountUsageCounts = await fetchDirectDiscountUsageCounts(prisma, {
+            partnerId: store.partnerId,
+            discountIds: directDiscountRows.map((discount) => discount.id),
+          });
+        } catch (usageError) {
+          console.warn("[stores.menu] direct discount usage unavailable:", usageError?.code || usageError?.message);
+        }
+      }
+      const activeDirectDiscounts = attachDirectDiscountUsage(
+        directDiscountRows,
+        directDiscountUsageCounts
+      ).filter((discount) =>
+        isPromoWithinWindow(discount, directDiscountWindowNow) && !isDirectDiscountSoldOut(discount)
       );
       const priceAdjustmentWindowNow = nowInTZ();
       const activePriceAdjustments = normalizePriceAdjustmentRules(

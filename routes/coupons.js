@@ -9,6 +9,12 @@ import {
   CUSTOMER_SEGMENTS,
   normalizeCustomerSegment,
 } from "../services/customerSegments.js";
+import {
+  attachDirectDiscountUsage,
+  ensureDirectDiscountUsageLimitColumn,
+  fetchDirectDiscountUsageCounts,
+  isDirectDiscountSoldOut,
+} from "../services/directDiscountUsage.js";
 
 const router = express.Router();
 
@@ -2844,6 +2850,8 @@ export default function couponsRoutes(prisma) {
         ...(segment ? { segmentAtRedeem: segment } : {}),
       };
 
+      await ensureDirectDiscountUsageLimitColumn(prisma);
+
       const [
         issued,
         redemptions,
@@ -2875,6 +2883,7 @@ export default function couponsRoutes(prisma) {
             daysActive: true,
             windowStart: true,
             windowEnd: true,
+            usageLimit: true,
           },
         }),
         prisma.promo.findMany({
@@ -3007,8 +3016,16 @@ export default function couponsRoutes(prisma) {
       const activePromos = promoRows.filter((item) =>
         isOfferCurrentlyOperational(item, now)
       ).length;
-      const activeTopDeals = directDiscountRows.filter((item) =>
-        isOfferCurrentlyOperational(item, now)
+      const directDiscountUsageCounts = await fetchDirectDiscountUsageCounts(prisma, {
+        partnerId,
+        discountIds: directDiscountRows.map((item) => item.id),
+      });
+      const directDiscountRowsWithUsage = attachDirectDiscountUsage(
+        directDiscountRows,
+        directDiscountUsageCounts
+      );
+      const activeTopDeals = directDiscountRowsWithUsage.filter((item) =>
+        isOfferCurrentlyOperational(item, now) && !isDirectDiscountSoldOut(item)
       ).length;
       const activeIncentives = incentiveRows.filter((item) =>
         isIncentiveCurrentlyOperational(

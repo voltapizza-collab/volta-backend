@@ -4,6 +4,7 @@ import {
   calculateCouponDiscount,
   getCouponLines,
   getEligibleCouponSubtotal,
+  validateTopDealAvailability,
   validateCouponForCheckout,
 } from "../routes/checkout.js";
 
@@ -135,5 +136,62 @@ test("channel shift QR coupons are reusable until their expiration date", () => 
       }
     ),
     "coupon_not_available"
+  );
+});
+
+test("top deal checkout accepts quantities within remaining stock", () => {
+  const lines = [
+    {
+      pizzaId: 44,
+      category: "Pizzas",
+      qty: 2,
+      directDiscount: { id: 12 },
+    },
+  ];
+  const activeTopDeals = [
+    {
+      id: 12,
+      targetType: "PRODUCT",
+      productIds: [44],
+      storeIds: [3],
+      usageLimit: 5,
+      usedCount: 3,
+    },
+  ];
+
+  assert.equal(
+    validateTopDealAvailability(lines, { activeTopDeals, storeId: 3 }),
+    null
+  );
+});
+
+test("top deal checkout rejects quantities above remaining stock", () => {
+  const lines = [
+    {
+      pizzaId: 44,
+      category: "Pizzas",
+      qty: 3,
+      directDiscount: { id: 12 },
+    },
+  ];
+  const activeTopDeals = [
+    {
+      id: 12,
+      targetType: "PRODUCT",
+      productIds: [44],
+      storeIds: [3],
+      usageLimit: 5,
+      usedCount: 3,
+    },
+  ];
+
+  assert.deepEqual(
+    validateTopDealAvailability(lines, { activeTopDeals, storeId: 3 }),
+    {
+      error: "top_deal_quantity_unavailable",
+      discountId: 12,
+      requestedQuantity: 3,
+      remainingQuantity: 2,
+    }
   );
 });

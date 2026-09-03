@@ -7,6 +7,15 @@ import {
 } from "../services/stripe.js";
 import { sendOrderPaidTrackingSms } from "../services/orderNotifications.js";
 import { sendBoostPurchasedTrackingSms } from "../services/trackingNotifications.js";
+import {
+  attachDirectDiscountUsage,
+  ensureDirectDiscountUsageLimitColumn,
+  fetchDirectDiscountUsageCounts,
+  getDirectDiscountCartQuantities,
+  getDirectDiscountRemainingQuantity,
+  getLineDirectDiscountId,
+  isDirectDiscountSoldOut,
+} from "../services/directDiscountUsage.js";
 
 const parsePositiveInt = (value) => {
   const parsed = Number(value);
@@ -309,6 +318,89 @@ const lineHasActiveTopDeal = (line, activeTopDeals, storeId) =>
   activeTopDeals.some(
     (discount) => discountAppliesToStore(discount, storeId) && discountAppliesToCartLine(discount, line)
   );
+
+export const validateTopDealAvailability = (lines, { activeTopDeals = [], storeId = null } = {}) => {
+  const activeTopDealsById = new Map(
+    activeTopDeals
+      .map((discount) => [Number(discount?.id), discount])
+      .filter(([discountId]) => Number.isInteger(discountId) && discountId > 0)
+  );
+  const requestedByDiscountId = new Map();
+
+  asArray(lines).forEach((line) => {
+    const discountId = getLineDirectDiscountId(line);
+    if (!discountId || requestedByDiscountId.has(`invalid:${discountId}`)) return;
+
+    const discount = activeTopDealsById.get(discountId);
+    if (!discount || !discountAppliesToStore(discount, storeId) || !discountAppliesToCartLine(discount, line)) {
+      requestedByDiscountId.set(`invalid:${discountId}`, {
+        error: "top_deal_not_available",
+        discountId,
+        remainingQuantity: 0,
+      });
+      return;
+    }
+
+    requestedByDiscountId.set(discountId, (requestedByDiscountId.get(discountId) || 0) + getLineQty(line));
+  });
+
+  const invalidEntry = [...requestedByDiscountId.values()].find((value) => value?.error);
+  if (invalidEntry) return invalidEntry;
+
+  for (const [discountId, requestedQuantity] of requestedByDiscountId.entries()) {
+    const discount = activeTopDealsById.get(discountId);
+    const remainingQuantity = getDirectDiscountRemainingQuantity(discount, discount?.usedCount);
+
+    if (remainingQuantity != null && requestedQuantity > remainingQuantity) {
+      return {
+        error: "top_deal_quantity_unavailable",
+        discountId,
+        requestedQuantity,
+        remainingQuantity,
+      };
+    }
+  }
+
+  return null;
+};
+
+const loadActiveTopDeals = async (prismaClient, partnerId, reference) => {
+  const directDiscountRows = await prismaClient.directDiscount.findMany({
+    where: {
+      partnerId,
+      status: "ACTIVE",
+      AND: [
+        {
+          OR: [
+            { activeFrom: null },
+            { activeFrom: { lte: new Date() } },
+          ],
+        },
+        {
+          OR: [
+            { expiresAt: null },
+            { expiresAt: { gt: new Date() } },
+          ],
+        },
+      ],
+    },
+  });
+  const usageCounts = await fetchDirectDiscountUsageCounts(prismaClient, {
+    partnerId,
+    discountIds: directDiscountRows.map((discount) => discount.id),
+  });
+
+  return attachDirectDiscountUsage(directDiscountRows, usageCounts).filter((discount) =>
+    isDirectDiscountActive(discount, reference)
+  );
+};
+
+const throwCheckoutError = (error, status = 409, details = {}) => {
+  const checkoutError = new Error(error);
+  checkoutError.status = status;
+  checkoutError.details = details;
+  throw checkoutError;
+};
 
 const isCustomBuildLine = (line) => {
   const type = String(line?.type || "").toUpperCase();
@@ -807,28 +899,21 @@ export default function checkoutRoutes(prisma) {
         });
       }
 
-      const activeTopDeals = (
-        await prisma.directDiscount.findMany({
-          where: {
-            partnerId,
-            status: "ACTIVE",
-            AND: [
-              {
-                OR: [
-                  { activeFrom: null },
-                  { activeFrom: { lte: new Date() } },
-                ],
-              },
-              {
-                OR: [
-                  { expiresAt: null },
-                  { expiresAt: { gt: new Date() } },
-                ],
-              },
-            ],
-          },
-        })
-      ).filter((discount) => isDirectDiscountActive(discount, nowInTZ()));
+      await ensureDirectDiscountUsageLimitColumn(prisma);
+      const activeTopDeals = await loadActiveTopDeals(prisma, partnerId, nowInTZ());
+      const topDealAvailabilityError = validateTopDealAvailability(lines, {
+        activeTopDeals,
+        storeId,
+      });
+
+      if (topDealAvailabilityError) {
+        return res.status(409).json({
+          ok: false,
+          ...topDealAvailabilityError,
+        });
+      }
+
+      const couponEligibleTopDeals = activeTopDeals.filter((discount) => !isDirectDiscountSoldOut(discount));
 
       const delivery = req.body.delivery && typeof req.body.delivery === "object" ? req.body.delivery : {};
       const rawDeliveryAddress = delivery.address ? String(delivery.address).trim() : "";
@@ -860,7 +945,7 @@ export default function checkoutRoutes(prisma) {
       }
 
       const couponLine = couponLines[0] || null;
-      const eligibleSubtotal = getEligibleCouponSubtotal(lines, { activeTopDeals, storeId });
+      const eligibleSubtotal = getEligibleCouponSubtotal(lines, { activeTopDeals: couponEligibleTopDeals, storeId });
 
       if (couponLine && !couponLine.couponCode) {
         return res.status(409).json({ ok: false, error: "coupon_not_available" });
@@ -940,6 +1025,31 @@ export default function checkoutRoutes(prisma) {
       const scheduledFor = req.body.scheduledFor ? new Date(req.body.scheduledFor) : null;
       const customerInput = req.body.customer && typeof req.body.customer === "object" ? req.body.customer : {};
       const sale = await prisma.$transaction(async (tx) => {
+        const topDealQuantities = getDirectDiscountCartQuantities(lines);
+        const topDealIds = [...topDealQuantities.keys()];
+
+        if (topDealIds.length) {
+          const placeholders = topDealIds.map(() => "?").join(",");
+          await tx.$queryRawUnsafe(
+            `SELECT id FROM \`DirectDiscount\` WHERE partnerId = ? AND id IN (${placeholders}) FOR UPDATE`,
+            partnerId,
+            ...topDealIds
+          );
+          const lockedActiveTopDeals = await loadActiveTopDeals(tx, partnerId, nowInTZ());
+          const lockedTopDealAvailabilityError = validateTopDealAvailability(lines, {
+            activeTopDeals: lockedActiveTopDeals,
+            storeId,
+          });
+
+          if (lockedTopDealAvailabilityError) {
+            throwCheckoutError(
+              lockedTopDealAvailabilityError.error,
+              409,
+              lockedTopDealAvailabilityError
+            );
+          }
+        }
+
         const customer = await resolveCheckoutCustomer(tx, {
           partnerId,
           customer: customerInput,
@@ -1063,6 +1173,13 @@ export default function checkoutRoutes(prisma) {
       console.error("[checkout.session] error:", error);
       if (error?.status === 400 && error?.message === "customer_profile_required") {
         return res.status(400).json({ ok: false, error: "customer_profile_required" });
+      }
+      if (error?.status) {
+        return res.status(error.status).json({
+          ok: false,
+          error: error.message,
+          ...(error.details || {}),
+        });
       }
       if (isPrismaConnectivityError(error)) {
         return res.status(503).json({ ok: false, error: "database_unavailable" });

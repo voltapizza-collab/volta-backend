@@ -1,4 +1,10 @@
 import express from "express";
+import {
+  attachDirectDiscountUsage,
+  ensureDirectDiscountUsageLimitColumn,
+  fetchDirectDiscountUsageCounts,
+  getDirectDiscountUsageLimit,
+} from "../services/directDiscountUsage.js";
 
 const parsePositiveInt = (value) => {
   const parsed = Number(value);
@@ -15,6 +21,12 @@ const parseNullableMinutes = (value) => {
   if (value == null || value === "") return null;
   const parsed = Number(value);
   return Number.isInteger(parsed) && parsed >= 0 && parsed <= 24 * 60 ? parsed : null;
+};
+
+const parseNullableUsageLimit = (value) => {
+  if (value == null || value === "") return null;
+  const parsed = Number(value);
+  return Number.isInteger(parsed) && parsed >= 0 ? parsed : Number.NaN;
 };
 
 const esDayToNum = (value) => {
@@ -119,6 +131,9 @@ const serializeDirectDiscount = (discount) => ({
   daysActive: normalizeDaysActive(discount.daysActive),
   windowStart: discount.windowStart,
   windowEnd: discount.windowEnd,
+  usageLimit: getDirectDiscountUsageLimit(discount),
+  usedCount: Number(discount.usedCount || 0),
+  remainingQuantity: discount.remainingQuantity == null ? null : Number(discount.remainingQuantity),
   status: discount.status,
   createdAt: discount.createdAt,
 });
@@ -142,6 +157,7 @@ const buildPayload = (body) => {
     daysActive: normalizeDaysActive(body.daysActive),
     windowStart: parseNullableMinutes(body.windowStart),
     windowEnd: parseNullableMinutes(body.windowEnd),
+    usageLimit: parseNullableUsageLimit(body.usageLimit ?? body.availableQuantity),
     status: body.status ? String(body.status).toUpperCase() : "ACTIVE",
   };
 };
@@ -151,6 +167,7 @@ const validatePayload = (payload) => {
   if (!["PERCENT", "FIXED_AMOUNT"].includes(payload.discountType)) return "bad_discount_type";
   if (!Number.isFinite(payload.value) || payload.value <= 0) return "bad_value";
   if (payload.discountType === "PERCENT" && payload.value > 100) return "bad_percent";
+  if (Number.isNaN(payload.usageLimit)) return "bad_usage_limit";
   if (!["CATEGORY", "PRODUCT"].includes(payload.targetType)) return "bad_target_type";
   if (payload.targetType === "PRODUCT" && !payload.productIds.length) return "missing_products";
   if (
@@ -198,12 +215,19 @@ export default function directDiscountsRoutes(prisma) {
     }
 
     try {
+      await ensureDirectDiscountUsageLimitColumn(prisma);
+
       const discounts = await prisma.directDiscount.findMany({
         where: { partnerId },
         orderBy: { createdAt: "desc" },
       });
+      const usageCounts = await fetchDirectDiscountUsageCounts(prisma, {
+        partnerId,
+        discountIds: discounts.map((discount) => discount.id),
+      });
+      const discountsWithUsage = attachDirectDiscountUsage(discounts, usageCounts);
 
-      return res.json({ ok: true, discounts: discounts.map(serializeDirectDiscount) });
+      return res.json({ ok: true, discounts: discountsWithUsage.map(serializeDirectDiscount) });
     } catch (error) {
       console.error("[direct-discounts.get] error:", error);
       return res.status(500).json({ ok: false, error: "server" });
@@ -219,6 +243,8 @@ export default function directDiscountsRoutes(prisma) {
     }
 
     try {
+      await ensureDirectDiscountUsageLimitColumn(prisma);
+
       const ownershipError = await verifyOwnership(prisma, payload);
       if (ownershipError) {
         return res.status(400).json({ ok: false, error: ownershipError });
@@ -245,6 +271,8 @@ export default function directDiscountsRoutes(prisma) {
     }
 
     try {
+      await ensureDirectDiscountUsageLimitColumn(prisma);
+
       const existing = await prisma.directDiscount.findFirst({
         where: { id, partnerId: payload.partnerId },
       });
@@ -279,6 +307,8 @@ export default function directDiscountsRoutes(prisma) {
     }
 
     try {
+      await ensureDirectDiscountUsageLimitColumn(prisma);
+
       const existing = await prisma.directDiscount.findFirst({
         where: { id, partnerId },
       });

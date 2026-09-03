@@ -842,6 +842,7 @@ model DirectDiscount {
   daysActive    Json?
   windowStart   Int?
   windowEnd     Int?
+  usageLimit    Int?
   status        String                   @default("ACTIVE")
   createdAt     DateTime                 @default(now())
   updatedAt     DateTime                 @updatedAt
