@@ -235,6 +235,7 @@ const mapPizza = (pizza) => ({
   ingredients: (pizza.ingredients || []).map((rel) => ({
     id: rel.ingredientId,
     name: rel.ingredient?.name,
+    canonicalKey: rel.ingredient?.canonicalKey || null,
     allergens: rel.ingredient?.allergens || [],
     qtyBySize: rel.qtyBySize,
     status: rel.ingredient?.status,

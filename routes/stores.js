@@ -712,6 +712,7 @@ const attachStorePublicMenu = (router, prisma) => {
                 select: {
                   id: true,
                   name: true,
+                  canonicalKey: true,
                   allergens: true,
                   status: true,
                   storeStocks: {
@@ -871,6 +872,7 @@ const attachStorePublicMenu = (router, prisma) => {
           ingredients: (pizza.ingredients || []).map((rel) => ({
             id: rel.ingredient.id,
             name: rel.ingredient.name,
+            canonicalKey: rel.ingredient.canonicalKey || null,
             allergens: Array.isArray(rel.ingredient.allergens)
               ? rel.ingredient.allergens
               : [],
