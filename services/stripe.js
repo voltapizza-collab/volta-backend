@@ -146,7 +146,12 @@ export const createOrderCheckoutSession = async ({
   appendParam(params, "line_items[0][price_data][currency]", cleanCurrency);
   appendParam(params, "line_items[0][price_data][unit_amount]", amountCents);
   appendParam(params, "line_items[0][price_data][product_data][name]", `Pedido ${CHECKOUT_DISPLAY_NAME} - ${orderCode}`);
-  appendParam(params, "line_items[0][price_data][product_data][description]", store.storeName);
+  appendParam(params, "line_items[0][price_data][product_data][description]", customerData.scheduledFor
+    ? `${store.storeName} - Pedido programado: ${new Intl.DateTimeFormat("es-ES", {
+        timeZone: process.env.TIMEZONE || "Europe/Madrid", dateStyle: "medium", timeStyle: "short",
+      }).format(new Date(customerData.scheduledFor))}`
+    : store.storeName);
+  appendParam(params, "metadata[scheduledFor]", customerData.scheduledFor);
   appendParam(params, "metadata[purpose]", "order_checkout");
   appendParam(params, "metadata[partnerId]", partnerId);
   appendParam(params, "metadata[storeId]", storeId);

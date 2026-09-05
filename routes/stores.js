@@ -11,7 +11,7 @@ import {
 import {
   attachDirectDiscountUsage,
   ensureDirectDiscountUsageLimitColumn,
-  fetchDirectDiscountUsageCounts,
+  fetchDirectDiscountUsageSummary,
   getDirectDiscountRemainingQuantity,
   getDirectDiscountUsageLimit,
   isDirectDiscountSoldOut,
@@ -570,7 +570,7 @@ const applyPriceAdjustmentRulesToPizza = (pizza, rules, storeId) => {
 
 const getDiscountedPrice = (price, discount) => {
   const original = Number(price || 0);
-  const value = Number(discount?.value || 0);
+  const value = Number(discount?.effectiveValue ?? discount?.value ?? 0);
 
   if (!Number.isFinite(original) || original <= 0 || !Number.isFinite(value) || value <= 0) {
     return original;
@@ -624,15 +624,25 @@ const applyDirectDiscountToPizza = (pizza, discount) => {
       id: discount.id,
       title: discount.title,
       discountType: discount.discountType,
-      value: Number(discount.value || 0),
+      value: Number(discount.effectiveValue ?? discount.value ?? 0),
+      baseValue: Number(discount.value || 0),
+      effectiveValue: Number(discount.effectiveValue ?? discount.value ?? 0),
       activeFrom: discount.activeFrom,
       expiresAt: discount.expiresAt,
       windowStart: discount.windowStart,
       windowEnd: discount.windowEnd,
       daysActive: normalizePromoDaysActive(discount.daysActive),
       usageLimit: getDirectDiscountUsageLimit(discount),
+      globalUsageLimit:
+        discount.globalUsageLimit == null ? getDirectDiscountUsageLimit(discount) : discount.globalUsageLimit,
+      usageLimitScope: discount.usageLimitScope || "GLOBAL",
       usedCount: Number(discount.usedCount || 0),
-      remainingQuantity: getDirectDiscountRemainingQuantity(discount, discount.usedCount),
+      totalUsedCount: Number(discount.totalUsedCount ?? discount.usedCount ?? 0),
+      dailyUsedCount: Number(discount.dailyUsedCount || 0),
+      remainingQuantity:
+        discount.remainingQuantity == null
+          ? getDirectDiscountRemainingQuantity(discount, discount.usedCount)
+          : Number(discount.remainingQuantity),
     },
   };
 };
@@ -844,12 +854,13 @@ const attachStorePublicMenu = (router, prisma) => {
         directDiscountRows = [];
       }
       const directDiscountWindowNow = nowInTZ();
-      let directDiscountUsageCounts = new Map();
+      let directDiscountUsageSummary = { totalCounts: new Map(), dailyCounts: new Map() };
       if (directDiscountRows.length) {
         try {
-          directDiscountUsageCounts = await fetchDirectDiscountUsageCounts(prisma, {
+          directDiscountUsageSummary = await fetchDirectDiscountUsageSummary(prisma, {
             partnerId: store.partnerId,
             discountIds: directDiscountRows.map((discount) => discount.id),
+            reference: directDiscountWindowNow,
           });
         } catch (usageError) {
           console.warn("[stores.menu] direct discount usage unavailable:", usageError?.code || usageError?.message);
@@ -857,7 +868,8 @@ const attachStorePublicMenu = (router, prisma) => {
       }
       const activeDirectDiscounts = attachDirectDiscountUsage(
         directDiscountRows,
-        directDiscountUsageCounts
+        directDiscountUsageSummary,
+        { reference: directDiscountWindowNow }
       ).filter((discount) =>
         isPromoWithinWindow(discount, directDiscountWindowNow) && !isDirectDiscountSoldOut(discount)
       );

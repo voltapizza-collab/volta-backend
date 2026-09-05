@@ -12,7 +12,7 @@ import {
 import {
   attachDirectDiscountUsage,
   ensureDirectDiscountUsageLimitColumn,
-  fetchDirectDiscountUsageCounts,
+  fetchDirectDiscountUsageSummary,
   isDirectDiscountSoldOut,
 } from "../services/directDiscountUsage.js";
 
@@ -2897,6 +2897,8 @@ export default function couponsRoutes(prisma) {
             daysActive: true,
             windowStart: true,
             windowEnd: true,
+            usageLimit: true,
+            dailyOverrides: true,
           },
         }),
         prisma.directDiscount.findMany({
@@ -3016,13 +3018,15 @@ export default function couponsRoutes(prisma) {
       const activePromos = promoRows.filter((item) =>
         isOfferCurrentlyOperational(item, now)
       ).length;
-      const directDiscountUsageCounts = await fetchDirectDiscountUsageCounts(prisma, {
+      const directDiscountUsageSummary = await fetchDirectDiscountUsageSummary(prisma, {
         partnerId,
         discountIds: directDiscountRows.map((item) => item.id),
+        reference: now,
       });
       const directDiscountRowsWithUsage = attachDirectDiscountUsage(
         directDiscountRows,
-        directDiscountUsageCounts
+        directDiscountUsageSummary,
+        { reference: now }
       );
       const activeTopDeals = directDiscountRowsWithUsage.filter((item) =>
         isOfferCurrentlyOperational(item, now) && !isDirectDiscountSoldOut(item)

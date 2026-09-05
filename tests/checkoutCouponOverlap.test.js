@@ -7,6 +7,12 @@ import {
   validateTopDealAvailability,
   validateCouponForCheckout,
 } from "../routes/checkout.js";
+import {
+  attachDirectDiscountUsage,
+  getDirectDiscountDailyUsageFromSales,
+  getDirectDiscountEffectiveValue,
+  getDirectDiscountUsageFromSales,
+} from "../services/directDiscountUsage.js";
 
 test("coupon subtotal excludes promos, top deals, boosts and rewards", () => {
   const lines = [
@@ -193,5 +199,175 @@ test("top deal checkout rejects quantities above remaining stock", () => {
       requestedQuantity: 3,
       remainingQuantity: 2,
     }
+  );
+});
+
+test("daily top deal quantity uses current date sales only", () => {
+  const reference = new Date("2026-09-04T12:00:00.000Z");
+  const sales = [
+    {
+      date: new Date("2026-09-04T10:00:00.000Z"),
+      products: [{ directDiscount: { id: 12 }, qty: 3 }],
+    },
+    {
+      date: new Date("2026-09-03T10:00:00.000Z"),
+      products: [{ directDiscount: { id: 12 }, qty: 8 }],
+    },
+  ];
+  const totalCounts = getDirectDiscountUsageFromSales(sales, [12]);
+  const dailyCounts = getDirectDiscountDailyUsageFromSales(sales, [12], reference);
+  const [discount] = attachDirectDiscountUsage(
+    [
+      {
+        id: 12,
+        targetType: "PRODUCT",
+        productIds: [44],
+        storeIds: [3],
+        usageLimit: 20,
+        value: 40,
+        dailyOverrides: [{ date: "2026-09-04", usageLimit: 5 }],
+      },
+    ],
+    { totalCounts, dailyCounts },
+    { reference }
+  );
+
+  assert.equal(discount.usageLimitScope, "DAILY");
+  assert.equal(discount.usageLimit, 5);
+  assert.equal(discount.usedCount, 3);
+  assert.equal(discount.totalUsedCount, 11);
+  assert.equal(discount.remainingQuantity, 2);
+  assert.equal(
+    validateTopDealAvailability(
+      [{ pizzaId: 44, qty: 2, directDiscount: { id: 12 } }],
+      { activeTopDeals: [discount], storeId: 3 }
+    ),
+    null
+  );
+});
+
+test("base top deal quantity resets on the next day", () => {
+  const dayOne = new Date("2026-09-04T12:00:00.000Z");
+  const dayTwo = new Date("2026-09-05T12:00:00.000Z");
+  const sales = [
+    {
+      date: new Date("2026-09-04T10:00:00.000Z"),
+      products: [{ directDiscount: { id: 12 }, qty: 2 }],
+    },
+  ];
+  const totalCounts = getDirectDiscountUsageFromSales(sales, [12]);
+  const [dayOneDiscount] = attachDirectDiscountUsage(
+    [
+      {
+        id: 12,
+        targetType: "PRODUCT",
+        productIds: [44],
+        storeIds: [3],
+        usageLimit: 5,
+        value: 40,
+      },
+    ],
+    {
+      totalCounts,
+      dailyCounts: getDirectDiscountDailyUsageFromSales(sales, [12], dayOne),
+    },
+    { reference: dayOne }
+  );
+  const [dayTwoDiscount] = attachDirectDiscountUsage(
+    [
+      {
+        id: 12,
+        targetType: "PRODUCT",
+        productIds: [44],
+        storeIds: [3],
+        usageLimit: 5,
+        value: 40,
+      },
+    ],
+    {
+      totalCounts,
+      dailyCounts: getDirectDiscountDailyUsageFromSales(sales, [12], dayTwo),
+    },
+    { reference: dayTwo }
+  );
+
+  assert.equal(dayOneDiscount.usageLimitScope, "DAILY");
+  assert.equal(dayOneDiscount.usageLimit, 5);
+  assert.equal(dayOneDiscount.usedCount, 2);
+  assert.equal(dayOneDiscount.remainingQuantity, 3);
+  assert.equal(dayTwoDiscount.usageLimitScope, "DAILY");
+  assert.equal(dayTwoDiscount.usageLimit, 5);
+  assert.equal(dayTwoDiscount.usedCount, 0);
+  assert.equal(dayTwoDiscount.totalUsedCount, 2);
+  assert.equal(dayTwoDiscount.remainingQuantity, 5);
+  assert.equal(
+    validateTopDealAvailability(
+      [{ pizzaId: 44, qty: 5, directDiscount: { id: 12 } }],
+      { activeTopDeals: [dayTwoDiscount], storeId: 3 }
+    ),
+    null
+  );
+});
+
+test("today top deal quantity override falls back to base quantity tomorrow", () => {
+  const dayOne = new Date("2026-09-04T12:00:00.000Z");
+  const dayTwo = new Date("2026-09-05T12:00:00.000Z");
+  const sales = [
+    {
+      date: new Date("2026-09-04T10:00:00.000Z"),
+      products: [{ directDiscount: { id: 12 }, qty: 2 }],
+    },
+  ];
+  const totalCounts = getDirectDiscountUsageFromSales(sales, [12]);
+  const baseDiscount = {
+    id: 12,
+    targetType: "PRODUCT",
+    productIds: [44],
+    storeIds: [3],
+    usageLimit: 5,
+    value: 40,
+    dailyOverrides: [{ date: "2026-09-04", usageLimit: 8 }],
+  };
+  const [dayOneDiscount] = attachDirectDiscountUsage(
+    [baseDiscount],
+    {
+      totalCounts,
+      dailyCounts: getDirectDiscountDailyUsageFromSales(sales, [12], dayOne),
+    },
+    { reference: dayOne }
+  );
+  const [dayTwoDiscount] = attachDirectDiscountUsage(
+    [baseDiscount],
+    {
+      totalCounts,
+      dailyCounts: getDirectDiscountDailyUsageFromSales(sales, [12], dayTwo),
+    },
+    { reference: dayTwo }
+  );
+
+  assert.equal(dayOneDiscount.usageLimitScope, "DAILY");
+  assert.equal(dayOneDiscount.usageLimit, 8);
+  assert.equal(dayOneDiscount.usedCount, 2);
+  assert.equal(dayOneDiscount.remainingQuantity, 6);
+  assert.equal(dayTwoDiscount.usageLimitScope, "DAILY");
+  assert.equal(dayTwoDiscount.usageLimit, 5);
+  assert.equal(dayTwoDiscount.usedCount, 0);
+  assert.equal(dayTwoDiscount.remainingQuantity, 5);
+});
+
+test("daily top deal quantity override keeps the base percentage", () => {
+  const reference = new Date("2026-09-04T12:00:00.000Z");
+
+  assert.equal(
+    getDirectDiscountEffectiveValue(
+      {
+        value: 40,
+        dailyOverrides: [
+          { date: "2026-09-04", usageLimit: 5, value: 70 },
+        ],
+      },
+      reference
+    ),
+    40
   );
 });

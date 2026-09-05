@@ -1,4 +1,5 @@
 import express from "express";
+import { buildOrderAvailability, validateOrderSchedule } from "../services/orderAvailability.js";
 import {
   constructStripeWebhookEvent,
   createOrderCheckoutSession,
@@ -10,7 +11,7 @@ import { sendBoostPurchasedTrackingSms } from "../services/trackingNotifications
 import {
   attachDirectDiscountUsage,
   ensureDirectDiscountUsageLimitColumn,
-  fetchDirectDiscountUsageCounts,
+  fetchDirectDiscountUsageSummary,
   getDirectDiscountCartQuantities,
   getDirectDiscountRemainingQuantity,
   getLineDirectDiscountId,
@@ -385,12 +386,13 @@ const loadActiveTopDeals = async (prismaClient, partnerId, reference) => {
       ],
     },
   });
-  const usageCounts = await fetchDirectDiscountUsageCounts(prismaClient, {
+  const usageSummary = await fetchDirectDiscountUsageSummary(prismaClient, {
     partnerId,
     discountIds: directDiscountRows.map((discount) => discount.id),
+    reference,
   });
 
-  return attachDirectDiscountUsage(directDiscountRows, usageCounts).filter((discount) =>
+  return attachDirectDiscountUsage(directDiscountRows, usageSummary, { reference }).filter((discount) =>
     isDirectDiscountActive(discount, reference)
   );
 };
@@ -828,6 +830,19 @@ const createCouponRedemptionsForSale = async (tx, sale) => {
 export default function checkoutRoutes(prisma) {
   const router = express.Router();
 
+  router.get("/availability/:storeId", async (req, res) => {
+    const id = parsePositiveInt(req.params.storeId);
+    if (!id) return res.status(400).json({ error: "invalid_store" });
+    try {
+      const store = await prisma.store.findUnique({ where: { id }, include: { hours: true } });
+      if (!store) return res.status(404).json({ error: "store_not_found" });
+      res.set("Cache-Control", "no-store");
+      return res.json(buildOrderAvailability(store));
+    } catch (error) {
+      return res.status(503).json({ error: "availability_unavailable" });
+    }
+  });
+
   router.post("/session", async (req, res) => {
     const partnerId = parsePositiveInt(req.body.partnerId);
     const storeId = parsePositiveInt(req.body.storeId);
@@ -869,6 +884,9 @@ export default function checkoutRoutes(prisma) {
             longitude: true,
             pickupEnabled: true,
             deliveryEnabled: true,
+            active: true,
+            acceptingOrders: true,
+            hours: true,
           },
         }),
       ]);
@@ -876,6 +894,8 @@ export default function checkoutRoutes(prisma) {
       if (!partner || !store) {
         return res.status(404).json({ ok: false, error: "store_not_found" });
       }
+
+      validateOrderSchedule(store, req.body.scheduledFor);
 
       const paymentPolicySettings = normalizePaymentPolicySettings(partner.paymentPolicySettings);
 
@@ -1025,6 +1045,8 @@ export default function checkoutRoutes(prisma) {
       const scheduledFor = req.body.scheduledFor ? new Date(req.body.scheduledFor) : null;
       const customerInput = req.body.customer && typeof req.body.customer === "object" ? req.body.customer : {};
       const sale = await prisma.$transaction(async (tx) => {
+        const currentStore = await tx.store.findUnique({ where: { id: storeId }, include: { hours: true } });
+        validateOrderSchedule(currentStore, req.body.scheduledFor);
         const topDealQuantities = getDirectDiscountCartQuantities(lines);
         const topDealIds = [...topDealQuantities.keys()];
 
@@ -1178,6 +1200,7 @@ export default function checkoutRoutes(prisma) {
         return res.status(error.status).json({
           ok: false,
           error: error.message,
+          ...(error.availability ? { availability: error.availability } : {}),
           ...(error.details || {}),
         });
       }

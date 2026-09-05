@@ -130,7 +130,7 @@ test("order checkout sends card and Klarna Stripe fields without unsupported shi
   }
 });
 
-test("order checkout lets Stripe collect email when customer email is missing", async () => {
+test("scheduled checkout shows the date in Stripe and lets Stripe collect missing email", async () => {
   const previousSecret = process.env.STRIPE_SECRET_KEY;
   const previousFetch = globalThis.fetch;
   const requests = [];
@@ -153,6 +153,7 @@ test("order checkout lets Stripe collect email when customer email is missing", 
           name: "Luigi",
           phone: "+34600111222",
           email: null,
+          scheduledFor: "2026-09-07T12:30:00.000Z",
         },
       },
       partner: { id: 3 },
@@ -170,6 +171,8 @@ test("order checkout lets Stripe collect email when customer email is missing", 
     assert.equal(body.get("metadata[customerName]"), "Luigi");
     assert.equal(body.get("metadata[customerPhone]"), "+34600111222");
     assert.equal(body.has("metadata[customerEmail]"), false);
+    assert.equal(body.get("metadata[scheduledFor]"), "2026-09-07T12:30:00.000Z");
+    assert.match(body.get("line_items[0][price_data][product_data][description]"), /Pedido programado:/);
   } finally {
     if (previousSecret == null) delete process.env.STRIPE_SECRET_KEY;
     else process.env.STRIPE_SECRET_KEY = previousSecret;

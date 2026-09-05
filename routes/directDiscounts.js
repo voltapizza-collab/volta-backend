@@ -2,9 +2,15 @@ import express from "express";
 import {
   attachDirectDiscountUsage,
   ensureDirectDiscountUsageLimitColumn,
-  fetchDirectDiscountUsageCounts,
+  fetchDirectDiscountUsageSummary,
+  getDirectDiscountEffectiveValue,
+  getDirectDiscountRemainingQuantity,
   getDirectDiscountUsageLimit,
+  getDirectDiscountUsageLimitScope,
+  normalizeDirectDiscountDailyOverrides,
 } from "../services/directDiscountUsage.js";
+
+const TZ = process.env.TIMEZONE || "Europe/Madrid";
 
 const parsePositiveInt = (value) => {
   const parsed = Number(value);
@@ -27,6 +33,11 @@ const parseNullableUsageLimit = (value) => {
   if (value == null || value === "") return null;
   const parsed = Number(value);
   return Number.isInteger(parsed) && parsed >= 0 ? parsed : Number.NaN;
+};
+
+const nowInTZ = () => {
+  const snapshot = new Date().toLocaleString("sv-SE", { timeZone: TZ });
+  return new Date(snapshot.replace(" ", "T"));
 };
 
 const esDayToNum = (value) => {
@@ -115,28 +126,53 @@ const normalizeNames = (value) => {
   ];
 };
 
-const serializeDirectDiscount = (discount) => ({
-  id: discount.id,
-  partnerId: discount.partnerId,
-  title: discount.title,
-  discountType: discount.discountType,
-  value: Number(discount.value || 0),
-  targetType: discount.targetType,
-  productIds: normalizeIds(discount.productIds),
-  categoryIds: normalizeIds(discount.categoryIds),
-  categoryNames: normalizeNames(discount.categoryNames),
-  storeIds: normalizeIds(discount.storeIds),
-  activeFrom: discount.activeFrom,
-  expiresAt: discount.expiresAt,
-  daysActive: normalizeDaysActive(discount.daysActive),
-  windowStart: discount.windowStart,
-  windowEnd: discount.windowEnd,
-  usageLimit: getDirectDiscountUsageLimit(discount),
-  usedCount: Number(discount.usedCount || 0),
-  remainingQuantity: discount.remainingQuantity == null ? null : Number(discount.remainingQuantity),
-  status: discount.status,
-  createdAt: discount.createdAt,
-});
+const serializeDirectDiscount = (discount, reference = nowInTZ()) => {
+  const globalUsageLimit =
+    discount.globalUsageLimit != null
+      ? Number(discount.globalUsageLimit)
+      : getDirectDiscountUsageLimit(discount);
+  const todayUsageLimit =
+    discount.todayUsageLimit != null
+      ? Number(discount.todayUsageLimit)
+      : getDirectDiscountUsageLimit(discount, reference);
+  const remainingQuantity =
+    discount.remainingQuantity == null
+      ? getDirectDiscountRemainingQuantity(discount, discount.usedCount || 0, reference)
+      : Number(discount.remainingQuantity);
+
+  return {
+    id: discount.id,
+    partnerId: discount.partnerId,
+    title: discount.title,
+    discountType: discount.discountType,
+    value: Number(discount.value || 0),
+    baseValue: Number(discount.value || 0),
+    effectiveValue: Number(
+      discount.effectiveValue ?? getDirectDiscountEffectiveValue(discount, reference)
+    ),
+    targetType: discount.targetType,
+    productIds: normalizeIds(discount.productIds),
+    categoryIds: normalizeIds(discount.categoryIds),
+    categoryNames: normalizeNames(discount.categoryNames),
+    storeIds: normalizeIds(discount.storeIds),
+    activeFrom: discount.activeFrom,
+    expiresAt: discount.expiresAt,
+    daysActive: normalizeDaysActive(discount.daysActive),
+    windowStart: discount.windowStart,
+    windowEnd: discount.windowEnd,
+    usageLimit: globalUsageLimit,
+    globalUsageLimit,
+    todayUsageLimit,
+    dailyOverrides: normalizeDirectDiscountDailyOverrides(discount.dailyOverrides),
+    usedCount: Number(discount.usedCount || 0),
+    totalUsedCount: Number(discount.totalUsedCount ?? discount.usedCount ?? 0),
+    dailyUsedCount: Number(discount.dailyUsedCount || 0),
+    usageLimitScope: discount.usageLimitScope || getDirectDiscountUsageLimitScope(discount, reference),
+    remainingQuantity,
+    status: discount.status,
+    createdAt: discount.createdAt,
+  };
+};
 
 const buildPayload = (body) => {
   const discountType = String(body.discountType || "").toUpperCase();
@@ -158,6 +194,7 @@ const buildPayload = (body) => {
     windowStart: parseNullableMinutes(body.windowStart),
     windowEnd: parseNullableMinutes(body.windowEnd),
     usageLimit: parseNullableUsageLimit(body.usageLimit ?? body.availableQuantity),
+    dailyOverrides: normalizeDirectDiscountDailyOverrides(body.dailyOverrides),
     status: body.status ? String(body.status).toUpperCase() : "ACTIVE",
   };
 };
@@ -221,13 +258,20 @@ export default function directDiscountsRoutes(prisma) {
         where: { partnerId },
         orderBy: { createdAt: "desc" },
       });
-      const usageCounts = await fetchDirectDiscountUsageCounts(prisma, {
+      const reference = nowInTZ();
+      const usageSummary = await fetchDirectDiscountUsageSummary(prisma, {
         partnerId,
         discountIds: discounts.map((discount) => discount.id),
+        reference,
       });
-      const discountsWithUsage = attachDirectDiscountUsage(discounts, usageCounts);
+      const discountsWithUsage = attachDirectDiscountUsage(discounts, usageSummary, {
+        reference,
+      });
 
-      return res.json({ ok: true, discounts: discountsWithUsage.map(serializeDirectDiscount) });
+      return res.json({
+        ok: true,
+        discounts: discountsWithUsage.map((discount) => serializeDirectDiscount(discount, reference)),
+      });
     } catch (error) {
       console.error("[direct-discounts.get] error:", error);
       return res.status(500).json({ ok: false, error: "server" });
