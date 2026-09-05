@@ -2897,8 +2897,6 @@ export default function couponsRoutes(prisma) {
             daysActive: true,
             windowStart: true,
             windowEnd: true,
-            usageLimit: true,
-            dailyOverrides: true,
           },
         }),
         prisma.directDiscount.findMany({
@@ -2912,6 +2910,9 @@ export default function couponsRoutes(prisma) {
             daysActive: true,
             windowStart: true,
             windowEnd: true,
+            usageLimit: true,
+            dailyOverrides: true,
+            value: true,
           },
         }),
         prisma.incentive.findMany({
