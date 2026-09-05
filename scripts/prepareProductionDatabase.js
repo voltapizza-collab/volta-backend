@@ -37,6 +37,8 @@ const TRACKING_NOTIFICATION_SETTINGS_MIGRATION =
 const INGREDIENT_MEDIA_MIGRATION = "20260530102000_add_ingredient_media_fields";
 const PRICE_ADJUSTMENT_RULES_MIGRATION =
   "20260606130000_add_partner_price_adjustment_rules";
+const DIRECT_DISCOUNT_DAILY_OVERRIDES_MIGRATION =
+  "20260903170000_add_direct_discount_daily_overrides";
 
 const prisma = new PrismaClient();
 
@@ -143,12 +145,17 @@ try {
   const priceAdjustmentRulesColumnReady = await ensurePriceAdjustmentRulesColumn();
   await ensureIngredientMediaColumns(prisma);
   await ensureStorePosCredentialColumns(prisma);
+  const directDiscountDailyOverridesColumnReady = await hasColumn(
+    "DirectDiscount",
+    "dailyOverrides"
+  );
 
   const migrationNames = [
     STOREFRONT_MODE_MIGRATION,
     TRACKING_NOTIFICATION_SETTINGS_MIGRATION,
     INGREDIENT_MEDIA_MIGRATION,
     PRICE_ADJUSTMENT_RULES_MIGRATION,
+    DIRECT_DISCOUNT_DAILY_OVERRIDES_MIGRATION,
   ];
 
   const failedMigrationNames = [];
@@ -161,6 +168,16 @@ try {
       migration.rolled_back_at == null;
 
     if (isFailed) {
+      if (
+        migrationName === DIRECT_DISCOUNT_DAILY_OVERRIDES_MIGRATION &&
+        !directDiscountDailyOverridesColumnReady
+      ) {
+        console.warn(
+          `[db-prepare] ${migrationName} failed, but DirectDiscount.dailyOverrides is missing. Refusing to mark it applied.`
+        );
+        continue;
+      }
+
       failedMigrationNames.push(migrationName);
     } else if (
       migrationName === PRICE_ADJUSTMENT_RULES_MIGRATION &&

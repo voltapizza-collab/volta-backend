@@ -11,6 +11,21 @@ const envPath = path.join(backendRoot, ".env");
 
 const PRICE_ADJUSTMENT_RULES_MIGRATION =
   "20260606130000_add_partner_price_adjustment_rules";
+const DIRECT_DISCOUNT_DAILY_OVERRIDES_MIGRATION =
+  "20260903170000_add_direct_discount_daily_overrides";
+
+const RECOVERABLE_FAILED_MIGRATIONS = [
+  {
+    name: PRICE_ADJUSTMENT_RULES_MIGRATION,
+    tableName: "Partner",
+    columnName: "priceAdjustmentRules",
+  },
+  {
+    name: DIRECT_DISCOUNT_DAILY_OVERRIDES_MIGRATION,
+    tableName: "DirectDiscount",
+    columnName: "dailyOverrides",
+  },
+];
 
 if (fs.existsSync(envPath)) {
   const envLines = fs.readFileSync(envPath, "utf8").split(/\r?\n/);
@@ -60,11 +75,11 @@ async function hasColumn(prisma, tableName, columnName) {
   return Array.isArray(rows) && rows.length > 0;
 }
 
-async function canResolvePriceAdjustmentRulesMigration() {
+async function canResolveColumnMigration({ tableName, columnName }) {
   const prisma = new PrismaClient();
 
   try {
-    return await hasColumn(prisma, "Partner", "priceAdjustmentRules");
+    return await hasColumn(prisma, tableName, columnName);
   } finally {
     await prisma.$disconnect().catch(() => {});
   }
@@ -77,26 +92,27 @@ if (deployResult.status === 0) {
 }
 
 const output = `${deployResult.stdout || ""}\n${deployResult.stderr || ""}`;
-const isKnownPriceAdjustmentFailure =
-  output.includes("P3009") && output.includes(PRICE_ADJUSTMENT_RULES_MIGRATION);
+const recoverableMigration = RECOVERABLE_FAILED_MIGRATIONS.find(
+  (migration) => output.includes("P3009") && output.includes(migration.name)
+);
 
-if (!isKnownPriceAdjustmentFailure) {
+if (!recoverableMigration) {
   process.exit(deployResult.status || 1);
 }
 
-if (!(await canResolvePriceAdjustmentRulesMigration())) {
+if (!(await canResolveColumnMigration(recoverableMigration))) {
   console.error(
-    `[db-migrate] ${PRICE_ADJUSTMENT_RULES_MIGRATION} failed, but Partner.priceAdjustmentRules is missing. Refusing to mark it applied.`
+    `[db-migrate] ${recoverableMigration.name} failed, but ${recoverableMigration.tableName}.${recoverableMigration.columnName} is missing. Refusing to mark it applied.`
   );
   process.exit(deployResult.status || 1);
 }
 
-console.log(`[db-migrate] Resolving failed migration ${PRICE_ADJUSTMENT_RULES_MIGRATION}`);
+console.log(`[db-migrate] Resolving failed migration ${recoverableMigration.name}`);
 const resolveResult = runPrisma([
   "migrate",
   "resolve",
   "--applied",
-  PRICE_ADJUSTMENT_RULES_MIGRATION,
+  recoverableMigration.name,
 ]);
 
 if (resolveResult.status !== 0) {
