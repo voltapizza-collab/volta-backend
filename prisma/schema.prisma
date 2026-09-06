@@ -133,6 +133,7 @@ enum DirectDiscountTargetType {
   PRODUCT
 }
 model Partner {
+  posSessions PosSession[]
   id        Int      @id @default(autoincrement())
   name      String
   slug      String   @unique
@@ -189,6 +190,7 @@ model Partner {
   smsCreditLedger     SmsCreditLedger[]
 }
 model Store {
+  posSessions PosSession[]
   id                   Int                @id @default(autoincrement())
   partnerId            Int
   partner              Partner            @relation(fields: [partnerId], references: [id])
@@ -924,4 +926,71 @@ model Reservation {
 
   @@index([storeId, reservationDateTime])
   @@index([partnerId])
+}
+
+// Devices belong to Volta. Only their current session belongs to a store.
+model PosDevice {
+  id String @id @db.VarChar(36)
+  name String @db.VarChar(120)
+  model String @db.VarChar(80)
+  publicKey String @db.Text
+  publicKeyHash String @unique @db.VarChar(64)
+  status String @default("AUTHORIZED") @db.VarChar(20)
+  createdAt DateTime @default(now()) @db.DateTime(3)
+  updatedAt DateTime @updatedAt @db.DateTime(3)
+  lastSeenAt DateTime? @db.DateTime(3)
+  session PosSession?
+  nonces PosDeviceNonce[]
+  audit PosDeviceAudit[]
+}
+
+model PosEnrollment {
+  id String @id @db.VarChar(36)
+  tokenHash String @unique @db.VarChar(64)
+  name String @db.VarChar(120)
+  createdBy String @db.VarChar(120)
+  createdAt DateTime @default(now()) @db.DateTime(3)
+  expiresAt DateTime @db.DateTime(3)
+  consumedAt DateTime? @db.DateTime(3)
+}
+
+model PosSession {
+  id String @id @db.VarChar(36)
+  deviceId String @unique @db.VarChar(36)
+  device PosDevice @relation(fields: [deviceId], references: [id], onDelete: Cascade)
+  tokenHash String @unique @db.VarChar(64)
+  storeId Int
+  store Store @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  partnerId Int
+  partner Partner @relation(fields: [partnerId], references: [id], onDelete: Cascade)
+  credentialFingerprint String @db.VarChar(64)
+  createdAt DateTime @default(now()) @db.DateTime(3)
+  expiresAt DateTime @db.DateTime(3)
+}
+
+model PosDeviceNonce {
+  deviceId String @db.VarChar(36)
+  device PosDevice @relation(fields: [deviceId], references: [id], onDelete: Cascade)
+  nonce String @db.VarChar(64)
+  expiresAt DateTime @db.DateTime(3)
+  @@id([deviceId, nonce])
+  @@index([expiresAt])
+}
+
+model PosDeviceAudit {
+  id String @id @db.VarChar(36)
+  deviceId String @db.VarChar(36)
+  device PosDevice @relation(fields: [deviceId], references: [id], onDelete: Cascade)
+  action String @db.VarChar(40)
+  actor String @db.VarChar(120)
+  details Json?
+  createdAt DateTime @default(now()) @db.DateTime(3)
+  @@index([deviceId, createdAt])
+}
+
+model PosLoginThrottle {
+  key String @id @db.VarChar(64)
+  attempts Int @default(0)
+  expiresAt DateTime @db.DateTime(3)
+  @@index([expiresAt])
 }

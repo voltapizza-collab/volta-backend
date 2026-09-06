@@ -1310,7 +1310,7 @@ export default function myordersRoutes(prisma) {
     const partnerId = parsePositiveInt(req.query.partnerId);
     const storeId = parsePositiveInt(req.query.storeId);
     const take = Math.min(parsePositiveInt(req.query.take) || 80, 200);
-    const cacheKey = req.originalUrl;
+    const cacheKey = `${req.posSession ? "device" : "legacy"}:${partnerId || "all"}:${storeId || "all"}:${req.originalUrl}`;
     const cachedPayload = pendingOrdersCache.get(cacheKey);
 
     if (cachedPayload) {
@@ -1384,7 +1384,7 @@ export default function myordersRoutes(prisma) {
     const { from, to, label } = getPeriodRange(period);
     const historyFrom = subtractDays(nowInTZ(), SUMMARY_HISTORY_DAYS);
     const scope = orderScopeWhere({ partnerId, storeId, activeStoresOnly: false });
-    const cacheKey = req.originalUrl;
+    const cacheKey = `${req.posSession ? "device" : "legacy"}:${partnerId || "all"}:${storeId || "all"}:${req.originalUrl}`;
     const cachedPayload = summaryCache.get(cacheKey);
 
     if (cachedPayload) {
@@ -1437,6 +1437,7 @@ export default function myordersRoutes(prisma) {
         }),
         prisma.customer.count({
           where: {
+            ...(req.posSession ? { sales: { some: { storeId, partnerId } } } : {}),
             ...(partnerId ? { partnerId } : {}),
             createdAt: { gte: from, lt: to },
           },
@@ -1450,6 +1451,7 @@ export default function myordersRoutes(prisma) {
         }),
         prisma.store.findMany({
           where: {
+            ...(req.posSession ? { id: storeId } : {}),
             ...(partnerId ? { partnerId } : {}),
           },
           select: {

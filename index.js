@@ -33,6 +33,7 @@ import billingRoutes from "./routes/billing.js";
 import boostSettingsRoutes from "./routes/boostSettings.js";
 import checkoutRoutes from "./routes/checkout.js";
 import presenceRoutes from "./routes/presence.js";
+import posIdentityRoutes from "./routes/posIdentity.js";
 import salesRoutes from "./routes/sales.js";
 import trackingAlertsRoutes from "./routes/trackingAlerts.js";
 import productReviewsRoutes from "./routes/productReviews.js";
@@ -208,6 +209,8 @@ app.use("/api/scheduled-orders", scheduledOrdersRouter);
 app.use("/api/sms-credits", smsCreditsRouter);
 app.use("/api/checkout", checkoutRouter);
 app.use("/api/presence", presenceRouter);
+// Explicit rollout after migration. The local USB pilot mounts only this API.
+if (process.env.POS_IDENTITY_ENABLED === "true") app.use("/api/pos", posIdentityRoutes(prisma));
 app.use("/api/myorders", myordersRouter);
 app.use("/api/sales", salesRouter);
 app.use("/api/tracking-alerts", trackingAlertsRouter);

@@ -3,3 +3,5 @@ node_modules
 /generated/prisma
 *-dev.log
 /_db_backups/
+/tmp/
+/pos-private/
