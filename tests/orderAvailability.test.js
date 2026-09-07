@@ -29,6 +29,42 @@ test("manual closures disable every slot and cannot be bypassed with a schedule"
   }
 });
 
+test("pause requires scheduling during service, preserves future slots and resumes immediate orders", () => {
+  const now = new Date("2026-09-07T15:00:00Z");
+  const paused = { ...store, operationsPaused: true };
+  const availability = buildOrderAvailability(paused, now);
+  assert.equal(availability.acceptingOrders, true);
+  assert.equal(availability.serviceOpen, false);
+  assert.equal(availability.operationsPaused, true);
+  assert.equal(availability.requiresSchedule, true);
+  assert.ok(availability.days[0].slots.length > 0);
+  assert.throws(() => validateOrderSchedule(paused, null, now), /schedule_required/);
+  assert.doesNotThrow(() => validateOrderSchedule(paused, availability.days[0].slots[0].scheduledFor, now));
+  assert.doesNotThrow(() => validateOrderSchedule({ ...paused, operationsPaused: false }, null, now));
+  assert.throws(() => validateOrderSchedule({ ...paused, active: false }, availability.days[0].slots[0].scheduledFor, now), /store_closed/);
+});
+
+test("pause rejects immediate cash and card checkout before payment or sale creation", async (t) => {
+  const paused = { ...store, operationsPaused: true, hours: [] };
+  const prisma = {
+    $executeRawUnsafe: async () => {}, $queryRawUnsafe: async () => [{ id: 1 }],
+    store: { findFirst: async () => paused, findUnique: async () => paused },
+    $transaction: async () => assert.fail("No immediate sale during pause"),
+  };
+  const app = express(); app.use(express.json()); app.use(checkoutRoutes(prisma));
+  const server = app.listen(0, "127.0.0.1");
+  await new Promise(resolve => server.once("listening", resolve));
+  t.after(() => new Promise(resolve => server.close(resolve)));
+  for (const paymentMode of ["cash", "card"]) {
+    const response = await fetch(`http://127.0.0.1:${server.address().port}/session`, {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ storeId: 1, partnerId: 1, paymentMode, cart: [{ qty: 1 }] }),
+    });
+    assert.equal(response.status, 409);
+    assert.equal((await response.json()).error, "schedule_required");
+  }
+});
+
 test("server rejects missing, past, malformed, off-grid, closed-day and beyond-horizon schedules", () => {
   assert.throws(() => validateOrderSchedule(store, null, monday), /schedule_required/);
   for (const date of ["garbage", true, "2026-09-06T12:30:00Z", "2026-09-07T12:31:00Z", "2026-09-09T12:30:00Z", "2026-09-14T12:30:00Z"]) {

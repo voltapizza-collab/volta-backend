@@ -42,7 +42,8 @@ export const buildOrderAvailability = (store, now = new Date(), timeZone = proce
   }
   // Existing stores without configured hours allow immediate orders.
   const currentWindow = windows.find((window) => wallNow >= window.start && wallNow < window.end);
-  const serviceOpen = !hours.length || Boolean(currentWindow);
+  const operationsPaused = store?.operationsPaused === true;
+  const serviceOpen = !operationsPaused && (!hours.length || Boolean(currentWindow));
   const days = Array.from({ length: DAYS }, (_, offset) => {
     const date = new Date(today + offset * DAY_MS).toISOString().slice(0, 10);
     return { date, slots: [] };
@@ -57,7 +58,7 @@ export const buildOrderAvailability = (store, now = new Date(), timeZone = proce
     const time = new Date(wall).toISOString().slice(11, 16);
     day.slots.push({ time, scheduledFor: new Date(instant).toISOString() });
   }
-  return { acceptingOrders, serviceOpen, requiresSchedule: !serviceOpen, timeZone, days };
+  return { acceptingOrders, serviceOpen, operationsPaused, requiresSchedule: !serviceOpen, timeZone, days };
 };
 
 export const validateOrderSchedule = (store, scheduledFor, now = new Date()) => {

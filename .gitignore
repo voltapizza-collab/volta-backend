@@ -2,6 +2,7 @@ node_modules
 .env
 /generated/prisma
 *-dev.log
+backend-pause-local*.log
 /_db_backups/
 /tmp/
 /pos-private/

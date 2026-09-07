@@ -11,6 +11,12 @@ async function check(path, method='GET', query={}, db={}) {
 test('POS forces store scope even when client omits it',async()=>{
   assert.deepEqual(await check('/api/myorders/pending'),{status:200,passed:true,query:{storeId:'1',partnerId:'2'}});
 });
+
+test('POS may pause only its own store and only via PATCH', async () => {
+  assert.equal((await check('/api/stores/1/operations-pause', 'PATCH')).passed, true);
+  assert.equal((await check('/api/stores/3/operations-pause', 'PATCH')).status, 403);
+  assert.equal((await check('/api/stores/1/operations-pause', 'POST')).status, 403);
+});
 test('POS rejects foreign stores, partners and non-operational routes',async()=>{
   for(const [path,method,query] of [
     ['/api/myorders/pending','GET',{storeId:3}],['/api/myorders/summary','GET',{partnerId:4}],

@@ -1,0 +1,1 @@
+ALTER TABLE `Store` ADD COLUMN `operationsPaused` BOOLEAN NOT NULL DEFAULT false;

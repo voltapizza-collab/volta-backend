@@ -205,6 +205,7 @@ model Store {
   email                String?
   active               Boolean            @default(true)
   acceptingOrders      Boolean            @default(true)
+  operationsPaused     Boolean            @default(false)
   pickupEnabled        Boolean            @default(true)
   deliveryEnabled      Boolean            @default(true)
   acceptsReservations  Boolean            @default(false)

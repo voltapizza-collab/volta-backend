@@ -1092,6 +1092,25 @@ const attachStorePublicMenu = (router, prisma) => {
 export default function storesRoutes(prisma) {
   const router = express.Router();
 
+  router.patch("/:id/operations-pause", async (req, res) => {
+    const id = parsePositiveInt(req.params.id);
+    if (!id || typeof req.body?.paused !== "boolean") {
+      return res.status(400).json({ error: "Valid id and body.paused boolean required" });
+    }
+    try {
+      const store = await prisma.store.update({
+        where: { id }, data: { operationsPaused: req.body.paused },
+        select: { id: true, active: true, acceptingOrders: true, operationsPaused: true },
+      });
+      res.set("Cache-Control", "no-store");
+      return res.json(store);
+    } catch (error) {
+      if (error.code === "P2025") return res.status(404).json({ error: "Store not found" });
+      console.error("[stores.operations-pause]", error);
+      return res.status(500).json({ error: "Unable to change operations pause" });
+    }
+  });
+
   router.patch("/:id/active", async (req, res) => {
     const id = parsePositiveInt(req.params.id);
     if (!id) {

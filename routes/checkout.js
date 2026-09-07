@@ -886,6 +886,7 @@ export default function checkoutRoutes(prisma) {
             deliveryEnabled: true,
             active: true,
             acceptingOrders: true,
+            operationsPaused: true,
             hours: true,
           },
         }),

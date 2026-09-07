@@ -23,10 +23,10 @@ export function posUiScope(prisma) {
       if (Object.keys(query).some(k => !['storeId','partnerId','_ts','period'].includes(k))) return deny();
       query.storeId = String(storeId); query.partnerId = String(partnerId); allowed = true;
     }
-    const store = /^\/(?:api\/)?stores\/(\d+)\/(active|ingredients(?:\/\d+)?)$/.exec(path);
+    const store = /^\/(?:api\/)?stores\/(\d+)\/(active|operations-pause|ingredients(?:\/\d+)?)$/.exec(path);
     if (store) {
       if (Number(store[1]) !== storeId) return deny();
-      allowed = (store[2] === 'active' && method === 'PATCH') ||
+      allowed = (['active', 'operations-pause'].includes(store[2]) && method === 'PATCH') ||
         (store[2] === 'ingredients' && method === 'GET') ||
         (/^ingredients\/\d+$/.test(store[2]) && method === 'PATCH');
     }
@@ -60,7 +60,7 @@ export default function posUiRoutes(prisma) {
   router.use(posUiScope(prisma));
   router.get('/api/stores/:id', async (req,res) => {
     const store = await prisma.store.findUnique({ where: { id: req.posSession.storeId }, select: {
-      id:true, storeName:true, slug:true, active:true, acceptingOrders:true, city:true, latitude:true, longitude:true,
+      id:true, storeName:true, slug:true, active:true, acceptingOrders:true, operationsPaused:true, city:true, latitude:true, longitude:true,
     } });
     res.json(store);
   });
