@@ -1,4 +1,8 @@
 import express from "express";
+import { evaluateCoupon } from "../services/couponEvaluation.js";
+import { getCouponCartContext } from "./checkout.js";
+import { reconcileCouponReservations } from "../services/couponReservations.js";
+import { retrieveCheckoutSession } from "../services/stripe.js";
 import { estimateSmsParts, normalizeE164Phone, sendTelnyxSms } from "../services/telnyx.js";
 import {
   reserveSmsCreditForMessage,
@@ -1862,17 +1866,7 @@ export default function couponsRoutes(prisma) {
     }
 
     try {
-      const now = nowInTZ();
-      await prisma.coupon.updateMany({
-        where: {
-          partnerId,
-          status: "ACTIVE",
-          expiresAt: { lte: now },
-        },
-        data: { status: "EXPIRED" },
-      });
-
-      let coupon = await findCouponByInputCode(prisma, code);
+      const coupon = await findCouponByInputCode(prisma, code);
 
       if (!coupon || Number(coupon.partnerId) !== partnerId) {
         return res.json({
@@ -1884,85 +1878,25 @@ export default function couponsRoutes(prisma) {
         });
       }
 
-      const usageLimit = toNum(coupon.usageLimit);
-      const usageUnlimited = Boolean(coupon.usageUnlimited);
-      const usedCount = toNum(coupon.usedCount) || 0;
-      const minAmount = toNum(coupon.minAmount) || 0;
-      const deliveryFree = isDeliveryFreeCoupon(coupon);
-      let store = null;
-
-      if (storeId) {
-        store = await prisma.store.findFirst({
-          where: { id: storeId, partnerId },
-          select: { id: true, zipCode: true },
-        });
+      const store = storeId ? await prisma.store.findFirst({
+        where: { id: storeId, partnerId }, select: { id: true, zipCode: true },
+      }) : null;
+      const context = Array.isArray(req.body.cart)
+        ? await getCouponCartContext(prisma, partnerId, storeId, req.body.cart)
+        : { eligibleSubtotal: subtotal, hasProducts: subtotal > 0 };
+      const evaluation = evaluateCoupon(coupon, { ...context, deliveryFee, store });
+      if (evaluation.valid && !coupon.usageUnlimited) {
+        await reconcileCouponReservations(prisma, coupon.id, retrieveCheckoutSession);
+        const reserved = await prisma.couponReservation.count({ where: { couponId: coupon.id, status: "RESERVED" } });
+        if (Number(coupon.usedCount || 0) + reserved >= Number(coupon.usageLimit ?? 1)) {
+          Object.assign(evaluation, { valid: false, status: "reserved", discount: 0,
+            message: "El cupón está reservado en un pago pendiente. Vuelve a ese pago o espera a que caduque." });
+        }
       }
-
-      let status = "valid";
-      let message = "Cupon valido. Descuento aplicado al carrito.";
-
-      if (coupon.status !== "ACTIVE") {
-        status = String(coupon.status || "").toLowerCase() || "inactive";
-        message =
-          coupon.status === "EXPIRED"
-            ? "Este cupon ya caduco."
-            : coupon.status === "USED"
-              ? "Este cupon ya fue usado o alcanzo su limite."
-              : "Este cupon no esta activo.";
-      } else if (!usageUnlimited && usageLimit != null && usedCount >= usageLimit) {
-        status = "used";
-        message = "Este cupon ya fue usado o alcanzo su limite.";
-      } else if (!isActiveByDate(coupon, now)) {
-        status = coupon.expiresAt && new Date(coupon.expiresAt).getTime() <= now.getTime()
-          ? "expired"
-          : "not_started";
-        message = status === "expired" ? "Este cupon ya caduco." : "Este cupon todavia no esta activo.";
-      } else if (!isWithinWindow(coupon, now)) {
-        status = "outside_window";
-        message = "Este cupon no esta disponible en este horario.";
-      } else if (
-        hasTerritorialTargeting(coupon) &&
-        !isPortalClaimedCoupon(coupon) &&
-        !matchesCouponStoreScope(coupon, store)
-      ) {
-        status = "wrong_area";
-        message = "Este cupon no esta disponible para esta tienda.";
-      } else if (deliveryFree && deliveryFee <= 0) {
-        status = "no_delivery_fee";
-        message = "Este cupon elimina el envio cuando hay tarifa de delivery.";
-      } else if (!deliveryFree && subtotal <= 0) {
-        status = "empty_cart";
-        message = "Codigo listo. Agrega productos elegibles para activar el descuento.";
-      } else if (minAmount > 0 && subtotal < minAmount) {
-        status = "min_not_met";
-        message = `Este cupon requiere un minimo de EUR ${minAmount.toFixed(2)} en productos.`;
-      }
-
-      if (coupon.status === "ACTIVE" && status === "expired") {
-        coupon = await prisma.coupon.update({
-          where: { id: coupon.id },
-          data: { status: "EXPIRED" },
-        });
-      } else if (coupon.status === "ACTIVE" && status === "used") {
-        coupon = await prisma.coupon.update({
-          where: { id: coupon.id },
-          data: {
-            status: "USED",
-            usedAt: coupon.usedAt || now,
-          },
-        });
-      }
-
-      const valid = status === "valid";
-      const discount = valid ? calculateCouponDiscount(coupon, subtotal, { deliveryFee }) : 0;
 
       return res.json({
         ok: true,
-        valid,
-        status,
-        message,
-        subtotal,
-        discount,
+        ...evaluation,
         discountPotential: calculateCouponPotentialDiscount(coupon, { deliveryFee }),
         coupon: serializeCouponValidation(coupon),
       });

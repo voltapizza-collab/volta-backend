@@ -1,4 +1,7 @@
 import express from "express";
+import { lockCheckoutCoupon, reserveCouponForSale, releaseCouponReservation, reconcileCouponReservations } from "../services/couponReservations.js";
+import { evaluateCoupon, calculateCouponDiscount } from "../services/couponEvaluation.js";
+export { calculateCouponDiscount } from "../services/couponEvaluation.js";
 import { buildOrderAvailability, validateOrderSchedule } from "../services/orderAvailability.js";
 import {
   constructStripeWebhookEvent,
@@ -523,83 +526,18 @@ export const getEligibleCouponSubtotal = (lines, { activeTopDeals = [], storeId 
 
 export const getCouponLines = (lines) => lines.filter(isCouponLine);
 
-const isDeliveryFreeCoupon = (coupon) => {
-  const campaign = String(coupon?.campaign || "").toUpperCase();
-  const meta =
-    coupon?.meta && typeof coupon.meta === "object" && !Array.isArray(coupon.meta)
-      ? coupon.meta
-      : {};
-  return campaign === "DELIVERY_FREE" || Boolean(meta.deliveryFree);
+export const validateCouponForCheckout = (coupon, context) => {
+  const result = evaluateCoupon(coupon, context);
+  if (result.valid) return null;
+  return ["no_delivery_fee", "no_eligible_products", "empty_cart", "min_not_met"].includes(result.status)
+    ? "coupon_not_applicable" : "coupon_not_available";
 };
 
-const readCouponMeta = (coupon) => {
-  const meta = parseMaybeJson(coupon?.meta, {});
-  return meta && typeof meta === "object" && !Array.isArray(meta) ? meta : {};
-};
-
-const readCouponTargeting = (coupon) => {
-  const meta = readCouponMeta(coupon);
-  const targeting =
-    meta.targeting && typeof meta.targeting === "object" && !Array.isArray(meta.targeting)
-      ? meta.targeting
-      : {};
-
-  return {
-    storeIds: normalizePositiveIds(targeting.storeIds),
-    zipCodes: asArray(targeting.zipCodes)
-      .map(extractZipCode)
-      .filter(Boolean),
-  };
-};
-
-const couponMatchesStoreScope = (coupon, store) => {
-  const { storeIds, zipCodes } = readCouponTargeting(coupon);
-  if (!storeIds.length && !zipCodes.length) return true;
-
-  const storeId = Number(store?.id);
-  if (Number.isInteger(storeId) && storeIds.includes(storeId)) return true;
-
-  const storeZipCode = extractZipCode(store?.zipCode);
-  return Boolean(storeZipCode && zipCodes.includes(storeZipCode));
-};
-
-export const calculateCouponDiscount = (coupon, eligibleSubtotal, { deliveryFee = 0 } = {}) => {
-  if (isDeliveryFreeCoupon(coupon)) {
-    return roundMoney(Math.max(0, Number(deliveryFee || 0)));
-  }
-
-  const base = Math.max(0, roundMoney(eligibleSubtotal));
-  if (base <= 0) return 0;
-
-  if (coupon.kind === "AMOUNT") {
-    return roundMoney(Math.min(Number(coupon.amount || 0), base));
-  }
-
-  if (coupon.kind === "PERCENT") {
-    const raw = roundMoney((base * Number(coupon.percent || 0)) / 100);
-    const maxAmount = coupon.maxAmount == null ? null : Number(coupon.maxAmount);
-    return roundMoney(maxAmount == null ? raw : Math.min(raw, maxAmount));
-  }
-
-  return 0;
-};
-
-export const validateCouponForCheckout = (coupon, { eligibleSubtotal, deliveryFee, store, reference }) => {
-  const usageLimit = Number(coupon?.usageLimit || 1);
-  const usedCount = Number(coupon?.usedCount || 0);
-  const minAmount = Number(coupon?.minAmount || 0);
-  const deliveryFree = isDeliveryFreeCoupon(coupon);
-
-  if (!isDirectDiscountActive(coupon, reference)) return "coupon_not_available";
-  if (!coupon.usageUnlimited && Number.isFinite(usageLimit) && usedCount >= usageLimit) {
-    return "coupon_not_available";
-  }
-  if (!couponMatchesStoreScope(coupon, store)) return "coupon_not_available";
-  if (deliveryFree && Number(deliveryFee || 0) <= 0) return "coupon_not_applicable";
-  if (!deliveryFree && Number(eligibleSubtotal || 0) <= 0) return "coupon_not_applicable";
-  if (minAmount > 0 && Number(eligibleSubtotal || 0) < minAmount) return "coupon_not_applicable";
-
-  return null;
+export const getCouponCartContext = async (prisma, partnerId, storeId, cart) => {
+  const lines = asArray(cart).map(sanitizeLine);
+  const activeTopDeals = (await loadActiveTopDeals(prisma, partnerId, nowInTZ())).filter(d => !isDirectDiscountSoldOut(d));
+  return { eligibleSubtotal: getEligibleCouponSubtotal(lines, { activeTopDeals, storeId }),
+    hasProducts: lines.some(line => !isCouponLine(line) && !isBoostLine(line) && !isIncentiveRewardLine(line)) };
 };
 
 const buildReturnUrl = (req, status, fallbackPath = "/", extraParams = {}) => {
@@ -769,7 +707,8 @@ const resolveCheckoutCustomer = async (tx, { partnerId, customer, delivery, stor
   });
 };
 
-const createCouponRedemptionsForSale = async (tx, sale) => {
+export const createCouponRedemptionsForSale = async (tx, sale) => {
+  await tx.$queryRawUnsafe("SELECT id FROM Sale WHERE id = ? FOR UPDATE", sale.id);
   const lines = asArray(sale.products);
   const couponLines = lines.filter((line) => isCouponLine(line) && line.couponCode);
 
@@ -784,14 +723,13 @@ const createCouponRedemptionsForSale = async (tx, sale) => {
 
     if (existing) continue;
 
-    const coupon = await tx.coupon.findFirst({
-      where: {
-        partnerId: sale.partnerId,
-        code: line.couponCode,
-      },
-    });
-
-    if (!coupon) continue;
+    const rows = await tx.$queryRawUnsafe("SELECT * FROM Coupon WHERE partnerId = ? AND code = ? FOR UPDATE", sale.partnerId, line.couponCode);
+    const coupon = rows[0];
+    if (!coupon) throwCheckoutError("coupon_not_available", 409);
+    const reservation = await tx.couponReservation.findUnique({ where: { saleId: sale.id } });
+    if (reservation?.status === "RELEASED") throwCheckoutError("coupon_reservation_released", 409);
+    if (!coupon.usageUnlimited && Number(coupon.usedCount || 0) >= Number(coupon.usageLimit ?? 1))
+      throwCheckoutError("coupon_not_available", 409);
 
     await tx.couponRedemption.create({
       data: {
@@ -819,11 +757,12 @@ const createCouponRedemptionsForSale = async (tx, sale) => {
     await tx.coupon.update({
       where: { id: coupon.id },
       data: {
-        usedCount: nextUsedCount,
+        usedCount: { increment: 1 },
         usedAt: new Date(),
         status: usageUnlimited ? coupon.status : nextUsedCount >= usageLimit ? "USED" : coupon.status,
       },
     });
+    if (reservation) await tx.couponReservation.update({ where: { saleId: sale.id }, data: { status: "CONSUMED" } });
   }
 };
 
@@ -985,11 +924,13 @@ export default function checkoutRoutes(prisma) {
           return res.status(409).json({ ok: false, error: "coupon_not_available" });
         }
 
+        if (!coupon.usageUnlimited) await reconcileCouponReservations(prisma, coupon.id, retrieveCheckoutSession);
+
         const couponCheckoutError = validateCouponForCheckout(coupon, {
           eligibleSubtotal,
           deliveryFee,
           store,
-          reference: nowInTZ(),
+          reference: new Date(),
         });
         if (couponCheckoutError) {
           return res.status(409).json({ ok: false, error: couponCheckoutError });
@@ -1046,6 +987,11 @@ export default function checkoutRoutes(prisma) {
       const scheduledFor = req.body.scheduledFor ? new Date(req.body.scheduledFor) : null;
       const customerInput = req.body.customer && typeof req.body.customer === "object" ? req.body.customer : {};
       const sale = await prisma.$transaction(async (tx) => {
+        const lockedCoupon = couponLine?.couponCode ? await lockCheckoutCoupon(tx, {
+          partnerId, code: couponLine.couponCode, eligibleSubtotal, deliveryFee, store,
+        }) : null;
+        if (lockedCoupon && Math.abs(lockedCoupon.evaluation.discount - discounts) > 0.004)
+          throwCheckoutError("coupon_changed", 409);
         const currentStore = await tx.store.findUnique({ where: { id: storeId }, include: { hours: true } });
         validateOrderSchedule(currentStore, req.body.scheduledFor);
         const topDealQuantities = getDirectDiscountCartQuantities(lines);
@@ -1137,6 +1083,7 @@ export default function checkoutRoutes(prisma) {
           },
         });
 
+        await reserveCouponForSale(tx, lockedCoupon?.coupon, createdSale);
         if (paymentMode === "cash") {
           await createCouponRedemptionsForSale(tx, createdSale);
         }
@@ -1157,7 +1104,7 @@ export default function checkoutRoutes(prisma) {
         });
       }
 
-      const session = await createOrderCheckoutSession({
+      const sessionOptions = {
         sale,
         partner,
         store,
@@ -1167,7 +1114,26 @@ export default function checkoutRoutes(prisma) {
           order_code: sale.code,
         }),
         cancelUrl: buildReturnUrl(req, "cancel", `/${partner.slug}/${store.slug}`),
-      });
+      };
+      let session;
+      try {
+        try {
+          session = await createOrderCheckoutSession(sessionOptions);
+        } catch (error) {
+          // Retry an uncertain transport/server outcome with the same idempotency key.
+          if (error.statusCode >= 400 && error.statusCode < 500) throw error;
+          session = await createOrderCheckoutSession(sessionOptions);
+        }
+      } catch (error) {
+        if (error.statusCode >= 400 && error.statusCode < 500 && ![408, 409, 429].includes(error.statusCode)) {
+          await prisma.couponReservation.updateMany({ where: { saleId: sale.id, status: "RESERVED" }, data: { status: "RELEASED" } });
+        }
+        // An ambiguous outcome must keep its reservation: Stripe may still accept payment.
+        console.error("[checkout.session-reservation]", { saleId: sale.id, requiresReconciliation: !error.statusCode || error.statusCode >= 500 });
+        throw error;
+      }
+
+      if (session?.id) await prisma.couponReservation.updateMany({ where: { saleId: sale.id, status: "RESERVED" }, data: { stripeSessionId: session.id } });
 
       if (!session?.url) {
         return res.status(502).json({ ok: false, error: "stripe_session_url_missing" });
@@ -1224,7 +1190,7 @@ export default function checkoutRoutes(prisma) {
       throw error;
     }
 
-    if (session.payment_status && session.payment_status !== "paid") {
+    if (session.payment_status !== "paid") {
       const error = new Error("payment_not_paid");
       error.status = 409;
       throw error;
@@ -1238,6 +1204,7 @@ export default function checkoutRoutes(prisma) {
     }
 
     const result = await prisma.$transaction(async (tx) => {
+      await tx.$queryRawUnsafe("SELECT id FROM Sale WHERE id = ? FOR UPDATE", saleId);
       const sale = await tx.sale.findUnique({ where: { id: saleId } });
       if (!sale) {
         const error = new Error("sale_not_found");
@@ -1245,6 +1212,7 @@ export default function checkoutRoutes(prisma) {
         throw error;
       }
 
+      if (sale.stripeCheckoutSessionId && sale.stripeCheckoutSessionId !== session.id) throwCheckoutError("payment_session_mismatch", 409);
       if (sale.status === "PAID") {
         return { sale, shouldNotify: false };
       }
@@ -1466,13 +1434,17 @@ export default function checkoutRoutes(prisma) {
       return res.status(400).json({ ok: false, error: "bad_stripe_signature" });
     }
 
-    if (event.type !== "checkout.session.completed") {
+    if (!["checkout.session.completed", "checkout.session.async_payment_succeeded", "checkout.session.expired", "checkout.session.async_payment_failed"].includes(event.type)) {
       return res.json({ ok: true, ignored: true });
     }
 
     const session = event.data?.object || {};
 
     try {
+      if (["checkout.session.expired", "checkout.session.async_payment_failed"].includes(event.type)) {
+        await releaseCouponReservation(prisma, session);
+        return res.json({ ok: true });
+      }
       if (session.metadata?.purpose === "boost_checkout") {
         const result = await markBoostPaidFromStripeSession(session);
 

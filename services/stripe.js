@@ -139,6 +139,7 @@ export const createOrderCheckoutSession = async ({
   appendParam(params, "cancel_url", cancelUrl);
   appendParam(params, "locale", "es");
   appendParam(params, "client_reference_id", `order:${saleId}`);
+  appendParam(params, "expires_at", Math.floor(new Date(sale.createdAt || Date.now()).getTime() / 1000) + 35 * 60);
   appendParam(params, "customer_email", customerData.email);
   appendParam(params, "customer_creation", "if_required");
   appendParam(params, "phone_number_collection[enabled]", "false");
@@ -172,7 +173,7 @@ export const createOrderCheckoutSession = async ({
   return stripeRequest(
     "/checkout/sessions",
     params,
-    `order-${saleId}-${amountCents}-${Date.now()}`
+    `order-${saleId}-${amountCents}`
   );
 };
 

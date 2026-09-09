@@ -515,6 +515,7 @@ model Sale {
   boostMeta               Json?
 
   redemptions             CouponRedemption[]  @relation("SaleToRedemptions")
+  couponReservation       CouponReservation?
   productReviewRequest    ProductReviewRequest?
   productReviewVotes      ProductReviewVote[]
 
@@ -769,6 +770,7 @@ model Coupon {
   assignedTo   Customer?            @relation("CustomerAssignedCoupons", fields: [assignedToId], references: [id], onDelete: SetNull)
   game         Game?                @relation("GameCoupons", fields: [gameId], references: [id], onDelete: SetNull)
   redemptions  CouponRedemption[]   @relation("CouponToRedemptions")
+  reservations CouponReservation[]
 
   @@index([partnerId])
   @@index([status])
@@ -779,6 +781,20 @@ model Coupon {
   @@index([gameId])
   @@index([acquisition, gameId])
 }
+model CouponReservation {
+  id              Int      @id @default(autoincrement())
+  couponId        Int
+  saleId          Int      @unique
+  status          String   @default("RESERVED") @db.VarChar(16)
+  stripeSessionId String?  @db.VarChar(191)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  coupon          Coupon   @relation(fields: [couponId], references: [id], onDelete: Restrict)
+  sale            Sale     @relation(fields: [saleId], references: [id], onDelete: Cascade)
+
+  @@index([couponId, status])
+}
+
 model SmsCreditLedger {
   id           Int                 @id @default(autoincrement())
   partnerId    Int

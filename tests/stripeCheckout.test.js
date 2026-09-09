@@ -89,6 +89,7 @@ test("order checkout sends card and Klarna Stripe fields without unsupported shi
       sale: {
         id: 77,
         code: "VLT-77",
+        createdAt: new Date("2026-09-09T12:00:00Z"),
         customerData: {
           name: "Luigi",
           phone: "+34600111222",
@@ -107,6 +108,8 @@ test("order checkout sends card and Klarna Stripe fields without unsupported shi
 
     assert.equal(requests.length, 1);
     const body = new URLSearchParams(String(requests[0].options.body));
+    assert.equal(requests[0].options.headers["Idempotency-Key"], "order-77-1490");
+    assert.equal(Number(body.get("expires_at")), Date.parse("2026-09-09T12:35:00Z") / 1000);
 
     assert.equal(body.get("payment_method_types[0]"), "card");
     assert.equal(body.get("payment_method_types[1]"), "klarna");
