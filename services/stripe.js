@@ -24,7 +24,9 @@ const appendPaymentMethodTypes = (params, { includeKlarna = true } = {}) => {
   });
 };
 
-const shouldEnableKlarna = () => process.env.STRIPE_ENABLE_KLARNA !== "0";
+export const getOrderCheckoutPaymentMethods = () => [
+  "card", ...(process.env.STRIPE_ENABLE_KLARNA !== "0" ? ["klarna"] : []),
+];
 
 const stripeApiRequest = async ({ method = "POST", path, params, idempotencyKey }) => {
   if (!globalThis.fetch) {
@@ -118,9 +120,13 @@ export const createOrderCheckoutSession = async ({
   store,
   amountCents,
   currency = "eur",
+  paymentMethod = "card",
   successUrl,
   cancelUrl,
 }) => {
+  if (!getOrderCheckoutPaymentMethods().includes(paymentMethod)) {
+    throw new Error("payment_method_not_available");
+  }
   const params = new URLSearchParams();
   const partnerId = String(partner.id);
   const storeId = String(store.id);
@@ -131,8 +137,9 @@ export const createOrderCheckoutSession = async ({
 
   appendParam(params, "mode", "payment");
   appendParam(params, "branding_settings[display_name]", CHECKOUT_DISPLAY_NAME);
-  appendPaymentMethodTypes(params);
-  if (shouldEnableKlarna()) {
+  appendParam(params, "payment_method_types[0]", paymentMethod);
+  appendParam(params, "wallet_options[link][display]", "never");
+  if (paymentMethod === "klarna") {
     appendParam(params, "billing_address_collection", "required");
   }
   appendParam(params, "success_url", successUrl);
@@ -173,7 +180,7 @@ export const createOrderCheckoutSession = async ({
   return stripeRequest(
     "/checkout/sessions",
     params,
-    `order-${saleId}-${amountCents}`
+    `order-${saleId}-${amountCents}-${paymentMethod}`
   );
 };
 

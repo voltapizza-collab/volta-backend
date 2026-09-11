@@ -6,6 +6,7 @@ import { buildOrderAvailability, validateOrderSchedule } from "../services/order
 import {
   constructStripeWebhookEvent,
   createOrderCheckoutSession,
+  getOrderCheckoutPaymentMethods,
   isStripeCheckoutConfigured,
   retrieveCheckoutSession,
 } from "../services/stripe.js";
@@ -776,7 +777,7 @@ export default function checkoutRoutes(prisma) {
       const store = await prisma.store.findUnique({ where: { id }, include: { hours: true } });
       if (!store) return res.status(404).json({ error: "store_not_found" });
       res.set("Cache-Control", "no-store");
-      return res.json(buildOrderAvailability(store));
+      return res.json({ ...buildOrderAvailability(store), paymentMethods: getOrderCheckoutPaymentMethods() });
     } catch (error) {
       return res.status(503).json({ error: "availability_unavailable" });
     }
@@ -788,6 +789,7 @@ export default function checkoutRoutes(prisma) {
     const rawLines = asArray(req.body.cart);
     const currency = String(req.body.currency || "EUR").trim().toUpperCase();
     const paymentMode = String(req.body.paymentMode || "card").trim().toLowerCase() === "cash" ? "cash" : "card";
+    const paymentMethod = String(req.body.paymentMethod || "card").trim().toLowerCase();
 
     if (!partnerId || !storeId || !rawLines.length) {
       return res.status(400).json({ ok: false, error: "bad_checkout_payload" });
@@ -795,6 +797,9 @@ export default function checkoutRoutes(prisma) {
 
     if (paymentMode === "card" && !isStripeCheckoutConfigured()) {
       return res.status(503).json({ ok: false, error: "stripe_not_configured" });
+    }
+    if (paymentMode === "card" && !getOrderCheckoutPaymentMethods().includes(paymentMethod)) {
+      return res.status(400).json({ ok: false, error: "payment_method_not_available" });
     }
 
     try {
@@ -1056,6 +1061,7 @@ export default function checkoutRoutes(prisma) {
               customerCode: customer.code,
               delivery: sanitizedDelivery,
               paymentMode,
+              ...(paymentMode === "card" ? { paymentMethod } : {}),
               paymentStatus: paymentMode === "cash" ? "cash_pending" : "awaiting_card_payment",
               scheduledFor: scheduledFor && !Number.isNaN(scheduledFor.getTime()) ? scheduledFor.toISOString() : null,
             },
@@ -1108,6 +1114,7 @@ export default function checkoutRoutes(prisma) {
         sale,
         partner,
         store,
+        paymentMethod,
         amountCents,
         currency,
         successUrl: buildReturnUrl(req, "success", `/${partner.slug}/${store.slug}`, {
