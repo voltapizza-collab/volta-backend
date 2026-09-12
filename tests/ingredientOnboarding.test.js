@@ -85,6 +85,22 @@ test("limits provider calls and retries failed requests without leaking provider
   assert.equal((await retry(request)).translations.length, 7);
 });
 
+test("confirming the displayed onboarding names saves all seven reviewed and publishes their identity", async () => {
+  let creation;
+  const prisma = { $transaction: async (run) => run({
+    ingredientSemanticCategory: { findUnique: async () => ({ id: 7 }) },
+    ingredient: { findMany: async () => [], create: async (args) => { creation = args; return args.data; } },
+  }) };
+  await createIngredientOnboarding(prisma, { ...body(), confirmTranslations: true });
+  assert.equal(creation.data.semanticStatus, "REVIEWED");
+  assert.equal(creation.data.translations.create.length, 7);
+  assert.ok(creation.data.translations.create.every((item) => item.isReviewed === true));
+  assert.deepEqual(creation.data.translations.create.map((item) => item.name), body().translations.map((item) => item.name));
+  assert.equal(normalizeIngredientOnboarding({ ...body(), confirmTranslations: "true" }).translations[1].isReviewed, false);
+  const incomplete = body(); incomplete.translations.pop();
+  await assert.rejects(createIngredientOnboarding(prisma, { ...incomplete, confirmTranslations: true }), /siete idiomas/);
+});
+
 const memoryResponse = (translatedText, extra = {}) => ({ ok: true, json: async () => ({
   responseStatus: 200, responseData: { translatedText }, quotaFinished: false, ...extra,
 }) });

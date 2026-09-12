@@ -31,7 +31,7 @@ export function normalizeIngredientOnboarding(body = {}) {
     const translationName = text(input.find((item) => item?.locale === locale)?.name);
     if (!translationName) fail("Completa los siete idiomas antes de añadir el ingrediente.");
     if (locale === "es" && translationName !== name) fail("El nombre original debe coincidir con el nombre en español.");
-    return { locale, name: translationName, isReviewed: locale === "es" };
+    return { locale, name: translationName, isReviewed: body.confirmTranslations === true || locale === "es" };
   });
   const normalizedAliases = [...new Set([name, ...(Array.isArray(body.aliases) ? body.aliases : [])])]
     .slice(0, 30).map((alias) => normalizeAliasInput({ alias: text(alias), locale: "es",
@@ -61,7 +61,9 @@ export async function createIngredientOnboarding(prisma, body, imageData = {}) {
       }
       return tx.ingredient.create({ data: {
         name: data.name, category: data.category, canonicalKey: data.canonicalKey,
-        allergens: data.allergens, isSystem: true, semanticStatus: "NEEDS_REVIEW", semanticCategoryId: category.id,
+        allergens: data.allergens, isSystem: true,
+        semanticStatus: data.translations.every((translation) => translation.isReviewed) ? "REVIEWED" : "NEEDS_REVIEW",
+        semanticCategoryId: category.id,
         translations: { create: data.translations }, aliases: { create: data.aliases },
         ...imageData,
       }, include: { translations: true, aliases: true } });
