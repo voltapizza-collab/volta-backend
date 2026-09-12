@@ -2,6 +2,18 @@
 // Keep IDs stable; increase revision only when users need to read the note again.
 export const backofficeAnnouncements = [
   {
+    id: "pos-pause-queue-2026-09", revision: 1,
+    publishedAt: "2026-09-12T16:00:00.000Z", expiresAt: "2026-12-12T16:00:00.000Z",
+    category: "improvement", severity: "info", title: "La pausa del POS web ocupa toda la pantalla de pedidos",
+    message: "Al pausar las operaciones en el POS web, la cola y los tickets quedan ocultos aunque haya pedidos programados. Pulsa Reanudar operaciones para volver a verlos; los pedidos se conservan.",
+    translations: {
+      en: { title: "Web POS pause fills the order screen", message: "When operations are paused in the web POS, the queue and tickets stay hidden even if there are scheduled orders. Select Resume operations to see them again; your orders are preserved." },
+      it: { title: "La pausa del POS web occupa tutta la schermata degli ordini", message: "Quando metti in pausa le operazioni nel POS web, la coda e i ticket restano nascosti anche se ci sono ordini programmati. Premi Riprendi operazioni per rivederli; gli ordini vengono conservati." },
+      fr: { title: "La pause du POS web occupe tout l’écran des commandes", message: "Lorsque les opérations sont en pause dans le POS web, la file et les tickets restent masqués même si des commandes sont programmées. Appuyez sur Reprendre les opérations pour les retrouver ; vos commandes sont conservées." },
+      pt: { title: "A pausa do POS web ocupa todo o ecrã de pedidos", message: "Ao pausar as operações no POS web, a fila e os tickets ficam ocultos mesmo que existam pedidos agendados. Prima Retomar operações para os voltar a ver; os pedidos são preservados." },
+    },
+  },
+  {
     id: "inventory-ingredient-details-2026-09", revision: 1,
     publishedAt: "2026-09-12T00:00:00.000Z", expiresAt: "2026-12-12T00:00:00.000Z",
     category: "improvement", severity: "info", title: "Una ficha de ingredientes más clara",
