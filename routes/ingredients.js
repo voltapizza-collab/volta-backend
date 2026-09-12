@@ -14,9 +14,50 @@ import {
   suggestLocalSemanticMappings,
 } from "../services/ingredientLocalSemantics.js";
 import prisma from "../services/prisma.js";
+import { onboardIngredientWithImage } from "../services/ingredientOnboarding.js";
+import { translateIngredient } from "../services/ingredientTranslation.js";
 
 const router = express.Router();
 const upload = multer({ storage: multer.memoryStorage() });
+const onboardingUpload = multer({
+  storage: multer.memoryStorage(), limits: { fileSize: 5 * 1024 * 1024, files: 1, fieldSize: 64 * 1024 },
+  fileFilter: (_req, file, done) => {
+    if (["image/jpeg", "image/png", "image/webp"].includes(file.mimetype)) return done(null, true);
+    done(Object.assign(new Error("Usa una foto JPG, PNG o WebP."), { status: 400 }));
+  },
+}).single("image");
+
+router.post("/translate", async (req, res) => {
+  try {
+    res.json(await translateIngredient(req.body));
+  } catch (err) {
+    res.status(err.status || 503).json({ error: err.message });
+  }
+});
+
+router.post("/onboarding", (req, res, next) => {
+  onboardingUpload(req, res, (err) => {
+    if (!err) return next();
+    res.status(400).json({ error: err.code === "LIMIT_FILE_SIZE" ? "La foto debe pesar como máximo 5 MB." : "Usa una sola foto JPG, PNG o WebP de hasta 5 MB." });
+  });
+}, async (req, res) => {
+  try {
+    await requireIngredientSemantics();
+    if (req.file) await ensureIngredientMediaColumns(prisma);
+    const body = req.body.payload ? parseMaybeJson(req.body.payload, {}) : req.body;
+    const ingredient = await onboardIngredientWithImage({ prisma, body, file: req.file,
+      uploadImage: async (file) => {
+        try { return await uploadIngredientImage(file, "onboarding", ["jpg", "png", "webp"]); }
+        catch { throw Object.assign(new Error("No se pudo subir la foto. No se ha creado el ingrediente; puedes reintentar."), { status: 503 }); }
+      },
+      deleteImage: (publicId) => cloudinary.uploader.destroy(publicId),
+    });
+    res.status(201).json({ ...ingredient, displayName: ingredient.name,
+      semanticTranslations: ingredient.translations, semanticAliases: ingredient.aliases });
+  } catch (err) {
+    res.status(getErrorStatus(err, 500)).json({ error: err.status ? err.message : "No se pudo guardar el ingrediente. Inténtalo de nuevo." });
+  }
+});
 
 const parseMaybeJson = (value, fallback) => {
   if (value == null || value === "") return fallback;
@@ -58,14 +99,14 @@ const normalizeAllergens = (value) => {
     : [];
 };
 
-const uploadIngredientImage = async (file, ingredientId) => {
+const uploadIngredientImage = async (file, ingredientId, allowedFormats) => {
   if (!file) return null;
 
   assertCloudinaryConfigured();
 
   const result = await cloudinary.uploader.upload(
     `data:${file.mimetype};base64,${file.buffer.toString("base64")}`,
-    { folder: `volta/ingredients/${ingredientId}` }
+    { folder: `volta/ingredients/${ingredientId}`, ...(allowedFormats ? { allowed_formats: allowedFormats } : {}) }
   );
 
   return {

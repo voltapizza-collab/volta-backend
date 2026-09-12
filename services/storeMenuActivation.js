@@ -1,3 +1,5 @@
+import { loadPartnerIngredientProfiles, withPartnerIngredientProfile } from "./partnerIngredientProfiles.js";
+
 const normalizePositiveIds = (values) => [
   ...new Set(
     (Array.isArray(values) ? values : [])
@@ -39,7 +41,7 @@ export const ensureStoresBelongToPartner = async (
   return targetStoreIds;
 };
 
-export const assertIngredientsCanBeActivated = async (prisma, ingredientIds) => {
+export const assertIngredientsCanBeActivated = async (prisma, ingredientIds, partnerId = null) => {
   const targetIngredientIds = normalizePositiveIds(ingredientIds);
 
   if (!targetIngredientIds.length) return [];
@@ -48,12 +50,12 @@ export const assertIngredientsCanBeActivated = async (prisma, ingredientIds) => 
     where: {
       id: { in: targetIngredientIds },
       status: "ACTIVE",
-      costPrice: { gt: 0 },
+      ...(!partnerId ? { costPrice: { gt: 0 } } : {}),
     },
-    select: { id: true },
+    select: { id: true, costPrice: true },
   });
-
-  const activeIds = new Set(activeIngredients.map((ingredient) => ingredient.id));
+  const profiles = partnerId ? await loadPartnerIngredientProfiles(prisma, partnerId) : null;
+  const activeIds = new Set(activeIngredients.filter((ingredient) => !partnerId || Number(withPartnerIngredientProfile(ingredient, profiles).costPrice) > 0).map((ingredient) => ingredient.id));
   const blockedIds = targetIngredientIds.filter((id) => !activeIds.has(id));
 
   if (blockedIds.length) {
@@ -72,12 +74,14 @@ export const ensureStoreIngredientsActive = async (
   { storeIds, ingredientIds }
 ) => {
   const targetStoreIds = normalizePositiveIds(storeIds);
-  const targetIngredientIds = await assertIngredientsCanBeActivated(
-    prisma,
-    ingredientIds
-  );
+  const targetIngredientIds = normalizePositiveIds(ingredientIds);
 
   if (!targetStoreIds.length || !targetIngredientIds.length) return;
+  const stores = await prisma.store.findMany({ where: { id: { in: targetStoreIds } }, select: { id: true, partnerId: true } });
+  if (stores.length !== targetStoreIds.length) throwRequestError("Store not found", 404);
+  for (const partnerId of new Set(stores.map((store) => store.partnerId))) {
+    await assertIngredientsCanBeActivated(prisma, targetIngredientIds, partnerId);
+  }
 
   await Promise.all(
     targetStoreIds.flatMap((storeId) =>

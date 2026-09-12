@@ -6,3 +6,4 @@ backend-pause-local*.log
 /_db_backups/
 /tmp/
 /pos-private/
+/.cache/

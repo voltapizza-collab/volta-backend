@@ -2,6 +2,7 @@ import express from "express";
 import multer from "multer";
 import { v2 as cloudinary } from "cloudinary";
 import { assertCloudinaryConfigured } from "../services/cloudinaryConfig.js";
+import { loadPartnerIngredientProfiles, withPartnerIngredientProfile } from "../services/partnerIngredientProfiles.js";
 import {
   assertIngredientsCanBeActivated,
   ensureStoreIngredientsActive,
@@ -151,7 +152,7 @@ const assertIngredientsAvailableForStores = async (
     partnerId,
     storeIds: targetStoreIds,
   });
-  await assertIngredientsCanBeActivated(prisma, ingredientIds);
+  await assertIngredientsCanBeActivated(prisma, ingredientIds, partnerId);
 
   return ingredientIds;
 };
@@ -196,9 +197,10 @@ const syncIngredientCategoryUsesForCategory = async (
   });
 
   const ingredientsById = new Map();
+  const profiles = await loadPartnerIngredientProfiles(prismaClient, parsedPartnerId);
   recipeRows.forEach((row) => {
     if (!ingredientsById.has(row.ingredientId)) {
-      ingredientsById.set(row.ingredientId, row.ingredient?.costPrice ?? null);
+      ingredientsById.set(row.ingredientId, profiles.get(row.ingredientId)?.costPrice ?? row.ingredient?.costPrice ?? null);
     }
   });
   const ingredientIds = [...ingredientsById.keys()];
@@ -555,7 +557,11 @@ export default function pizzasRoutes(prisma) {
         },
       });
 
-      res.json(pizzas.map(mapPizza));
+      const profilesByPartner = new Map(await Promise.all([...new Set(pizzas.map((pizza) => pizza.partnerId))]
+        .map(async (id) => [id, await loadPartnerIngredientProfiles(prisma, id)])));
+      res.json(pizzas.map((pizza) => mapPizza({ ...pizza, ingredients: (pizza.ingredients || []).map((row) => ({
+        ...row, ingredient: withPartnerIngredientProfile(row.ingredient, profilesByPartner.get(pizza.partnerId)),
+      })) })));
     } catch (err) {
       console.error(err);
       res.status(500).json({ error: "Error fetching pizzas" });

@@ -28,6 +28,7 @@ import reservationsRoutes from "./routes/reservations.js";
 import scheduledOrdersRoutes from "./routes/scheduledOrders.js";
 import telnyxWebhooksRoutes from "./routes/telnyxWebhooks.js";
 import smsCreditsRoutes from "./routes/smsCredits.js";
+import backofficeNotificationsRoutes from "./routes/backofficeNotifications.js";
 import myordersRoutes from "./routes/myorders.js";
 import billingRoutes from "./routes/billing.js";
 import boostSettingsRoutes from "./routes/boostSettings.js";
@@ -207,6 +208,7 @@ app.use("/api/games", gamesRouter);
 app.use("/api/reservations", reservationsRouter);
 app.use("/api/scheduled-orders", scheduledOrdersRouter);
 app.use("/api/sms-credits", smsCreditsRouter);
+app.use("/api/backoffice-notifications", backofficeNotificationsRoutes(prisma));
 app.use("/api/checkout", checkoutRouter);
 app.use("/api/presence", presenceRouter);
 // Explicit rollout after migration. The local USB pilot mounts only this API.

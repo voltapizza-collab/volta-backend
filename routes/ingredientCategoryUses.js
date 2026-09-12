@@ -1,4 +1,5 @@
 import express from "express";
+import { loadPartnerIngredientProfiles, withPartnerIngredientProfile } from "../services/partnerIngredientProfiles.js";
 
 const normalizePositiveId = (value) => {
   const id = Number(value);
@@ -151,6 +152,8 @@ export default function ingredientCategoryUsesRoutes(prisma) {
       const availableRows = rows.filter((row) =>
         isIngredientAvailable(row.ingredient)
       );
+      const profiles = await loadPartnerIngredientProfiles(prisma, partnerId);
+      availableRows.forEach((row) => { row.ingredient = withPartnerIngredientProfile(row.ingredient, profiles); });
 
       const usesByIngredientId = new Map(
         availableRows.map((row) => [
@@ -212,7 +215,7 @@ export default function ingredientCategoryUsesRoutes(prisma) {
       });
 
       recipeRows.forEach((row) => {
-        const ingredient = row.ingredient;
+        const ingredient = withPartnerIngredientProfile(row.ingredient, profiles);
         if (!isIngredientAvailable(ingredient)) return;
         if (usesByIngredientId.has(row.ingredientId)) return;
 
@@ -275,7 +278,8 @@ export default function ingredientCategoryUsesRoutes(prisma) {
         ],
       });
 
-      res.json(groupUses(rows));
+      const profiles = await loadPartnerIngredientProfiles(prisma, partnerId);
+      res.json(groupUses(rows.map((row) => ({ ...row, ingredient: withPartnerIngredientProfile(row.ingredient, profiles) }))));
     } catch (err) {
       console.error("ingredientCategoryUses all error:", err);
       res.status(500).json({ error: "Error fetching ingredient uses" });

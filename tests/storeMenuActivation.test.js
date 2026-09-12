@@ -43,6 +43,9 @@ test("assertIngredientsCanBeActivated rejects inactive or unpriced ingredients",
 test("ensureStoreIngredientsActive upserts every recipe ingredient as active", async () => {
   const upserts = [];
   const prisma = {
+    store: { findMany: async () => [{ id: 10, partnerId: 7 }, { id: 11, partnerId: 7 }] },
+    $executeRawUnsafe: async () => {},
+    $queryRaw: async () => [{ ingredientId: 20, costPrice: 2 }, { ingredientId: 21, costPrice: 3 }],
     ingredient: {
       findMany: async ({ where }) => where.id.in.map((id) => ({ id })),
     },

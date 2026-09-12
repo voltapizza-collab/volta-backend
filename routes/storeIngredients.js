@@ -1,4 +1,8 @@
 import express from "express";
+import multer from "multer";
+import { v2 as cloudinary } from "cloudinary";
+import { assertCloudinaryConfigured } from "../services/cloudinaryConfig.js";
+import { loadPartnerIngredientProfiles, savePartnerIngredientProfile, withPartnerIngredientProfile } from "../services/partnerIngredientProfiles.js";
 import { sendIngredientDisabledTrackingSms } from "../services/trackingNotifications.js";
 import { ensureIngredientMediaColumns } from "../services/ingredientMediaColumns.js";
 import { ensureIngredientSemanticsAvailable } from "../services/ingredientSemanticsColumns.js";
@@ -6,6 +10,11 @@ import { resolveIngredientDisplay } from "../services/ingredientSemantics.js";
 import prisma from "../services/prisma.js";
 
 const router = express.Router({ mergeParams: true });
+const detailUpload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 5 * 1024 * 1024, files: 1, fieldSize: 65536 },
+  fileFilter: (_req, file, done) => {
+    if (!["image/jpeg", "image/png", "image/webp"].includes(file.mimetype)) return done(new Error("Invalid image format"));
+    done(null, true);
+  } }).single("image");
 const DEMO_PARTNER_SLUG = "volta-demo";
 const DEMO_INGREDIENT_NAMES = new Set([
   "mozzarella demo",
@@ -185,8 +194,10 @@ const getStoreIngredientContext = async (
   });
 
   if (!store) return null;
+  const profiles = await loadPartnerIngredientProfiles(prisma, store.partnerId);
   return {
     store,
+    profiles,
     allowDemoIngredients: store.partner?.slug === DEMO_PARTNER_SLUG,
     locale: semanticsEnabled
       ? normalizeLocaleParam(localeOverride) ||
@@ -198,6 +209,7 @@ const getStoreIngredientContext = async (
 };
 
 const serializeIngredient = (ing, storeStock, context = {}, extra = {}) => {
+  ing = withPartnerIngredientProfile(ing, context.profiles);
   const isPriced = Number(ing.costPrice) > 0;
   const semantic = resolveIngredientDisplay(ing, {
     locale: context.locale || "es",
@@ -234,6 +246,9 @@ const serializeIngredient = (ing, storeStock, context = {}, extra = {}) => {
     aliases: semantic.aliases,
     searchAliases: semantic.searchAliases,
     semanticTranslations: semantic.translations,
+    pendingTranslationCount: (ing.translations || []).filter((item) => !item.isReviewed && item.name).length,
+    pendingAliasCount: (ing.aliases || []).filter((item) => !item.isReviewed).length,
+    hasPartnerProfile: ing.hasPartnerProfile === true,
     searchText,
     semanticMapping: mappedGlobal
       ? {
@@ -514,15 +529,16 @@ router.post("/", async (req, res) => {
       });
     }
 
+    const context = await getStoreIngredientContext(storeId);
+    if (!context) return res.status(404).json({ error: "Store not found" });
     const activeIngredients = await prisma.ingredient.findMany({
       where: {
         id: { in: normalizedIds },
         status: "ACTIVE",
-        costPrice: { gt: 0 },
       },
-      select: { id: true },
+      select: { id: true, costPrice: true },
     });
-    const onboardableIds = new Set(activeIngredients.map((item) => item.id));
+    const onboardableIds = new Set(activeIngredients.filter((item) => Number(withPartnerIngredientProfile(item, context.profiles).costPrice) > 0).map((item) => item.id));
     const blockedIds = normalizedIds.filter((id) => !onboardableIds.has(id));
 
     if (blockedIds.length) {
@@ -564,6 +580,31 @@ router.post("/", async (req, res) => {
   }
 });
 
+router.patch("/:ingredientId/details", (req, res, next) => {
+  detailUpload(req, res, (error) => {
+    if (error) return res.status(400).json({ error: "Sube una foto JPG, PNG o WebP de hasta 5 MB." });
+    next();
+  });
+}, async (req, res) => {
+  try {
+    const storeId = parseId(req.params.storeId);
+    const ingredientId = parseId(req.params.ingredientId);
+    if (!storeId || !ingredientId) return res.status(400).json({ error: "Invalid ids" });
+    const result = await savePartnerIngredientProfile({ prisma, storeId, ingredientId, body: req.body, file: req.file,
+      uploadImage: async (file, partnerId, id) => {
+        assertCloudinaryConfigured();
+        const uploaded = await cloudinary.uploader.upload(`data:${file.mimetype};base64,${file.buffer.toString("base64")}`,
+          { folder: `volta/partners/${partnerId}/ingredients/${id}`, allowed_formats: ["jpg", "png", "webp"] });
+        return { image: uploaded.secure_url, imagePublicId: uploaded.public_id };
+      },
+      deleteImage: (id) => cloudinary.uploader.destroy(id),
+    });
+    res.json(result);
+  } catch (error) {
+    res.status(error.status || 500).json({ error: error.status ? error.message : "No se pudo guardar la ficha. Puedes reintentar." });
+  }
+});
+
 router.patch("/:ingredientId", async (req, res) => {
   try {
     const storeId = parseId(req.params.storeId);
@@ -601,12 +642,14 @@ router.patch("/:ingredientId", async (req, res) => {
     });
 
     if (data.active === true) {
+      const context = await getStoreIngredientContext(storeId);
+      if (!context) return res.status(404).json({ error: "Store not found" });
       const ingredient = await prisma.ingredient.findUnique({
         where: { id: ingredientId },
-        select: { status: true, costPrice: true },
+        select: { id: true, status: true, costPrice: true },
       });
 
-      if (ingredient?.status !== "ACTIVE" || Number(ingredient?.costPrice) <= 0) {
+      if (ingredient?.status !== "ACTIVE" || !(Number(withPartnerIngredientProfile(ingredient, context.profiles)?.costPrice) > 0)) {
         return res.status(400).json({
           error: "Ingredient must be active and priced before activation",
         });

@@ -1,0 +1,13 @@
+# Ficha de ingredientes del backoffice
+
+El precio base de armado, la descripción y la foto se guardan en `PartnerIngredientProfile`, por negocio e ingrediente. La activación sigue siendo por tienda. `PATCH /stores/:storeId/ingredients/:ingredientId/details` obtiene el negocio de la tienda en el servidor; no admite cambiarlo en el cuerpo. Precio y activación se guardan en una transacción. El ingrediente global no se actualiza ni se elimina su foto.
+
+La tabla se añade con `20260912160000_add_partner_ingredient_profiles`; el servicio también prepara esta tabla de forma idempotente para el arranque local. No se transforma ningún dato existente. Mientras no exista un ajuste propio, se conserva el precio, descripción y foto anteriores como referencia. El precio efectivo también se utiliza en los usos por categoría y en las validaciones de activación de pizzas e ingredientes. Los precios finales de productos y extras no se modifican.
+
+La foto opcional admite JPG, PNG o WebP de hasta 5 MB. Se almacena en la carpeta del negocio. Un fallo al guardar elimina la nueva subida sin vincular; la foto anterior del negocio se elimina únicamente después del guardado correcto. Si falla la limpieza, se conserva el resultado de la operación y el archivo queda pendiente de mantenimiento.
+
+Los alias, los alérgenos y las traducciones son referencias del catálogo global, administradas en Global Manager. Los alias usados solo para búsquedas no se muestran como revisados. No tener alias adicionales no invalida un ingrediente: su nombre principal sigue siendo buscable. Los alérgenos locales y los de una identidad global vinculada se combinan para su lectura; una lista vacía se presenta como información sin completar, nunca como «sin alérgenos». Las etiquetas existentes se traducen para su presentación sin inferir ingredientes ni alérgenos nuevos. Las traducciones automáticas pendientes no se publican como revisadas.
+
+La ficha sigue el idioma y moneda del negocio. Acepta coma o punto decimal, rechaza negativos y más de dos decimales. «Usar sugerido» usa la media de otros ingredientes activos de la categoría y solo modifica el borrador abierto; se retira la acción masiva oculta en el mismo botón. El diálogo mantiene acciones visibles y desplazamiento vertical dentro de su contenido.
+
+Validación: pruebas de `partnerIngredientProfiles`, `storeMenuActivation`, `backofficeNotifications` y `InventoryIngredientDialog`; pruebas previas del onboarding y compilación del frontend. La comprobación visual no guarda precios ni fotos en la base real. Publicar frontend y backend juntos para disponer de la ruta y la nota de la mejora. La autenticación de administración conserva el esquema existente del proyecto.

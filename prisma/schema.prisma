@@ -185,6 +185,7 @@ model Partner {
   incentives         Incentive[]
   ingredientExtras   IngredientExtra[]
   ingredientCategoryUses IngredientCategoryUse[]
+  ingredientProfiles PartnerIngredientProfile[]
   partnerCategories  PartnerCategory[]
   reservations       Reservation[]
   smsCreditLedger     SmsCreditLedger[]
@@ -335,6 +336,7 @@ model Ingredient {
   ingredientExtras IngredientExtra[]
   categoryUses     IngredientCategoryUse[]
   storeStocks      StoreIngredientStock[]
+  partnerProfiles  PartnerIngredientProfile[]
   translations     IngredientTranslation[]
   aliases          IngredientAlias[]
   semanticCategory IngredientSemanticCategory? @relation(fields: [semanticCategoryId], references: [id], onDelete: SetNull)
@@ -793,6 +795,22 @@ model CouponReservation {
   sale            Sale     @relation(fields: [saleId], references: [id], onDelete: Cascade)
 
   @@index([couponId, status])
+}
+
+model PartnerIngredientProfile {
+  partnerId    Int
+  ingredientId Int
+  costPrice    Decimal @db.Decimal(10, 2)
+  description  String? @db.Text
+  image        String? @db.Text
+  imagePublicId String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  partner      Partner @relation(fields: [partnerId], references: [id], onDelete: Cascade)
+  ingredient   Ingredient @relation(fields: [ingredientId], references: [id], onDelete: Cascade)
+
+  @@id([partnerId, ingredientId])
+  @@index([ingredientId])
 }
 
 model SmsCreditLedger {
