@@ -2,6 +2,18 @@
 // Keep IDs stable; increase revision only when users need to read the note again.
 export const backofficeAnnouncements = [
   {
+    id: "ingredient-translation-flow-2026-09", revision: 1,
+    publishedAt: "2026-09-12T17:00:00.000Z", expiresAt: "2026-12-12T17:00:00.000Z",
+    category: "improvement", severity: "info", title: "Un solo proceso para los idiomas de ingredientes",
+    message: "En Global Manager, añadir un ingrediente confirma sus siete nombres. La ficha de semántica muestra los idiomas guardados y señala los que faltan; puedes completar una ficha antigua y confirmar sus nombres al guardar.",
+    translations: {
+      en: { title: "One process for ingredient languages", message: "In Global Manager, adding an ingredient confirms its seven names. The semantics panel shows saved languages and highlights missing ones; you can complete an older ingredient and confirm its names when saving." },
+      it: { title: "Un unico processo per le lingue degli ingredienti", message: "In Global Manager, aggiungere un ingrediente conferma i suoi sette nomi. La scheda semantica mostra le lingue salvate e segnala quelle mancanti; puoi completare un ingrediente precedente e confermarne i nomi al salvataggio." },
+      fr: { title: "Un seul processus pour les langues des ingrédients", message: "Dans Global Manager, l’ajout d’un ingrédient confirme ses sept noms. La fiche sémantique affiche les langues enregistrées et signale celles qui manquent ; vous pouvez compléter un ancien ingrédient et confirmer ses noms en enregistrant." },
+      pt: { title: "Um único processo para os idiomas dos ingredientes", message: "No Global Manager, adicionar um ingrediente confirma os seus sete nomes. A ficha de semântica mostra os idiomas guardados e assinala os que faltam; pode completar um ingrediente antigo e confirmar os nomes ao guardar." },
+    },
+  },
+  {
     id: "pos-pause-queue-2026-09", revision: 1,
     publishedAt: "2026-09-12T16:00:00.000Z", expiresAt: "2026-12-12T16:00:00.000Z",
     category: "improvement", severity: "info", title: "La pausa del POS web ocupa toda la pantalla de pedidos",
