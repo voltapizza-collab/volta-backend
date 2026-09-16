@@ -1,9 +1,10 @@
 // Add a user-facing note in the same change that delivers a feature.
 // Keep IDs stable; increase revision only when users need to read the note again.
-// Activate after the coordinated storefront and POS update is available.
-export const pendingIngredientRemovalAnnouncement = {
+export const ingredientRemovalAnnouncement = {
   id: "pizza-ingredient-removals-2026-09",
   revision: 1,
+  publishedAt: "2026-09-16T09:06:22.000Z",
+  expiresAt: "2026-12-16T09:06:22.000Z",
   category: "improvement",
   severity: "info",
   title: "Pizzas con ingredientes a elección",
@@ -18,6 +19,7 @@ export const pendingIngredientRemovalAnnouncement = {
 };
 
 export const backofficeAnnouncements = [
+  ingredientRemovalAnnouncement,
   {
     id: "ingredient-translation-flow-2026-09", revision: 1,
     publishedAt: "2026-09-12T17:00:00.000Z", expiresAt: "2026-12-12T17:00:00.000Z",
