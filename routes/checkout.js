@@ -1,4 +1,5 @@
 import express from "express";
+import { validateIngredientRemovals } from "../services/ingredientRemovals.js";
 import { lockCheckoutCoupon, reserveCouponForSale, releaseCouponReservation, reconcileCouponReservations } from "../services/couponReservations.js";
 import { evaluateCoupon, calculateCouponDiscount } from "../services/couponEvaluation.js";
 export { calculateCouponDiscount } from "../services/couponEvaluation.js";
@@ -498,6 +499,7 @@ const sanitizeLine = (line, index) => ({
   type: line?.type ? String(line.type).trim().slice(0, 60) : null,
   source: line?.source ? String(line.source).trim().slice(0, 60) : null,
   extras: asArray(line?.extras),
+  removedIngredients: asArray(line?.removedIngredients),
   ingredients: asArray(line?.ingredients),
   allergens: asArray(line?.allergens),
   customDetails: sanitizeCustomDetails(line?.customDetails, asArray(line?.ingredients)),
@@ -848,7 +850,7 @@ export default function checkoutRoutes(prisma) {
         return res.status(403).json({ ok: false, error: "cash_payment_not_allowed" });
       }
 
-      let lines = rawLines.map(sanitizeLine);
+      let lines = (await validateIngredientRemovals(prisma, rawLines, partnerId, storeId)).map(sanitizeLine);
       const incompleteCustomLine = lines.find(
         (line) =>
           isCustomBuildLine(line) &&

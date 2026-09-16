@@ -1,5 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
+import { pendingIngredientRemovalAnnouncement } from "../data/backofficeAnnouncements.js";
 import express from "express";
 import { backofficeAnnouncements } from "../data/backofficeAnnouncements.js";
 import { buildSmsBalanceNotification, buildBackofficeNotifications, validateAnnouncement } from "../services/backofficeNotifications.js";
@@ -46,6 +47,12 @@ test("release feed filters dates and audiences, orders urgent notices first and 
   assert.deepEqual(result.map((item) => item.id), ["sms-balance", "this-partner", "test-improvement"]);
   assert.equal(result[1].partnerIds, undefined);
   assert.equal(result[1].requiresAction, false);
+});
+
+test("ingredient removal announcement stays unpublished until the coordinated rollout", () => {
+  assert.equal(backofficeAnnouncements.some((item) => item.id === pendingIngredientRemovalAnnouncement.id), false);
+  assert.equal(validateAnnouncement(pendingIngredientRemovalAnnouncement), false);
+  assert.equal(validateAnnouncement({ ...pendingIngredientRemovalAnnouncement, publishedAt: "2026-09-16T00:00:00Z" }), true);
 });
 
 test("every shipped announcement is valid and uniquely versioned", () => {

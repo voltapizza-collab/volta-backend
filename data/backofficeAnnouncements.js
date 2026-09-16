@@ -1,5 +1,22 @@
 // Add a user-facing note in the same change that delivers a feature.
 // Keep IDs stable; increase revision only when users need to read the note again.
+// Activate after the coordinated storefront and POS update is available.
+export const pendingIngredientRemovalAnnouncement = {
+  id: "pizza-ingredient-removals-2026-09",
+  revision: 1,
+  category: "improvement",
+  severity: "info",
+  title: "Pizzas con ingredientes a elección",
+  message: "Tus clientes pueden quitar ingredientes de las pizzas enteras de carta. El desplegable lee automáticamente los ingredientes guardados en la receta, igual que la descripción, sin tener que activarlos uno a uno.",
+  detail: "El precio se mantiene. Las retiradas se pueden editar en el carrito y se conservan al repetir un pedido. Cocina y ticket agrupan retiradas y extras bajo CAMBIOS en cada pizza; si no hay modificaciones, muestran Receta original. El SUNMI requiere la app 0.3.8. Las mitades y las pizzas de promociones quedan para una próxima fase.",
+  translations: {
+    en: { title: "Let customers leave ingredients out", message: "Customers can remove ingredients from whole menu pizzas. The dropdown automatically reads the ingredients saved in the recipe, just like the description, without enabling them one by one.", detail: "The price stays the same. Removals can be edited in the cart and are kept when repeating an order. Kitchen and receipt group removals and extras under CAMBIOS for each pizza; unchanged pizzas show Receta original. SUNMI requires app 0.3.8. Half pizzas and pizzas in promotions will follow in a later phase." },
+    it: { title: "Pizze con ingredienti a scelta", message: "I clienti possono togliere ingredienti dalle pizze intere del menu. Il menu a discesa legge automaticamente gli ingredienti salvati nella ricetta, come la descrizione, senza doverli attivare uno per uno.", detail: "Il prezzo non cambia. Le rimozioni sono modificabili nel carrello e vengono conservate ripetendo l’ordine. Cucina e scontrino raggruppano rimozioni ed extra sotto CAMBIOS per ogni pizza; senza modifiche appare Receta original. SUNMI richiede l’app 0.3.8. Le mezze pizze e le pizze nelle promozioni arriveranno in una fase successiva." },
+    fr: { title: "Des pizzas avec les ingrédients au choix", message: "Les clients peuvent retirer des ingrédients des pizzas entières de la carte. La liste déroulante lit automatiquement les ingrédients enregistrés dans la recette, comme la description, sans devoir les activer un par un.", detail: "Le prix reste identique. Les retraits sont modifiables dans le panier et conservés lors d’une nouvelle commande identique. La cuisine et le ticket regroupent retraits et suppléments sous CAMBIOS pour chaque pizza ; sans modification, Receta original s’affiche. SUNMI nécessite l’app 0.3.8. Les demi-pizzas et les pizzas des promotions suivront dans une prochaine phase." },
+    pt: { title: "Pizzas com ingredientes à escolha", message: "Os clientes podem retirar ingredientes das pizzas inteiras da ementa. A lista lê automaticamente os ingredientes guardados na receita, tal como a descrição, sem ser necessário ativá-los um a um.", detail: "O preço mantém-se. As retiradas podem ser editadas no carrinho e são conservadas ao repetir o pedido. Cozinha e talão agrupam retiradas e extras sob CAMBIOS em cada pizza; sem alterações, aparece Receta original. O SUNMI requer a app 0.3.8. As metades e as pizzas de promoções ficam para uma fase posterior." },
+  },
+};
+
 export const backofficeAnnouncements = [
   {
     id: "ingredient-translation-flow-2026-09", revision: 1,

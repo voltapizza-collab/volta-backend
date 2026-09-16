@@ -275,6 +275,8 @@ model MenuPizzaIngredient {
   menuPizzaId  Int
   ingredientId Int
   qtyBySize    Json
+  // Legacy column from the applied migration; recipe membership now determines removals.
+  removable    Boolean    @default(false)
 
   menuPizza    MenuPizza  @relation(fields: [menuPizzaId], references: [id], onDelete: Cascade)
   ingredient   Ingredient @relation(fields: [ingredientId], references: [id], onDelete: Cascade)

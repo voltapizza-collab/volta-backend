@@ -849,7 +849,7 @@ export const formatSale = (sale) => {
   };
 };
 
-const buildRepeatCartDraft = (sale) => {
+export const buildRepeatCartDraft = (sale) => {
   const formatted = formatSale(sale);
   const items = formatted.products.map((item, index) => ({
     ...item,
