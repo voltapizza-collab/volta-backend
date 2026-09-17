@@ -43,4 +43,14 @@ Las pruebas automáticas usan respuestas del traductor y almacenamiento simulado
 
 Esta es una mejora interna de Global Manager. No se publica un aviso para los administradores de las pizzerías porque sus pantallas y disponibilidad del catálogo no cambian hasta que se incorporen y revisen ingredientes.
 
+## Limpieza de identidades de la lista maestra (17 de septiembre de 2026)
+
+El cierre de la limpieza dejó 1.104 fichas seleccionables, después de consolidar 11 registros duplicados y conservar otras 25 fichas ambiguas aparte. Los siete lotes de ampliación añaden 1.910 fichas, en las mismas 14 categorías (3.014 en total); su evidencia y recuentos están en `volta-storefront/docs/ingredient-master-expansion.md`. Los dos primeros lotes dejaron 1.612 fichas; las 1.402 siguientes se incorporaron conservando todas las anteriores. Los nombres mantienen sus tildes y caracteres propios; los alias y las traducciones no incrementan el número de ingredientes. La ampliación es local, con revisión semántica e imagen pendientes; no se han generado traducciones ni se han escrito ingredientes en la base de datos.
+
+`data/ingredientMasterIdentityRules.js` recoge las 11 claves retiradas y las 25 pendientes. El servidor resuelve las claves retiradas hacia la ficha superviviente y rechaza las pendientes con 409, también para clientes antiguos. Debe mantenerse sincronizado con `legacyCanonicalKeys` en la lista maestra del storefront y con `ingredientMasterPendingReview.json`. El parámetro opcional `legacyCanonicalKeys` solo se usa para comprobar duplicados; no modifica claves existentes ni se persiste como columna o alias visible.
+
+La comprobación de duplicados compara el nombre y los alias entrantes con nombres, traducciones y alias existentes, además de las claves canónicas actuales e históricas. Utiliza coincidencias completas normalizadas y conserva las letras no latinas. Las preparaciones distintas mantienen identidades separadas. No se ejecuta ninguna migración ni se fusionan registros existentes de la base de datos.
+
+Publicar estas reglas en el backend antes de actualizar el selector del storefront. El informe y el detalle de decisiones están en `volta-storefront/docs/ingredient-master-identity-cleanup.md` y `ingredient-master-identity-audit.json`. La limpieza está preparada localmente; esta nota no implica un despliegue.
+
 El alta utiliza siete idiomas. Árabe se muestra de derecha a izquierda y chino usa caracteres simplificados (`zh` en Volta, `zh-CN` en MyMemory). El editor de ingredientes existentes también puede completar AR/ZH aunque los otros cinco nombres ya estén rellenos. Las entradas antiguas de caché conservan sus cuatro traducciones y consultan únicamente AR/ZH al volver a utilizarse. No se modifica ni retraduce el catálogo existente automáticamente.

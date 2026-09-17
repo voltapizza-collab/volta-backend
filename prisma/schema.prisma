@@ -345,10 +345,22 @@ model Ingredient {
   localSemanticMapping IngredientLocalSemanticMapping? @relation("LocalIngredientSemanticMapping")
   globalSemanticMappings IngredientLocalSemanticMapping[] @relation("GlobalIngredientSemanticMapping")
   suggestedLocalSemanticMappings IngredientLocalSemanticMapping[] @relation("SuggestedIngredientSemanticMapping")
+  catalogState IngredientCatalogState?
 
   @@index([semanticCategoryId])
   @@index([semanticStatus])
   @@index([imageStatus])
+}
+model IngredientCatalogState {
+  ingredientId Int @id
+  ingredient Ingredient @relation(fields: [ingredientId], references: [id], onDelete: Restrict)
+  masterCanonicalKey String @db.VarChar(120)
+  archivedAt DateTime?
+  previousStatus String? @db.VarChar(20)
+  updatedAt DateTime @updatedAt
+
+  @@index([masterCanonicalKey])
+  @@index([archivedAt])
 }
 model IngredientLocalSemanticMapping {
   id                 Int      @id @default(autoincrement())

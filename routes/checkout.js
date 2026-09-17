@@ -1230,10 +1230,12 @@ export default function checkoutRoutes(prisma) {
         sale.customerData && typeof sale.customerData === "object" && !Array.isArray(sale.customerData)
           ? sale.customerData
           : {};
-      const customerData =
-        stripeEmail && !normalizeEmail(existingCustomerData.email)
-          ? { ...existingCustomerData, email: stripeEmail }
-          : existingCustomerData;
+      const customerData = {
+        ...existingCustomerData,
+        paymentMode: "card",
+        paymentStatus: "card_paid",
+        ...(stripeEmail && !normalizeEmail(existingCustomerData.email) ? { email: stripeEmail } : {}),
+      };
 
       const paidSale = await tx.sale.update({
         where: { id: sale.id },
@@ -1241,7 +1243,7 @@ export default function checkoutRoutes(prisma) {
           status: "PAID",
           stripeCheckoutSessionId: session.id || sale.stripeCheckoutSessionId,
           stripePaymentIntentId: session.payment_intent || sale.stripePaymentIntentId,
-          ...(stripeEmail && !normalizeEmail(existingCustomerData.email) ? { customerData } : {}),
+          customerData,
           ...(sale.boostActive && !sale.boostPaidAt ? { boostPaidAt: new Date() } : {}),
         },
       });

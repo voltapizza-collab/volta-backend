@@ -1,5 +1,17 @@
 # Avisos del backoffice
 
+## Pendientes e historial — 17 de septiembre de 2026
+
+La apertura manual de Avisos ahora muestra una bandeja de **Pendientes** y un **Historial**. Antes, abrir Avisos volvía a encolar todas las novedades, incluidas las que ya estaban marcadas como leídas; esto podía mostrar el cartel con «Leído» y «Continuar», como en la captura reportada.
+
+Marcar como leído, desde una ficha o desde la lista, mueve la novedad al historial. Los carteles automáticos y su cola excluyen las lecturas nuevas, incluidas las recibidas de otra pestaña. Las lecturas anteriores mantienen sus claves `id:revision` y migran al historial cuando su contenido está disponible. Un cambio real de revisión puede volver a notificar; no se han cambiado las revisiones publicadas para esta corrección.
+
+El historial guarda el contenido y todas sus traducciones por negocio en este navegador, por lo que una novedad leída sigue consultable cuando caduca o sale del feed. Sus entradas también cuentan como comprobantes de lectura. Los comprobantes ya no se recortan a los últimos 500. Se conservan las lecturas simultáneas de otras pestañas; si el almacenamiento falla, hay respaldo en memoria durante la sesión de la página. No hay sincronización entre dispositivos u orígenes y borrar los datos del navegador elimina este historial; una novedad ya retirada antes de esta actualización no puede reconstruirse solo a partir de su identificador antiguo.
+
+Las alertas operativas SMS conservan su comportamiento: se resuelven con el saldo, no al marcarlas como leídas. Su destino continúa conectado al formulario de recarga existente.
+
+Validación: 22 pruebas de interfaz, 7 de backend, compilación de producción y recorrido con Edge en escritorio, 393 px y 320 px. Se verificaron archivo desde la lista, consulta de historial, recarga sin repetición, traducciones y teclado. Capturas en `../output/notification-inbox/`. La corrección está en el workspace y compilada; no publicada en el entorno remoto. No requiere migración. `notificationInboxAnnouncement` está preparada en ES/EN/IT/FR/PT y fuera del catálogo activo hasta el despliegue.
+
 Implementación del 12 de septiembre de 2026. Requiere publicar tanto el backend como el storefront. No necesita migraciones ni cambios en el proceso de cobro.
 
 ## Saldo de SMS

@@ -33,9 +33,13 @@ const parseLaunchAt = (value) => {
 const PRODUCT_TAGS = new Set([
   "spicy",
   "vegan",
+  "vegetarian",
+  "gluten_free",
+  "kosher",
+  "halal",
 ]);
 
-const parseProductTags = (value) => {
+export const parseProductTags = (value) => {
   const parsed = parseMaybeJson(value, []);
 
   if (!Array.isArray(parsed)) return [];
@@ -764,7 +768,7 @@ export default function pizzasRoutes(prisma) {
         cookingMethod: nextBaseName,
         launchAt: parseLaunchAt(body.launchAt),
         availableUntil: parseLaunchAt(body.availableUntil),
-        productTags: parseProductTags(body.productTags),
+        productTags: body.productTags === undefined ? parseProductTags(existing.productTags) : parseProductTags(body.productTags),
         image: nextImage,
         imagePublicId: nextImagePublicId,
       };

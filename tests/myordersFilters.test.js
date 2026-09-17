@@ -48,4 +48,34 @@ test("formatted POS orders infer card payment from Stripe ids", () => {
 
   assert.equal(order.paymentMode, "card");
   assert.equal(order.customerData.paymentMode, "card");
+  assert.equal(order.paymentStatus, "card_paid");
+});
+
+for (const paymentStatus of ["awaiting_card_payment", "cash_pending"]) {
+  test(`confirmed card overrides stale ${paymentStatus} without rewriting the sale`, () => {
+    const sale = { id: 3, status: "PAID", products: [], total: 11.18,
+      customerData: { paymentMode: "card", paymentStatus } };
+    const order = formatSale(sale);
+    assert.equal(order.paymentMode, "card");
+    assert.equal(order.paymentStatus, "card_paid");
+    assert.equal(order.customerData.paymentStatus, "card_paid");
+    assert.equal(sale.customerData.paymentStatus, paymentStatus);
+  });
+}
+
+test("an unconfirmed or canceled card is never inferred paid from Stripe identifiers", () => {
+  for (const status of ["PENDING", "AWAITING_PAYMENT", "CANCELED"]) {
+    const order = formatSale({ id: 4, status, stripeCheckoutSessionId: "cs_unpaid", products: [], customerData: {} });
+    assert.equal(order.paymentMode, "card");
+    assert.notEqual(order.paymentStatus, "card_paid");
+  }
+});
+
+test("cash collection is determined independently of the kitchen PAID status", () => {
+  for (const [stored, expected] of [[undefined, "cash_pending"], ["cash_pending", "cash_pending"], ["cash_paid", "cash_paid"]]) {
+    const order = formatSale({ id: 5, status: "PAID", products: [],
+      customerData: { paymentMode: "cash", paymentStatus: stored } });
+    assert.equal(order.paymentMode, "cash");
+    assert.equal(order.paymentStatus, expected);
+  }
 });

@@ -16,6 +16,8 @@ import {
 import prisma from "../services/prisma.js";
 import { onboardIngredientWithImage } from "../services/ingredientOnboarding.js";
 import { translateIngredient } from "../services/ingredientTranslation.js";
+import { archiveCatalogIngredient, saveCatalogIngredient, catalogInclude } from "../services/ingredientCatalog.js";
+import { getMasterIngredient } from "../services/ingredientMasterCatalogue.js";
 
 const router = express.Router();
 const upload = multer({ storage: multer.memoryStorage() });
@@ -45,6 +47,17 @@ router.post("/onboarding", (req, res, next) => {
     await requireIngredientSemantics();
     if (req.file) await ensureIngredientMediaColumns(prisma);
     const body = req.body.payload ? parseMaybeJson(req.body.payload, {}) : req.body;
+    const master = getMasterIngredient(body.canonicalKey);
+    if (!master) return res.status(409).json({ error: "Selecciona un ingrediente de la lista maestra protegida." });
+    const archived = await prisma.ingredientCatalogState.findFirst({
+      where: { masterCanonicalKey: master.canonicalKey, archivedAt: { not: null } },
+    });
+    if (archived) {
+      const restored = await saveCatalogIngredient({ prisma, id: archived.ingredientId, body, file: req.file, restore: true,
+        uploadImage: (file, id) => uploadIngredientImage(file, id, ["jpg", "png", "webp"]),
+        deleteImage: publicId => cloudinary.uploader.destroy(publicId) });
+      return res.json({ ...restored, displayName: restored.name, semanticTranslations: restored.translations, semanticAliases: restored.aliases });
+    }
     const ingredient = await onboardIngredientWithImage({ prisma, body, file: req.file,
       uploadImage: async (file) => {
         try { return await uploadIngredientImage(file, "onboarding", ["jpg", "png", "webp"]); }
@@ -56,6 +69,35 @@ router.post("/onboarding", (req, res, next) => {
       semanticTranslations: ingredient.translations, semanticAliases: ingredient.aliases });
   } catch (err) {
     res.status(getErrorStatus(err, 500)).json({ error: err.status ? err.message : "No se pudo guardar el ingrediente. Inténtalo de nuevo." });
+  }
+});
+
+router.get("/catalog-pool", async (_req, res) => {
+  try {
+    const entries = await prisma.ingredientCatalogState.findMany({ where: { archivedAt: { not: null } },
+      include: { ingredient: { include: catalogInclude } } });
+    res.json(entries.map(entry => ({ ...entry.ingredient, masterCanonicalKey: entry.masterCanonicalKey })));
+  } catch {
+    res.status(503).json({ error: "No se pudo cargar la bolsa de ingredientes conservados. Revisa que la actualización del catálogo esté aplicada." });
+  }
+});
+
+router.patch("/:id/editor", (req, res, next) => onboardingUpload(req, res, error => {
+  if (error) return res.status(400).json({ error: "Usa una sola foto JPG, PNG o WebP de hasta 5 MB." });
+  next();
+}), async (req, res) => {
+  try {
+    const id = Number(req.params.id);
+    if (!Number.isInteger(id) || id <= 0) return res.status(400).json({ error: "Ingrediente no válido." });
+    await requireIngredientSemantics();
+    if (req.file) await ensureIngredientMediaColumns(prisma);
+    const body = req.body.payload ? parseMaybeJson(req.body.payload, {}) : req.body;
+    const ingredient = await saveCatalogIngredient({ prisma, id, body, file: req.file,
+      uploadImage: (file, ingredientId) => uploadIngredientImage(file, ingredientId, ["jpg", "png", "webp"]),
+      deleteImage: publicId => cloudinary.uploader.destroy(publicId) });
+    res.json({ ...ingredient, displayName: ingredient.name, semanticTranslations: ingredient.translations, semanticAliases: ingredient.aliases });
+  } catch (error) {
+    res.status(getErrorStatus(error, 500)).json({ error: error.status ? error.message : "No se pudieron guardar los cambios. La ficha anterior se conserva." });
   }
 });
 
@@ -261,10 +303,11 @@ router.get("/", async (req, res) => {
     const semanticsEnabled = await ensureIngredientSemanticsAvailable(prisma);
 
     const ingredients = await prisma.ingredient.findMany({
-      where: { isSystem: true },
+      where: { isSystem: true, NOT: { catalogState: { is: { archivedAt: { not: null } } } } },
       orderBy: { createdAt: "desc" },
       select: {
         ...ingredientLegacySelect,
+        catalogState: { select: { masterCanonicalKey: true } },
         ...(semanticsEnabled
           ? {
               canonicalKey: true,
@@ -867,6 +910,9 @@ router.patch("/:id/semantics", async (req, res) => {
     )
       ? payload.canonicalKey
       : existing.canonicalKey;
+    if (existing.canonicalKey && finalCanonicalKey !== existing.canonicalKey) {
+      return res.status(409).json({ error: "La identidad del ingrediente está protegida. Editar la ficha no cambia la lista maestra." });
+    }
     const finalSemanticCategoryId = Object.prototype.hasOwnProperty.call(
       payload,
       "semanticCategoryId"
@@ -1229,96 +1275,13 @@ router.patch("/:id", upload.single("image"), async (req, res) => {
 router.delete("/:id", async (req, res) => {
   try {
     const id = Number(req.params.id);
-
-    if (!Number.isInteger(id) || id <= 0) {
-      return res.status(400).json({ error: "Invalid ingredient id" });
-    }
-
-    const existing = await prisma.ingredient.findUnique({
-      where: { id },
-      select: { id: true, imagePublicId: true },
+    if (!Number.isInteger(id) || id <= 0) return res.status(400).json({ error: "Ingrediente no válido." });
+    res.json(await archiveCatalogIngredient(prisma, id, req.body?.confirmReturnToPool));
+  } catch (error) {
+    res.status(getErrorStatus(error, 500)).json({
+      error: error.status ? error.message : "No se pudo devolver el ingrediente a la bolsa. La ficha se conserva.",
+      ...(error.usage ? { usage: error.usage } : {}),
     });
-
-    if (!existing) {
-      return res.status(404).json({ error: "Ingredient not found" });
-    }
-
-    const [
-      storeReferenceCount,
-      activeStoreReferenceCount,
-      productReferenceCount,
-      extraReferenceCount,
-      categoryUseReferenceCount,
-    ] = await Promise.all([
-      prisma.storeIngredientStock.count({
-        where: { ingredientId: id },
-      }),
-      prisma.storeIngredientStock.count({
-        where: {
-          ingredientId: id,
-          active: true,
-          store: {
-            active: true,
-            partner: { active: true },
-          },
-        },
-      }),
-      prisma.menuPizzaIngredient.count({
-        where: { ingredientId: id },
-      }),
-      prisma.ingredientExtra.count({
-        where: { ingredientId: id },
-      }),
-      prisma.ingredientCategoryUse.count({
-        where: { ingredientId: id },
-      }),
-    ]);
-    const hasOperationalReferences =
-      storeReferenceCount > 0 ||
-      productReferenceCount > 0 ||
-      extraReferenceCount > 0 ||
-      categoryUseReferenceCount > 0;
-
-    if (hasOperationalReferences) {
-      return res.status(409).json({
-        error:
-          "Ingredient cannot be deleted because it is used by stores, products, extras, or category rules. Disable it instead.",
-        usage: {
-          stores: storeReferenceCount,
-          activeStores: activeStoreReferenceCount,
-          products: productReferenceCount,
-          extras: extraReferenceCount,
-          categoryUses: categoryUseReferenceCount,
-        },
-      });
-    }
-
-    await prisma.$transaction([
-      prisma.storeIngredientStock.deleteMany({
-        where: { ingredientId: id },
-      }),
-      prisma.menuPizzaIngredient.deleteMany({
-        where: { ingredientId: id },
-      }),
-      prisma.ingredientExtra.deleteMany({
-        where: { ingredientId: id },
-      }),
-      prisma.ingredient.delete({
-        where: { id },
-      }),
-    ]);
-
-    if (existing.imagePublicId) {
-      assertCloudinaryConfigured();
-      await cloudinary.uploader.destroy(existing.imagePublicId).catch((error) => {
-        console.error("Cloudinary ingredient image cleanup failed:", error);
-      });
-    }
-
-    res.json({ ok: true });
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: "error deleting ingredient" });
   }
 });
 router.post("/suggestions", async (req, res) => {

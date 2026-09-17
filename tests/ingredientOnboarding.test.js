@@ -5,6 +5,7 @@ import os from "node:os";
 import path from "node:path";
 import { normalizeIngredientOnboarding, createIngredientOnboarding, onboardIngredientWithImage } from "../services/ingredientOnboarding.js";
 import { createIngredientTranslator } from "../services/ingredientTranslation.js";
+import { ingredientMasterIdentityRules } from "../data/ingredientMasterIdentityRules.js";
 
 const body = () => ({ name: "Pollo frito", category: "CARNES", canonicalKey: "pollo_frito", aliases: ["POLLO FRITO"],
   translations: ["es", "en", "it", "fr", "pt", "ar", "zh"].map((locale) => ({ locale, name: locale === "es" ? "Pollo frito" : names[locale], isReviewed: true })) });
@@ -83,6 +84,61 @@ test("limits provider calls and retries failed requests without leaking provider
   const retry = createIngredientTranslator({ env, fetchImpl: async () => { if (++calls === 1) throw new Error("provider secret data"); return response(); } });
   await assert.rejects(retry(request), (err) => !err.message.includes("secret"));
   assert.equal((await retry(request)).translations.length, 7);
+});
+
+test("same-language aliases and retired master keys prevent new duplicate identities", async () => {
+  let created = 0;
+  let existing = [];
+  const prisma = { $transaction: async (run) => run({
+    ingredientSemanticCategory: { findUnique: async () => ({ id: 7 }) },
+    ingredient: { findMany: async () => existing, create: async ({ data }) => {
+      created++;
+      assert.equal(data.legacyCanonicalKeys, undefined, "lookup hints must not be written as ingredient columns");
+      return { id: 42 };
+    } },
+  }) };
+  const payload = (name, canonicalKey, aliases = [], legacyCanonicalKeys = []) => ({ ...body(),
+    name, canonicalKey, aliases, legacyCanonicalKeys,
+    translations: body().translations.map((row) => ({ ...row, name })),
+  });
+  existing = [{ name: "Maní", canonicalKey: "peanut" }];
+  await assert.rejects(createIngredientOnboarding(prisma, payload("Cacahuete", "cacahuete_man", ["Maní", "Cacahuate"])), { status: 409 });
+  existing = [{ name: "Nombre histórico", canonicalKey: "champi_nes_blancos" }];
+  await assert.rejects(createIngredientOnboarding(prisma, payload("Champiñones blancos", "champi_ones_blancos", [], ["champi_nes_blancos"])), { status: 409 });
+  // A stale client still using the old Spanish name is rejected against the surviving aliases.
+  existing = [{ name: "Carne molida de vacuno", canonicalKey: "carne_molida_de_vacuno", aliases: [{ alias: "Carne molida de res" }] }];
+  await assert.rejects(createIngredientOnboarding(prisma, payload("Carne molida de res", "carne_molida_de_res")), { status: 409 });
+  assert.equal(created, 0);
+  existing = [{ name: "Piña caramelizada", canonicalKey: "pi_a_caramelizada" }];
+  assert.deepEqual(await createIngredientOnboarding(prisma, payload("Piña", "pi_a", ["Ananá"])), { id: 42 });
+  assert.equal(created, 1, "different preparations remain separate ingredients");
+});
+
+test("alias identity comparison preserves non-Latin letters and validates legacy-key hints", async () => {
+  const input = { ...body(), aliases: ["奶酪"] };
+  let existingName = "豆腐";
+  const prisma = { $transaction: async (run) => run({
+    ingredientSemanticCategory: { findUnique: async () => ({ id: 7 }) },
+    ingredient: { findMany: async () => [{ name: existingName }], create: async () => ({ id: 42 }) },
+  }) };
+  assert.deepEqual(await createIngredientOnboarding(prisma, input), { id: 42 });
+  existingName = "奶酪";
+  await assert.rejects(createIngredientOnboarding(prisma, input), { status: 409 });
+  for (const legacyCanonicalKeys of ["old_key", [null], ["old key"], Array(31).fill("old_key")]) {
+    assert.throws(() => normalizeIngredientOnboarding({ ...body(), legacyCanonicalKeys }), /referencias/);
+  }
+});
+
+test("retired keys resolve on the server and ambiguous entries cannot be created by stale clients", () => {
+  for (const [oldKey, canonicalKey] of Object.entries(ingredientMasterIdentityRules.redirects)) {
+    const data = normalizeIngredientOnboarding({ ...body(), canonicalKey: oldKey });
+    assert.equal(data.canonicalKey, canonicalKey);
+    assert.ok(data.legacyCanonicalKeys.includes(oldKey));
+    assert.equal(normalizeIngredientOnboarding({ ...body(), canonicalKey }).canonicalKey, canonicalKey);
+  }
+  for (const canonicalKey of ingredientMasterIdentityRules.pendingKeys) {
+    assert.throws(() => normalizeIngredientOnboarding({ ...body(), canonicalKey }), { status: 409 });
+  }
 });
 
 test("confirming the displayed onboarding names saves all seven reviewed and publishes their identity", async () => {

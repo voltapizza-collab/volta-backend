@@ -1,4 +1,6 @@
 import { normalizeCanonicalKey, normalizeAliasInput } from "./ingredientSemanticAdmin.js";
+import { normalizeSearchText } from "./ingredientSemantics.js";
+import { ingredientMasterIdentityRules } from "../data/ingredientMasterIdentityRules.js";
 
 export const ONBOARDING_LOCALES = ["es", "en", "it", "fr", "pt", "ar", "zh"];
 const categoryKeys = {
@@ -21,8 +23,25 @@ const text = (value, max = 160) => {
 export function normalizeIngredientOnboarding(body = {}) {
   const name = text(body.name, 120);
   const category = text(body.category, 80).toUpperCase();
-  const canonicalKey = normalizeCanonicalKey(body.canonicalKey);
+  const inputKey = normalizeCanonicalKey(body.canonicalKey);
+  const canonicalKey = Object.hasOwn(ingredientMasterIdentityRules.redirects, inputKey)
+    ? ingredientMasterIdentityRules.redirects[inputKey] : inputKey;
   if (!name || !categoryKeys[category] || !canonicalKey) fail("Selecciona un ingrediente válido de la lista maestra.");
+  if (ingredientMasterIdentityRules.pendingKeys.includes(canonicalKey)) {
+    fail("Este ingrediente necesita aclarar su identidad antes de añadirlo al catálogo.", 409);
+  }
+  const legacyInput = body.legacyCanonicalKeys ?? [];
+  if (!Array.isArray(legacyInput) || legacyInput.length > 30) fail("Revisa las referencias del ingrediente de la lista maestra.");
+  const providedLegacyKeys = legacyInput.map((value) => {
+    if (typeof value !== "string" || !/^[a-z0-9]+(?:_[a-z0-9]+)*$/.test(value) || value.length > 120) {
+      fail("Revisa las referencias del ingrediente de la lista maestra.");
+    }
+    return value;
+  });
+  const legacyCanonicalKeys = [...new Set([
+    ...Object.entries(ingredientMasterIdentityRules.redirects).filter(([, target]) => target === canonicalKey).map(([key]) => key),
+    ...providedLegacyKeys,
+  ])].filter((value) => value !== canonicalKey);
   const input = Array.isArray(body.translations) ? body.translations : [];
   if (input.length !== ONBOARDING_LOCALES.length || new Set(input.map((item) => item?.locale)).size !== ONBOARDING_LOCALES.length) {
     fail("Completa los siete idiomas: español, inglés, italiano, francés, portugués, árabe y chino.");
@@ -37,7 +56,7 @@ export function normalizeIngredientOnboarding(body = {}) {
     .slice(0, 30).map((alias) => normalizeAliasInput({ alias: text(alias), locale: "es",
       searchable: true, displayable: true, isReviewed: true, source: "MASTER_SOURCE" }));
   const aliases = [...new Map(normalizedAliases.map((alias) => [alias.normalizedAlias, alias])).values()];
-  return { name, category, canonicalKey, translations, aliases,
+  return { name, category, canonicalKey, legacyCanonicalKeys, translations, aliases,
     semanticCategoryKey: categoryKeys[category],
     allergens: [...new Set((Array.isArray(body.allergens) ? body.allergens : []).map((item) => text(item, 80)).filter(Boolean))].slice(0, 30),
   };
@@ -52,11 +71,13 @@ export async function createIngredientOnboarding(prisma, body, imageData = {}) {
       const existing = await tx.ingredient.findMany({ where: { isSystem: true }, select: {
         id: true, canonicalKey: true, name: true, translations: { select: { name: true } }, aliases: { select: { alias: true } },
       } });
-      const identityKeys = new Set([normalizeCanonicalKey(data.name), data.canonicalKey]);
-      if (existing.some((item) => [item.name, item.canonicalKey,
+      // Legacy master keys are lookup hints only: do not rewrite existing IDs or persist them as displayable aliases.
+      const identityKeys = new Set([data.canonicalKey, ...data.legacyCanonicalKeys]);
+      const nameKeys = new Set([data.name, ...data.aliases.map((alias) => alias.alias)].map(normalizeSearchText));
+      if (existing.some((item) => identityKeys.has(item.canonicalKey) || [item.name,
         ...(item.translations || []).map((translation) => translation.name),
         ...(item.aliases || []).map((alias) => alias.alias)]
-        .some((value) => value && identityKeys.has(normalizeCanonicalKey(value))))) {
+        .some((value) => value && nameKeys.has(normalizeSearchText(value))))) {
         fail("Este ingrediente ya está añadido al catálogo global.", 409);
       }
       return tx.ingredient.create({ data: {

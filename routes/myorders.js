@@ -247,7 +247,9 @@ const normalizeSalePaymentMode = (sale, customerData = asObject(sale?.customerDa
     .toLowerCase();
   const rawStatus = String(customerData.paymentStatus || sale?.paymentStatus || "").trim().toLowerCase();
 
-  if (rawMode === "cash" || rawMode === "efectivo" || rawStatus.includes("cash")) return "cash";
+  if (rawMode === "cash" || rawMode === "efectivo") return "cash";
+  if (["card", "tarjeta", "stripe", "stripe_checkout"].includes(rawMode)) return "card";
+  if (rawStatus.includes("cash")) return "cash";
   if (
     rawMode === "card" ||
     rawMode === "tarjeta" ||
@@ -265,12 +267,15 @@ const normalizeSalePaymentMode = (sale, customerData = asObject(sale?.customerDa
 };
 
 const normalizeSalePaymentStatus = (sale, customerData = asObject(sale?.customerData)) => {
-  const rawStatus = String(customerData.paymentStatus || sale?.paymentStatus || "").trim();
-  if (rawStatus) return rawStatus;
-
+  const rawStatus = String(customerData.paymentStatus || sale?.paymentStatus || "").trim().toLowerCase();
   const mode = normalizeSalePaymentMode(sale, customerData);
+  // Older Stripe confirmations left the checkout's pending status in customerData.
+  // Cash orders also use Sale.status=PAID, so only card orders can be inferred paid.
+  if (mode === "card" && sale?.status === "PAID" &&
+    ["", "pending", "awaiting_card_payment", "cash_pending", "paid", "card_paid"].includes(rawStatus)) return "card_paid";
+  if (rawStatus) return rawStatus;
   if (mode === "cash") return "cash_pending";
-  if (mode === "card") return sale?.status === "AWAITING_PAYMENT" ? "awaiting_card_payment" : "card_paid";
+  if (mode === "card" && sale?.status === "AWAITING_PAYMENT") return "awaiting_card_payment";
   return "";
 };
 
