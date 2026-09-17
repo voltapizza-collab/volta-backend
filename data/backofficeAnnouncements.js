@@ -1,8 +1,7 @@
 // Add a user-facing note in the same change that delivers a feature.
 // Keep IDs stable; increase revision only when users need to read the note again.
-// Draft: publish after both the pizza API and storefront accept the six notices.
 export const productSpecialNoticesAnnouncement = {
-  id: "product-special-notices-2026-09", revision: 1, publishedAt: null,
+  id: "product-special-notices-2026-09", revision: 1, publishedAt: "2026-09-17T11:45:22.456Z", expiresAt: "2026-12-17T11:45:22.465Z",
   category: "improvement", severity: "info",
   title: "Más avisos especiales para tus platos",
   message: "En Avisos especiales de Pizza Creator puedes combinar Picante, Vegano, Vegetariano, Sin gluten, Kosher y Halal. En la carta comparten una etiqueta que alterna el texto verticalmente y cambia de color; la ficha del plato muestra todos juntos.",
@@ -15,9 +14,8 @@ export const productSpecialNoticesAnnouncement = {
   },
 };
 
-// Draft: activate once the updated inventory styles are published.
 export const ingredientAvailableBadgeAnnouncement = {
-  id: "inventory-available-badge-2026-09", revision: 1, publishedAt: null,
+  id: "inventory-available-badge-2026-09", revision: 1, publishedAt: "2026-09-17T11:45:22.456Z", expiresAt: "2026-12-17T11:45:22.465Z",
   category: "improvement", severity: "info",
   title: "Ingredientes disponibles más fáciles de distinguir",
   message: "La etiqueta Agregar tiene fondo amarillo y letras moradas. Identifica los ingredientes disponibles que todavía no has añadido a tu tienda, tanto en las categorías como en la búsqueda.",
@@ -29,9 +27,8 @@ export const ingredientAvailableBadgeAnnouncement = {
   },
 };
 
-// Draft: publish after the storefront inbox/history update is available.
 export const notificationInboxAnnouncement = {
-  id: "backoffice-notification-inbox-2026-09", revision: 1, publishedAt: null,
+  id: "backoffice-notification-inbox-2026-09", revision: 1, publishedAt: "2026-09-17T11:45:22.456Z", expiresAt: "2026-12-17T11:45:22.465Z",
   category: "improvement", severity: "info",
   title: "Tus avisos, con pendientes e historial",
   message: "Al marcar una novedad como leída, pasa al Historial y deja de aparecer entre los pendientes. Abre Avisos para consultar ambas listas y volver a leerla cuando quieras.",
@@ -44,9 +41,8 @@ export const notificationInboxAnnouncement = {
   },
 };
 
-// Draft: activate only with the catalog migration and both application updates.
 export const ingredientCatalogEditorAnnouncement = {
-  id: "ingredient-catalog-editor-2026-09", revision: 1, publishedAt: null,
+  id: "ingredient-catalog-editor-2026-09", revision: 1, publishedAt: "2026-09-17T11:45:22.456Z", expiresAt: "2026-12-17T11:45:22.465Z",
   category: "improvement", severity: "info",
   title: "Editar y recuperar ingredientes desde una sola ficha",
   message: "En Global Manager, Editar reúne nombres, idiomas y foto. Eliminar del panel devuelve el ingrediente a la bolsa general y conserva su ficha para recuperarla. Si está en uso, la retirada se bloquea.",
@@ -59,9 +55,8 @@ export const ingredientCatalogEditorAnnouncement = {
   },
 };
 
-// Activate with a publication date after the backend, web POS and SUNMI update are available.
 export const posPaymentReceiptAnnouncement = {
-  id: "pos-payment-receipt-2026-09", revision: 1, publishedAt: null,
+  id: "pos-payment-receipt-2026-09", revision: 1, publishedAt: "2026-09-17T11:45:22.456Z", expiresAt: "2026-12-17T11:45:22.465Z",
   category: "improvement", severity: "info",
   title: "Estado del pago más claro en el ticket",
   message: "Los pedidos cobrados con tarjeta muestran Tarjeta pagada. Efectivo pendiente queda reservado para los pedidos en efectivo que siguen por cobrar; el efectivo confirmado muestra Efectivo cobrado.",
@@ -93,6 +88,11 @@ export const ingredientRemovalAnnouncement = {
 };
 
 export const backofficeAnnouncements = [
+  productSpecialNoticesAnnouncement,
+  ingredientAvailableBadgeAnnouncement,
+  notificationInboxAnnouncement,
+  ingredientCatalogEditorAnnouncement,
+  posPaymentReceiptAnnouncement,
   ingredientRemovalAnnouncement,
   {
     id: "ingredient-translation-flow-2026-09", revision: 1,

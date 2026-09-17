@@ -1,3 +1,5 @@
+Estado de publicación (2026-09-17T11:45:22.456Z): backend fdfe492 y storefront 2314d2f disponibles en producción. Migración 20260917120000_preserve_ingredient_catalog aplicada y comprobada. Las novedades están activadas en cinco idiomas. Los apartados siguientes conservan el historial de implementación y validación local.
+
 # Avisos especiales de platos
 
 Implementación local del 17 de septiembre de 2026; pendiente de publicar backend y storefront juntos. No requiere migración: reutiliza `MenuPizza.productTags`.

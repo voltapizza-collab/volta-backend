@@ -10,7 +10,7 @@ El historial guarda el contenido y todas sus traducciones por negocio en este na
 
 Las alertas operativas SMS conservan su comportamiento: se resuelven con el saldo, no al marcarlas como leídas. Su destino continúa conectado al formulario de recarga existente.
 
-Validación: 22 pruebas de interfaz, 7 de backend, compilación de producción y recorrido con Edge en escritorio, 393 px y 320 px. Se verificaron archivo desde la lista, consulta de historial, recarga sin repetición, traducciones y teclado. Capturas en `../output/notification-inbox/`. La corrección está en el workspace y compilada; no publicada en el entorno remoto. No requiere migración. `notificationInboxAnnouncement` está preparada en ES/EN/IT/FR/PT y fuera del catálogo activo hasta el despliegue.
+Validación: 22 pruebas de interfaz, 7 de backend, compilación de producción y recorrido con Edge en escritorio, 393 px y 320 px. Se verificaron archivo desde la lista, consulta de historial, recarga sin repetición, traducciones y teclado. Capturas en `../output/notification-inbox/`. La corrección se publicó en producción el 17 de septiembre de 2026 (storefront 2314d2f). No requiere migración. `notificationInboxAnnouncement` está activa en ES/EN/IT/FR/PT tras comprobar la publicación del backend y el storefront.
 
 Implementación del 12 de septiembre de 2026. Requiere publicar tanto el backend como el storefront. No necesita migraciones ni cambios en el proceso de cobro.
 
