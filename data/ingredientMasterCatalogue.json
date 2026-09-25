@@ -24425,5 +24425,6192 @@
     "aliases": [
       "Aroma de violeta"
     ]
+  },
+  {
+    "canonicalKey": "pan_de_patata",
+    "defaultName": "Pan de patata",
+    "category": "OTROS",
+    "aliases": [
+      "Pan de patata"
+    ]
+  },
+  {
+    "canonicalKey": "pan_de_queso",
+    "defaultName": "Pan de queso",
+    "category": "OTROS",
+    "aliases": [
+      "Pan de queso"
+    ]
+  },
+  {
+    "canonicalKey": "pan_multicereales",
+    "defaultName": "Pan multicereales",
+    "category": "OTROS",
+    "aliases": [
+      "Pan multicereales"
+    ]
+  },
+  {
+    "canonicalKey": "chapati",
+    "defaultName": "Chapati",
+    "category": "OTROS",
+    "aliases": [
+      "Chapati",
+      "Roti de trigo"
+    ]
+  },
+  {
+    "canonicalKey": "naan",
+    "defaultName": "Naan",
+    "category": "OTROS",
+    "aliases": [
+      "Naan"
+    ]
+  },
+  {
+    "canonicalKey": "pan_de_canela",
+    "defaultName": "Pan de canela",
+    "category": "OTROS",
+    "aliases": [
+      "Pan de canela"
+    ]
+  },
+  {
+    "canonicalKey": "pan_de_trigo_germinado",
+    "defaultName": "Pan de trigo germinado",
+    "category": "OTROS",
+    "aliases": [
+      "Pan de trigo germinado"
+    ]
+  },
+  {
+    "canonicalKey": "bagel_multicereales",
+    "defaultName": "Bagel multicereales",
+    "category": "OTROS",
+    "aliases": [
+      "Bagel multicereales"
+    ]
+  },
+  {
+    "canonicalKey": "bagel_de_canela_y_pasas",
+    "defaultName": "Bagel de canela y pasas",
+    "category": "OTROS",
+    "aliases": [
+      "Bagel de canela y pasas"
+    ]
+  },
+  {
+    "canonicalKey": "bagel_de_salvado_de_avena",
+    "defaultName": "Bagel de salvado de avena",
+    "category": "OTROS",
+    "aliases": [
+      "Bagel de salvado de avena"
+    ]
+  },
+  {
+    "canonicalKey": "pan_de_trigo_partido",
+    "defaultName": "Pan de trigo partido",
+    "category": "OTROS",
+    "aliases": [
+      "Pan de trigo partido"
+    ]
+  },
+  {
+    "canonicalKey": "pan_de_huevo",
+    "defaultName": "Pan de huevo",
+    "category": "OTROS",
+    "aliases": [
+      "Pan de huevo"
+    ]
+  },
+  {
+    "canonicalKey": "pan_de_salvado_de_avena",
+    "defaultName": "Pan de salvado de avena",
+    "category": "OTROS",
+    "aliases": [
+      "Pan de salvado de avena"
+    ]
+  },
+  {
+    "canonicalKey": "pan_de_avena",
+    "defaultName": "Pan de avena",
+    "category": "OTROS",
+    "aliases": [
+      "Pan de avena"
+    ]
+  },
+  {
+    "canonicalKey": "pan_de_pasas",
+    "defaultName": "Pan de pasas",
+    "category": "OTROS",
+    "aliases": [
+      "Pan de pasas"
+    ]
+  },
+  {
+    "canonicalKey": "pan_de_centeno",
+    "defaultName": "Pan de centeno",
+    "category": "OTROS",
+    "aliases": [
+      "Pan de centeno"
+    ]
+  },
+  {
+    "canonicalKey": "pan_integral_de_trigo",
+    "defaultName": "Pan integral de trigo",
+    "category": "OTROS",
+    "aliases": [
+      "Pan integral de trigo"
+    ]
+  },
+  {
+    "canonicalKey": "masa_de_hojaldre",
+    "defaultName": "Masa de hojaldre",
+    "category": "OTROS",
+    "aliases": [
+      "Masa de hojaldre",
+      "Hojaldre"
+    ]
+  },
+  {
+    "canonicalKey": "masa_filo",
+    "defaultName": "Masa filo",
+    "category": "OTROS",
+    "aliases": [
+      "Masa filo",
+      "Pasta filo"
+    ]
+  },
+  {
+    "canonicalKey": "panecillo_integral_de_trigo",
+    "defaultName": "Panecillo integral de trigo",
+    "category": "OTROS",
+    "aliases": [
+      "Panecillo integral de trigo"
+    ]
+  },
+  {
+    "canonicalKey": "pan_para_hamburguesa_o_perrito_caliente",
+    "defaultName": "Pan para hamburguesa o perrito caliente",
+    "category": "OTROS",
+    "aliases": [
+      "Pan para hamburguesa o perrito caliente"
+    ]
+  },
+  {
+    "canonicalKey": "pan_multicereales_para_hamburguesa_o_perrito_caliente",
+    "defaultName": "Pan multicereales para hamburguesa o perrito caliente",
+    "category": "OTROS",
+    "aliases": [
+      "Pan multicereales para hamburguesa o perrito caliente"
+    ]
+  },
+  {
+    "canonicalKey": "laminas_de_wonton",
+    "defaultName": "Láminas de wonton",
+    "category": "OTROS",
+    "aliases": [
+      "Láminas de wonton",
+      "Masa de wonton"
+    ]
+  },
+  {
+    "canonicalKey": "pan_rallado_sazonado",
+    "defaultName": "Pan rallado sazonado",
+    "category": "OTROS",
+    "aliases": [
+      "Pan rallado sazonado"
+    ]
+  },
+  {
+    "canonicalKey": "chapati_integral",
+    "defaultName": "Chapati integral",
+    "category": "OTROS",
+    "aliases": [
+      "Chapati integral"
+    ]
+  },
+  {
+    "canonicalKey": "paratha_integral",
+    "defaultName": "Paratha integral",
+    "category": "OTROS",
+    "aliases": [
+      "Paratha integral"
+    ]
+  },
+  {
+    "canonicalKey": "naan_integral",
+    "defaultName": "Naan integral",
+    "category": "OTROS",
+    "aliases": [
+      "Naan integral"
+    ]
+  },
+  {
+    "canonicalKey": "bolillo_mexicano",
+    "defaultName": "Bolillo mexicano",
+    "category": "OTROS",
+    "aliases": [
+      "Bolillo mexicano"
+    ]
+  },
+  {
+    "canonicalKey": "tortilla_integral_de_trigo",
+    "defaultName": "Tortilla integral de trigo",
+    "category": "OTROS",
+    "aliases": [
+      "Tortilla integral de trigo"
+    ]
+  },
+  {
+    "canonicalKey": "bagel_de_trigo",
+    "defaultName": "Bagel de trigo",
+    "category": "OTROS",
+    "aliases": [
+      "Bagel de trigo"
+    ]
+  },
+  {
+    "canonicalKey": "bagel_de_huevo",
+    "defaultName": "Bagel de huevo",
+    "category": "OTROS",
+    "aliases": [
+      "Bagel de huevo"
+    ]
+  },
+  {
+    "canonicalKey": "pan_de_maiz",
+    "defaultName": "Pan de maíz",
+    "category": "OTROS",
+    "aliases": [
+      "Pan de maíz"
+    ]
+  },
+  {
+    "canonicalKey": "pan_de_soda_irlandes",
+    "defaultName": "Pan de soda irlandés",
+    "category": "OTROS",
+    "aliases": [
+      "Pan de soda irlandés"
+    ]
+  },
+  {
+    "canonicalKey": "pan_pumpernickel",
+    "defaultName": "Pan pumpernickel",
+    "category": "OTROS",
+    "aliases": [
+      "Pan pumpernickel"
+    ]
+  },
+  {
+    "canonicalKey": "pan_de_salvado_de_arroz",
+    "defaultName": "Pan de salvado de arroz",
+    "category": "OTROS",
+    "aliases": [
+      "Pan de salvado de arroz"
+    ]
+  },
+  {
+    "canonicalKey": "pan_de_molde_blanco",
+    "defaultName": "Pan de molde blanco",
+    "category": "OTROS",
+    "aliases": [
+      "Pan de molde blanco"
+    ]
+  },
+  {
+    "canonicalKey": "grissini",
+    "defaultName": "Grissini",
+    "category": "OTROS",
+    "aliases": [
+      "Grissini",
+      "Palitos de pan"
+    ]
+  },
+  {
+    "canonicalKey": "muffin_ingles",
+    "defaultName": "Muffin inglés",
+    "category": "OTROS",
+    "aliases": [
+      "Muffin inglés"
+    ]
+  },
+  {
+    "canonicalKey": "muffin_ingles_multicereales",
+    "defaultName": "Muffin inglés multicereales",
+    "category": "OTROS",
+    "aliases": [
+      "Muffin inglés multicereales"
+    ]
+  },
+  {
+    "canonicalKey": "muffin_ingles_de_canela_y_pasas",
+    "defaultName": "Muffin inglés de canela y pasas",
+    "category": "OTROS",
+    "aliases": [
+      "Muffin inglés de canela y pasas"
+    ]
+  },
+  {
+    "canonicalKey": "panecillo_kaiser",
+    "defaultName": "Panecillo Kaiser",
+    "category": "OTROS",
+    "aliases": [
+      "Panecillo Kaiser"
+    ]
+  },
+  {
+    "canonicalKey": "tortilla_de_maiz",
+    "defaultName": "Tortilla de maíz",
+    "category": "OTROS",
+    "aliases": [
+      "Tortilla de maíz"
+    ]
+  },
+  {
+    "canonicalKey": "tortilla_de_trigo",
+    "defaultName": "Tortilla de trigo",
+    "category": "OTROS",
+    "aliases": [
+      "Tortilla de trigo"
+    ]
+  },
+  {
+    "canonicalKey": "muffin_ingles_integral",
+    "defaultName": "Muffin inglés integral",
+    "category": "OTROS",
+    "aliases": [
+      "Muffin inglés integral"
+    ]
+  },
+  {
+    "canonicalKey": "pan_de_masa_madre",
+    "defaultName": "Pan de masa madre",
+    "category": "OTROS",
+    "aliases": [
+      "Pan de masa madre"
+    ]
+  },
+  {
+    "canonicalKey": "pan_de_calabaza",
+    "defaultName": "Pan de calabaza",
+    "category": "OTROS",
+    "aliases": [
+      "Pan de calabaza"
+    ]
+  },
+  {
+    "canonicalKey": "pan_de_aceitunas",
+    "defaultName": "Pan de aceitunas",
+    "category": "OTROS",
+    "aliases": [
+      "Pan de aceitunas"
+    ]
+  },
+  {
+    "canonicalKey": "pan_de_semola_de_trigo_duro",
+    "defaultName": "Pan de sémola de trigo duro",
+    "category": "OTROS",
+    "aliases": [
+      "Pan de sémola de trigo duro"
+    ]
+  },
+  {
+    "canonicalKey": "focaccia",
+    "defaultName": "Focaccia",
+    "category": "OTROS",
+    "aliases": [
+      "Focaccia"
+    ]
+  },
+  {
+    "canonicalKey": "pan_de_cebada",
+    "defaultName": "Pan de cebada",
+    "category": "OTROS",
+    "aliases": [
+      "Pan de cebada"
+    ]
+  },
+  {
+    "canonicalKey": "pan_de_arroz",
+    "defaultName": "Pan de arroz",
+    "category": "OTROS",
+    "aliases": [
+      "Pan de arroz"
+    ]
+  },
+  {
+    "canonicalKey": "pan_de_castanas",
+    "defaultName": "Pan de castañas",
+    "category": "OTROS",
+    "aliases": [
+      "Pan de castañas"
+    ]
+  },
+  {
+    "canonicalKey": "pan_de_sesamo",
+    "defaultName": "Pan de sésamo",
+    "category": "OTROS",
+    "aliases": [
+      "Pan de sésamo"
+    ]
+  },
+  {
+    "canonicalKey": "pan_carasau",
+    "defaultName": "Pan carasau",
+    "category": "OTROS",
+    "aliases": [
+      "Pan carasau",
+      "Carta da musica"
+    ]
+  },
+  {
+    "canonicalKey": "pan_guttiau",
+    "defaultName": "Pan guttiau",
+    "category": "OTROS",
+    "aliases": [
+      "Pan guttiau"
+    ]
+  },
+  {
+    "canonicalKey": "pan_spianata_sardo",
+    "defaultName": "Pan spianata sardo",
+    "category": "OTROS",
+    "aliases": [
+      "Pan spianata sardo"
+    ]
+  },
+  {
+    "canonicalKey": "pan_nociato",
+    "defaultName": "Pan nociato",
+    "category": "OTROS",
+    "aliases": [
+      "Pan nociato"
+    ]
+  },
+  {
+    "canonicalKey": "panecillo_de_aceite",
+    "defaultName": "Panecillo de aceite",
+    "category": "OTROS",
+    "aliases": [
+      "Panecillo de aceite"
+    ]
+  },
+  {
+    "canonicalKey": "focaccia_de_chicharrones",
+    "defaultName": "Focaccia de chicharrones",
+    "category": "OTROS",
+    "aliases": [
+      "Focaccia de chicharrones",
+      "Chisola"
+    ]
+  },
+  {
+    "canonicalKey": "pan_brioche",
+    "defaultName": "Pan brioche",
+    "category": "OTROS",
+    "aliases": [
+      "Pan brioche",
+      "Brioche"
+    ]
+  },
+  {
+    "canonicalKey": "mollete_andaluz",
+    "defaultName": "Mollete andaluz",
+    "category": "OTROS",
+    "aliases": [
+      "Mollete andaluz"
+    ]
+  },
+  {
+    "canonicalKey": "pasta_capellini",
+    "defaultName": "Pasta capellini",
+    "category": "OTROS",
+    "aliases": [
+      "Pasta capellini",
+      "Capellini"
+    ]
+  },
+  {
+    "canonicalKey": "pasta_fedelini",
+    "defaultName": "Pasta fedelini",
+    "category": "OTROS",
+    "aliases": [
+      "Pasta fedelini",
+      "Fedelini"
+    ]
+  },
+  {
+    "canonicalKey": "pasta_spaghettini",
+    "defaultName": "Pasta spaghettini",
+    "category": "OTROS",
+    "aliases": [
+      "Pasta spaghettini",
+      "Spaghettini"
+    ]
+  },
+  {
+    "canonicalKey": "espaguetis",
+    "defaultName": "Espaguetis",
+    "category": "OTROS",
+    "aliases": [
+      "Espaguetis",
+      "Spaghetti"
+    ]
+  },
+  {
+    "canonicalKey": "pasta_spaghettoni",
+    "defaultName": "Pasta spaghettoni",
+    "category": "OTROS",
+    "aliases": [
+      "Pasta spaghettoni",
+      "Spaghettoni"
+    ]
+  },
+  {
+    "canonicalKey": "pasta_vermicelli_de_trigo",
+    "defaultName": "Pasta vermicelli de trigo",
+    "category": "OTROS",
+    "aliases": [
+      "Pasta vermicelli de trigo",
+      "Vermicelli de trigo"
+    ]
+  },
+  {
+    "canonicalKey": "pasta_alla_chitarra",
+    "defaultName": "Pasta alla chitarra",
+    "category": "OTROS",
+    "aliases": [
+      "Pasta alla chitarra",
+      "Maccheroni alla chitarra"
+    ]
+  },
+  {
+    "canonicalKey": "pasta_bucatini",
+    "defaultName": "Pasta bucatini",
+    "category": "OTROS",
+    "aliases": [
+      "Pasta bucatini",
+      "Bucatini"
+    ]
+  },
+  {
+    "canonicalKey": "pasta_ziti",
+    "defaultName": "Pasta ziti",
+    "category": "OTROS",
+    "aliases": [
+      "Pasta ziti",
+      "Ziti",
+      "Zita"
+    ]
+  },
+  {
+    "canonicalKey": "pasta_zitoni",
+    "defaultName": "Pasta zitoni",
+    "category": "OTROS",
+    "aliases": [
+      "Pasta zitoni",
+      "Zitoni",
+      "Zitone"
+    ]
+  },
+  {
+    "canonicalKey": "pasta_fusilli_largos_huecos",
+    "defaultName": "Pasta fusilli largos huecos",
+    "category": "OTROS",
+    "aliases": [
+      "Pasta fusilli largos huecos",
+      "Fusilli lunghi bucati"
+    ]
+  },
+  {
+    "canonicalKey": "pasta_linguine",
+    "defaultName": "Pasta linguine",
+    "category": "OTROS",
+    "aliases": [
+      "Pasta linguine",
+      "Linguine",
+      "Linguini"
+    ]
+  },
+  {
+    "canonicalKey": "pasta_tripoline",
+    "defaultName": "Pasta tripoline",
+    "category": "OTROS",
+    "aliases": [
+      "Pasta tripoline",
+      "Tripoline"
+    ]
+  },
+  {
+    "canonicalKey": "pasta_mafaldine",
+    "defaultName": "Pasta mafaldine",
+    "category": "OTROS",
+    "aliases": [
+      "Pasta mafaldine",
+      "Mafaldine"
+    ]
+  },
+  {
+    "canonicalKey": "pasta_sedanini",
+    "defaultName": "Pasta sedanini",
+    "category": "OTROS",
+    "aliases": [
+      "Pasta sedanini",
+      "Sedanini"
+    ]
+  },
+  {
+    "canonicalKey": "pasta_sedani_rigati",
+    "defaultName": "Pasta sedani rigati",
+    "category": "OTROS",
+    "aliases": [
+      "Pasta sedani rigati",
+      "Sedani rigati"
+    ]
+  },
+  {
+    "canonicalKey": "pasta_trivelli",
+    "defaultName": "Pasta trivelli",
+    "category": "OTROS",
+    "aliases": [
+      "Pasta trivelli",
+      "Trivelli"
+    ]
+  },
+  {
+    "canonicalKey": "pasta_rigatoncelli",
+    "defaultName": "Pasta rigatoncelli",
+    "category": "OTROS",
+    "aliases": [
+      "Pasta rigatoncelli",
+      "Rigatoncello"
+    ]
+  },
+  {
+    "canonicalKey": "pasta_tortiglioni",
+    "defaultName": "Pasta tortiglioni",
+    "category": "OTROS",
+    "aliases": [
+      "Pasta tortiglioni",
+      "Tortiglioni"
+    ]
+  },
+  {
+    "canonicalKey": "pasta_tufoli",
+    "defaultName": "Pasta tufoli",
+    "category": "OTROS",
+    "aliases": [
+      "Pasta tufoli",
+      "Tufoli"
+    ]
+  },
+  {
+    "canonicalKey": "pasta_rigatoni",
+    "defaultName": "Pasta rigatoni",
+    "category": "OTROS",
+    "aliases": [
+      "Pasta rigatoni",
+      "Rigatoni"
+    ]
+  },
+  {
+    "canonicalKey": "pasta_penne_lisce",
+    "defaultName": "Pasta penne lisce",
+    "category": "OTROS",
+    "aliases": [
+      "Pasta penne lisce",
+      "Penne lisce",
+      "Plumas lisas de pasta"
+    ]
+  },
+  {
+    "canonicalKey": "pasta_penne_rigate",
+    "defaultName": "Pasta penne rigate",
+    "category": "OTROS",
+    "aliases": [
+      "Pasta penne rigate",
+      "Penne rigate",
+      "Plumas rayadas de pasta"
+    ]
+  },
+  {
+    "canonicalKey": "pasta_pennoni_lisci",
+    "defaultName": "Pasta pennoni lisci",
+    "category": "OTROS",
+    "aliases": [
+      "Pasta pennoni lisci",
+      "Pennoni lisci"
+    ]
+  },
+  {
+    "canonicalKey": "pasta_pennoni_rigati",
+    "defaultName": "Pasta pennoni rigati",
+    "category": "OTROS",
+    "aliases": [
+      "Pasta pennoni rigati",
+      "Pennoni rigati"
+    ]
+  },
+  {
+    "canonicalKey": "pasta_penne_a_candela",
+    "defaultName": "Pasta penne a candela",
+    "category": "OTROS",
+    "aliases": [
+      "Pasta penne a candela",
+      "Penne a candela"
+    ]
+  },
+  {
+    "canonicalKey": "macarrones",
+    "defaultName": "Macarrones",
+    "category": "OTROS",
+    "aliases": [
+      "Macarrones",
+      "Maccheroni"
+    ]
+  },
+  {
+    "canonicalKey": "pasta_farfalle",
+    "defaultName": "Pasta farfalle",
+    "category": "OTROS",
+    "aliases": [
+      "Pasta farfalle",
+      "Farfalle",
+      "Lazos de pasta"
+    ]
+  },
+  {
+    "canonicalKey": "pasta_spaccatella",
+    "defaultName": "Pasta spaccatella",
+    "category": "OTROS",
+    "aliases": [
+      "Pasta spaccatella",
+      "Spaccatella"
+    ]
+  },
+  {
+    "canonicalKey": "pasta_cavatappi",
+    "defaultName": "Pasta cavatappi",
+    "category": "OTROS",
+    "aliases": [
+      "Pasta cavatappi",
+      "Cavatappi"
+    ]
+  },
+  {
+    "canonicalKey": "pasta_fusilli_cortos_huecos",
+    "defaultName": "Pasta fusilli cortos huecos",
+    "category": "OTROS",
+    "aliases": [
+      "Pasta fusilli cortos huecos",
+      "Fusilli corti bucati"
+    ]
+  },
+  {
+    "canonicalKey": "pasta_orecchiette",
+    "defaultName": "Pasta orecchiette",
+    "category": "OTROS",
+    "aliases": [
+      "Pasta orecchiette",
+      "Orecchiette"
+    ]
+  },
+  {
+    "canonicalKey": "pasta_gnocchetti_sardi",
+    "defaultName": "Pasta gnocchetti sardi",
+    "category": "OTROS",
+    "aliases": [
+      "Pasta gnocchetti sardi",
+      "Gnocchetti sardi",
+      "Malloreddus"
+    ]
+  },
+  {
+    "canonicalKey": "pasta_chifferi_rigati",
+    "defaultName": "Pasta chifferi rigati",
+    "category": "OTROS",
+    "aliases": [
+      "Pasta chifferi rigati",
+      "Chifferi rigati"
+    ]
+  },
+  {
+    "canonicalKey": "pasta_de_semola_en_forma_de_gnocchi",
+    "defaultName": "Pasta de sémola en forma de gnocchi",
+    "category": "OTROS",
+    "aliases": [
+      "Pasta de sémola en forma de gnocchi"
+    ]
+  },
+  {
+    "canonicalKey": "pasta_pipe_rigate",
+    "defaultName": "Pasta pipe rigate",
+    "category": "OTROS",
+    "aliases": [
+      "Pasta pipe rigate",
+      "Pipe rigate"
+    ]
+  },
+  {
+    "canonicalKey": "pasta_anelli_siciliani",
+    "defaultName": "Pasta anelli siciliani",
+    "category": "OTROS",
+    "aliases": [
+      "Pasta anelli siciliani",
+      "Anelli siciliani"
+    ]
+  },
+  {
+    "canonicalKey": "pasta_gramigna",
+    "defaultName": "Pasta gramigna",
+    "category": "OTROS",
+    "aliases": [
+      "Pasta gramigna",
+      "Gramigna"
+    ]
+  },
+  {
+    "canonicalKey": "pasta_fusilli",
+    "defaultName": "Pasta fusilli",
+    "category": "OTROS",
+    "aliases": [
+      "Pasta fusilli",
+      "Fusilli"
+    ]
+  },
+  {
+    "canonicalKey": "pasta_lumache_rigate",
+    "defaultName": "Pasta lumache rigate",
+    "category": "OTROS",
+    "aliases": [
+      "Pasta lumache rigate",
+      "Lumache rigate"
+    ]
+  },
+  {
+    "canonicalKey": "pasta_rotelle",
+    "defaultName": "Pasta rotelle",
+    "category": "OTROS",
+    "aliases": [
+      "Pasta rotelle",
+      "Rotelle",
+      "Ruedas de pasta"
+    ]
+  },
+  {
+    "canonicalKey": "pasta_conchiglie_rigate",
+    "defaultName": "Pasta conchiglie rigate",
+    "category": "OTROS",
+    "aliases": [
+      "Pasta conchiglie rigate",
+      "Conchiglie rigate"
+    ]
+  },
+  {
+    "canonicalKey": "pasta_radiatori",
+    "defaultName": "Pasta radiatori",
+    "category": "OTROS",
+    "aliases": [
+      "Pasta radiatori",
+      "Radiatori"
+    ]
+  },
+  {
+    "canonicalKey": "pasta_festonati",
+    "defaultName": "Pasta festonati",
+    "category": "OTROS",
+    "aliases": [
+      "Pasta festonati",
+      "Festonati"
+    ]
+  },
+  {
+    "canonicalKey": "pasta_racchette",
+    "defaultName": "Pasta racchette",
+    "category": "OTROS",
+    "aliases": [
+      "Pasta racchette",
+      "Racchette"
+    ]
+  },
+  {
+    "canonicalKey": "pasta_galletti",
+    "defaultName": "Pasta galletti",
+    "category": "OTROS",
+    "aliases": [
+      "Pasta galletti",
+      "Galletti"
+    ]
+  },
+  {
+    "canonicalKey": "pasta_funghini",
+    "defaultName": "Pasta funghini",
+    "category": "OTROS",
+    "aliases": [
+      "Pasta funghini",
+      "Funghini"
+    ]
+  },
+  {
+    "canonicalKey": "pasta_ditali_lisci",
+    "defaultName": "Pasta ditali lisci",
+    "category": "OTROS",
+    "aliases": [
+      "Pasta ditali lisci",
+      "Ditali lisci"
+    ]
+  },
+  {
+    "canonicalKey": "pasta_ditali_rigati",
+    "defaultName": "Pasta ditali rigati",
+    "category": "OTROS",
+    "aliases": [
+      "Pasta ditali rigati",
+      "Ditali rigati"
+    ]
+  },
+  {
+    "canonicalKey": "pasta_tubetti_lisci",
+    "defaultName": "Pasta tubetti lisci",
+    "category": "OTROS",
+    "aliases": [
+      "Pasta tubetti lisci",
+      "Tubetti lisci"
+    ]
+  },
+  {
+    "canonicalKey": "pasta_tubetti_rigati",
+    "defaultName": "Pasta tubetti rigati",
+    "category": "OTROS",
+    "aliases": [
+      "Pasta tubetti rigati",
+      "Tubetti rigati"
+    ]
+  },
+  {
+    "canonicalKey": "pasta_gnocchetti_di_zita",
+    "defaultName": "Pasta gnocchetti di zita",
+    "category": "OTROS",
+    "aliases": [
+      "Pasta gnocchetti di zita",
+      "Gnocchetti di zita"
+    ]
+  },
+  {
+    "canonicalKey": "pasta_filini",
+    "defaultName": "Pasta filini",
+    "category": "OTROS",
+    "aliases": [
+      "Pasta filini",
+      "Filini"
+    ]
+  },
+  {
+    "canonicalKey": "pasta_mixta_para_sopa",
+    "defaultName": "Pasta mixta para sopa",
+    "category": "OTROS",
+    "aliases": [
+      "Pasta mixta para sopa",
+      "Pasta mista"
+    ]
+  },
+  {
+    "canonicalKey": "pasta_rombi",
+    "defaultName": "Pasta rombi",
+    "category": "OTROS",
+    "aliases": [
+      "Pasta rombi",
+      "Rombi"
+    ]
+  },
+  {
+    "canonicalKey": "pasta_sagnette",
+    "defaultName": "Pasta sagnette",
+    "category": "OTROS",
+    "aliases": [
+      "Pasta sagnette",
+      "Sagnette abruzzesi"
+    ]
+  },
+  {
+    "canonicalKey": "pasta_coquillettes",
+    "defaultName": "Pasta coquillettes",
+    "category": "OTROS",
+    "aliases": [
+      "Pasta coquillettes",
+      "Coquillettes"
+    ]
+  },
+  {
+    "canonicalKey": "pasta_acini_di_pepe",
+    "defaultName": "Pasta acini di pepe",
+    "category": "OTROS",
+    "aliases": [
+      "Pasta acini di pepe",
+      "Acini di pepe"
+    ]
+  },
+  {
+    "canonicalKey": "pasta_corallini",
+    "defaultName": "Pasta corallini",
+    "category": "OTROS",
+    "aliases": [
+      "Pasta corallini",
+      "Corallini"
+    ]
+  },
+  {
+    "canonicalKey": "pasta_seme_di_melone",
+    "defaultName": "Pasta seme di melone",
+    "category": "OTROS",
+    "aliases": [
+      "Pasta seme di melone",
+      "Seme di melone"
+    ]
+  },
+  {
+    "canonicalKey": "pasta_orzo",
+    "defaultName": "Pasta orzo",
+    "category": "OTROS",
+    "aliases": [
+      "Pasta orzo",
+      "Orzo de pasta"
+    ]
+  },
+  {
+    "canonicalKey": "pasta_en_estrellas",
+    "defaultName": "Pasta en estrellas",
+    "category": "OTROS",
+    "aliases": [
+      "Pasta en estrellas",
+      "Stellette"
+    ]
+  },
+  {
+    "canonicalKey": "pasta_en_corazones",
+    "defaultName": "Pasta en corazones",
+    "category": "OTROS",
+    "aliases": [
+      "Pasta en corazones",
+      "Cuoretti"
+    ]
+  },
+  {
+    "canonicalKey": "pasta_de_letras",
+    "defaultName": "Pasta de letras",
+    "category": "OTROS",
+    "aliases": [
+      "Pasta de letras",
+      "Alfabeto de pasta"
+    ]
+  },
+  {
+    "canonicalKey": "pasta_quadretti",
+    "defaultName": "Pasta quadretti",
+    "category": "OTROS",
+    "aliases": [
+      "Pasta quadretti",
+      "Quadretti"
+    ]
+  },
+  {
+    "canonicalKey": "pasta_stortini",
+    "defaultName": "Pasta stortini",
+    "category": "OTROS",
+    "aliases": [
+      "Pasta stortini",
+      "Stortini"
+    ]
+  },
+  {
+    "canonicalKey": "pasta_anellini",
+    "defaultName": "Pasta anellini",
+    "category": "OTROS",
+    "aliases": [
+      "Pasta anellini",
+      "Anellini"
+    ]
+  },
+  {
+    "canonicalKey": "pasta_casarecce",
+    "defaultName": "Pasta casarecce",
+    "category": "OTROS",
+    "aliases": [
+      "Pasta casarecce",
+      "Casarecce",
+      "Casareccia"
+    ]
+  },
+  {
+    "canonicalKey": "pasta_paccheri",
+    "defaultName": "Pasta paccheri",
+    "category": "OTROS",
+    "aliases": [
+      "Pasta paccheri",
+      "Paccheri"
+    ]
+  },
+  {
+    "canonicalKey": "pasta_paccheri_rigati",
+    "defaultName": "Pasta paccheri rigati",
+    "category": "OTROS",
+    "aliases": [
+      "Pasta paccheri rigati",
+      "Paccheri rigati"
+    ]
+  },
+  {
+    "canonicalKey": "pasta_bombardoni_rigati",
+    "defaultName": "Pasta bombardoni rigati",
+    "category": "OTROS",
+    "aliases": [
+      "Pasta bombardoni rigati",
+      "Bombardoni rigati"
+    ]
+  },
+  {
+    "canonicalKey": "pasta_conchiglioni_rigati",
+    "defaultName": "Pasta conchiglioni rigati",
+    "category": "OTROS",
+    "aliases": [
+      "Pasta conchiglioni rigati",
+      "Conchiglioni rigati"
+    ]
+  },
+  {
+    "canonicalKey": "pasta_calamarata",
+    "defaultName": "Pasta calamarata",
+    "category": "OTROS",
+    "aliases": [
+      "Pasta calamarata",
+      "Calamarata"
+    ]
+  },
+  {
+    "canonicalKey": "pasta_lumaconi_rigati",
+    "defaultName": "Pasta lumaconi rigati",
+    "category": "OTROS",
+    "aliases": [
+      "Pasta lumaconi rigati",
+      "Lumaconi rigati"
+    ]
+  },
+  {
+    "canonicalKey": "pasta_strangozzi",
+    "defaultName": "Pasta strangozzi",
+    "category": "OTROS",
+    "aliases": [
+      "Pasta strangozzi",
+      "Strangozzi"
+    ]
+  },
+  {
+    "canonicalKey": "pasta_candele",
+    "defaultName": "Pasta candele",
+    "category": "OTROS",
+    "aliases": [
+      "Pasta candele",
+      "Candele"
+    ]
+  },
+  {
+    "canonicalKey": "pasta_tagliolini",
+    "defaultName": "Pasta tagliolini",
+    "category": "OTROS",
+    "aliases": [
+      "Pasta tagliolini",
+      "Tagliolini"
+    ]
+  },
+  {
+    "canonicalKey": "pasta_tagliatelle",
+    "defaultName": "Pasta tagliatelle",
+    "category": "OTROS",
+    "aliases": [
+      "Pasta tagliatelle",
+      "Tagliatelle",
+      "Tallarines tagliatelle"
+    ]
+  },
+  {
+    "canonicalKey": "pasta_fettuccine",
+    "defaultName": "Pasta fettuccine",
+    "category": "OTROS",
+    "aliases": [
+      "Pasta fettuccine",
+      "Fettuccine"
+    ]
+  },
+  {
+    "canonicalKey": "pasta_pappardelle",
+    "defaultName": "Pasta pappardelle",
+    "category": "OTROS",
+    "aliases": [
+      "Pasta pappardelle",
+      "Pappardelle"
+    ]
+  },
+  {
+    "canonicalKey": "laminas_de_lasana",
+    "defaultName": "Láminas de lasaña",
+    "category": "OTROS",
+    "aliases": [
+      "Láminas de lasaña",
+      "Pasta para lasaña"
+    ]
+  },
+  {
+    "canonicalKey": "laminas_de_lasana_rizada",
+    "defaultName": "Láminas de lasaña rizada",
+    "category": "OTROS",
+    "aliases": [
+      "Láminas de lasaña rizada",
+      "Lasagna riccia"
+    ]
+  },
+  {
+    "canonicalKey": "pasta_cavatelli",
+    "defaultName": "Pasta cavatelli",
+    "category": "OTROS",
+    "aliases": [
+      "Pasta cavatelli",
+      "Cavatelli"
+    ]
+  },
+  {
+    "canonicalKey": "pasta_garganelli",
+    "defaultName": "Pasta garganelli",
+    "category": "OTROS",
+    "aliases": [
+      "Pasta garganelli",
+      "Garganelli"
+    ]
+  },
+  {
+    "canonicalKey": "noquis_de_patata",
+    "defaultName": "Ñoquis de patata",
+    "category": "OTROS",
+    "aliases": [
+      "Ñoquis de patata",
+      "Gnocchi de patata"
+    ]
+  },
+  {
+    "canonicalKey": "pasta_strozzapreti",
+    "defaultName": "Pasta strozzapreti",
+    "category": "OTROS",
+    "aliases": [
+      "Pasta strozzapreti",
+      "Strozzapreti"
+    ]
+  },
+  {
+    "canonicalKey": "pasta_maltagliati",
+    "defaultName": "Pasta maltagliati",
+    "category": "OTROS",
+    "aliases": [
+      "Pasta maltagliati",
+      "Maltagliati"
+    ]
+  },
+  {
+    "canonicalKey": "pasta_trofie",
+    "defaultName": "Pasta trofie",
+    "category": "OTROS",
+    "aliases": [
+      "Pasta trofie",
+      "Trofie"
+    ]
+  },
+  {
+    "canonicalKey": "pasta_pici",
+    "defaultName": "Pasta pici",
+    "category": "OTROS",
+    "aliases": [
+      "Pasta pici",
+      "Pici",
+      "Pinci"
+    ]
+  },
+  {
+    "canonicalKey": "pasta_fileja",
+    "defaultName": "Pasta fileja",
+    "category": "OTROS",
+    "aliases": [
+      "Pasta fileja",
+      "Fileja"
+    ]
+  },
+  {
+    "canonicalKey": "noquis_de_calabaza",
+    "defaultName": "Ñoquis de calabaza",
+    "category": "OTROS",
+    "aliases": [
+      "Ñoquis de calabaza",
+      "Gnocchi de calabaza"
+    ]
+  },
+  {
+    "canonicalKey": "noquis_de_castanas",
+    "defaultName": "Ñoquis de castañas",
+    "category": "OTROS",
+    "aliases": [
+      "Ñoquis de castañas",
+      "Gnocchi de castañas"
+    ]
+  },
+  {
+    "canonicalKey": "tortelli_de_patata",
+    "defaultName": "Tortelli de patata",
+    "category": "OTROS",
+    "aliases": [
+      "Tortelli de patata"
+    ]
+  },
+  {
+    "canonicalKey": "tortelli_de_ricotta",
+    "defaultName": "Tortelli de ricotta",
+    "category": "OTROS",
+    "aliases": [
+      "Tortelli de ricotta"
+    ]
+  },
+  {
+    "canonicalKey": "tortelli_de_col",
+    "defaultName": "Tortelli de col",
+    "category": "OTROS",
+    "aliases": [
+      "Tortelli de col"
+    ]
+  },
+  {
+    "canonicalKey": "tortelli_de_calabaza",
+    "defaultName": "Tortelli de calabaza",
+    "category": "OTROS",
+    "aliases": [
+      "Tortelli de calabaza"
+    ]
+  },
+  {
+    "canonicalKey": "ravioli_de_ricotta",
+    "defaultName": "Ravioli de ricotta",
+    "category": "OTROS",
+    "aliases": [
+      "Ravioli de ricotta"
+    ]
+  },
+  {
+    "canonicalKey": "ravioli_de_patata",
+    "defaultName": "Ravioli de patata",
+    "category": "OTROS",
+    "aliases": [
+      "Ravioli de patata"
+    ]
+  },
+  {
+    "canonicalKey": "pansoti_de_hierbas",
+    "defaultName": "Pansoti de hierbas",
+    "category": "OTROS",
+    "aliases": [
+      "Pansoti de hierbas",
+      "Pansoti"
+    ]
+  },
+  {
+    "canonicalKey": "corte_denver_de_vacuno",
+    "defaultName": "Corte Denver de vacuno",
+    "category": "CARNES",
+    "aliases": [
+      "Corte Denver de vacuno"
+    ]
+  },
+  {
+    "canonicalKey": "redondo_de_vacuno",
+    "defaultName": "Redondo de vacuno",
+    "category": "CARNES",
+    "aliases": [
+      "Redondo de vacuno"
+    ]
+  },
+  {
+    "canonicalKey": "tapa_de_vacuno",
+    "defaultName": "Tapa de vacuno",
+    "category": "CARNES",
+    "aliases": [
+      "Tapa de vacuno"
+    ]
+  },
+  {
+    "canonicalKey": "contra_de_vacuno",
+    "defaultName": "Contra de vacuno",
+    "category": "CARNES",
+    "aliases": [
+      "Contra de vacuno"
+    ]
+  },
+  {
+    "canonicalKey": "rabillo_de_cadera_de_vacuno",
+    "defaultName": "Rabillo de cadera de vacuno",
+    "category": "CARNES",
+    "aliases": [
+      "Rabillo de cadera de vacuno",
+      "Tri-tip de vacuno"
+    ]
+  },
+  {
+    "canonicalKey": "ojo_de_lomo_de_vacuno",
+    "defaultName": "Ojo de lomo de vacuno",
+    "category": "CARNES",
+    "aliases": [
+      "Ojo de lomo de vacuno",
+      "Ribeye de vacuno"
+    ]
+  },
+  {
+    "canonicalKey": "morcillo_de_vacuno",
+    "defaultName": "Morcillo de vacuno",
+    "category": "CARNES",
+    "aliases": [
+      "Morcillo de vacuno"
+    ]
+  },
+  {
+    "canonicalKey": "falso_solomillo_de_vacuno",
+    "defaultName": "Falso solomillo de vacuno",
+    "category": "CARNES",
+    "aliases": [
+      "Falso solomillo de vacuno",
+      "Mock tender de vacuno"
+    ]
+  },
+  {
+    "canonicalKey": "costillas_cortas_de_aguja_de_vacuno",
+    "defaultName": "Costillas cortas de aguja de vacuno",
+    "category": "CARNES",
+    "aliases": [
+      "Costillas cortas de aguja de vacuno"
+    ]
+  },
+  {
+    "canonicalKey": "fondo_de_vacuno",
+    "defaultName": "Fondo de vacuno",
+    "category": "SALSAS",
+    "aliases": [
+      "Fondo de vacuno"
+    ]
+  },
+  {
+    "canonicalKey": "fondo_de_pollo",
+    "defaultName": "Fondo de pollo",
+    "category": "SALSAS",
+    "aliases": [
+      "Fondo de pollo"
+    ]
+  },
+  {
+    "canonicalKey": "fondo_de_pescado",
+    "defaultName": "Fondo de pescado",
+    "category": "SALSAS",
+    "aliases": [
+      "Fondo de pescado",
+      "Fumet de pescado"
+    ]
+  },
+  {
+    "canonicalKey": "caldo_de_verduras",
+    "defaultName": "Caldo de verduras",
+    "category": "SALSAS",
+    "aliases": [
+      "Caldo de verduras"
+    ]
+  },
+  {
+    "canonicalKey": "jugo_de_carne_para_salsa",
+    "defaultName": "Jugo de carne para salsa",
+    "category": "SALSAS",
+    "aliases": [
+      "Jugo de carne para salsa",
+      "Salsa au jus"
+    ]
+  },
+  {
+    "canonicalKey": "salsa_gravy_de_cebolla",
+    "defaultName": "Salsa gravy de cebolla",
+    "category": "SALSAS",
+    "aliases": [
+      "Salsa gravy de cebolla"
+    ]
+  },
+  {
+    "canonicalKey": "salsa_gravy_de_cerdo",
+    "defaultName": "Salsa gravy de cerdo",
+    "category": "SALSAS",
+    "aliases": [
+      "Salsa gravy de cerdo"
+    ]
+  },
+  {
+    "canonicalKey": "salsa_gravy_de_pollo",
+    "defaultName": "Salsa gravy de pollo",
+    "category": "SALSAS",
+    "aliases": [
+      "Salsa gravy de pollo"
+    ]
+  },
+  {
+    "canonicalKey": "salsa_gravy_de_pavo",
+    "defaultName": "Salsa gravy de pavo",
+    "category": "SALSAS",
+    "aliases": [
+      "Salsa gravy de pavo"
+    ]
+  },
+  {
+    "canonicalKey": "sofrito",
+    "defaultName": "Sofrito",
+    "category": "SALSAS",
+    "aliases": [
+      "Sofrito"
+    ]
+  },
+  {
+    "canonicalKey": "salsa_para_carne_a_base_de_tomate",
+    "defaultName": "Salsa para carne a base de tomate",
+    "category": "SALSAS",
+    "aliases": [
+      "Salsa para carne a base de tomate"
+    ]
+  },
+  {
+    "canonicalKey": "salsa_de_tomate_y_chile",
+    "defaultName": "Salsa de tomate y chile",
+    "category": "SALSAS",
+    "aliases": [
+      "Salsa de tomate y chile"
+    ]
+  },
+  {
+    "canonicalKey": "salsa_demi_glace",
+    "defaultName": "Salsa demi-glace",
+    "category": "SALSAS",
+    "aliases": [
+      "Salsa demi-glace"
+    ]
+  },
+  {
+    "canonicalKey": "base_de_salsa_espanola",
+    "defaultName": "Base de salsa española",
+    "category": "SALSAS",
+    "aliases": [
+      "Base de salsa española"
+    ]
+  },
+  {
+    "canonicalKey": "salsa_de_queso_gouda",
+    "defaultName": "Salsa de queso gouda",
+    "category": "SALSAS",
+    "aliases": [
+      "Salsa de queso gouda"
+    ]
+  },
+  {
+    "canonicalKey": "salsa_de_pimienta_verde",
+    "defaultName": "Salsa de pimienta verde",
+    "category": "SALSAS",
+    "aliases": [
+      "Salsa de pimienta verde"
+    ]
+  },
+  {
+    "canonicalKey": "salsa_de_chile_dulce",
+    "defaultName": "Salsa de chile dulce",
+    "category": "SALSAS",
+    "aliases": [
+      "Salsa de chile dulce"
+    ]
+  },
+  {
+    "canonicalKey": "roux_claro",
+    "defaultName": "Roux claro",
+    "category": "SALSAS",
+    "aliases": [
+      "Roux claro"
+    ]
+  },
+  {
+    "canonicalKey": "roux_oscuro",
+    "defaultName": "Roux oscuro",
+    "category": "SALSAS",
+    "aliases": [
+      "Roux oscuro"
+    ]
+  },
+  {
+    "canonicalKey": "aderezo_de_citricos",
+    "defaultName": "Aderezo de cítricos",
+    "category": "SALSAS",
+    "aliases": [
+      "Aderezo de cítricos"
+    ]
+  },
+  {
+    "canonicalKey": "salsa_chilindron",
+    "defaultName": "Salsa chilindrón",
+    "category": "SALSAS",
+    "aliases": [
+      "Salsa chilindrón"
+    ]
+  },
+  {
+    "canonicalKey": "chapata",
+    "defaultName": "Chapata",
+    "category": "OTROS",
+    "aliases": [
+      "Chapata",
+      "Ciabatta"
+    ]
+  },
+  {
+    "canonicalKey": "baguette",
+    "defaultName": "Baguette",
+    "category": "OTROS",
+    "aliases": [
+      "Baguette"
+    ]
+  },
+  {
+    "canonicalKey": "mortadela_de_campotosto",
+    "defaultName": "Mortadela de Campotosto",
+    "category": "EMBUTIDOS",
+    "aliases": [
+      "Mortadela de Campotosto",
+      "Mortadella di Campotosto"
+    ]
+  },
+  {
+    "canonicalKey": "salamella_de_higado_al_vino_cocido",
+    "defaultName": "Salamella de hígado al vino cocido",
+    "category": "EMBUTIDOS",
+    "aliases": [
+      "Salamella de hígado al vino cocido",
+      "Salamelle di fegato al vino cotto"
+    ]
+  },
+  {
+    "canonicalKey": "salsiccia_de_higado_con_miel",
+    "defaultName": "Salsiccia de hígado con miel",
+    "category": "EMBUTIDOS",
+    "aliases": [
+      "Salsiccia de hígado con miel",
+      "Salsiccia di fegato con miele"
+    ]
+  },
+  {
+    "canonicalKey": "pezzente",
+    "defaultName": "Pezzente",
+    "category": "EMBUTIDOS",
+    "aliases": [
+      "Pezzente"
+    ]
+  },
+  {
+    "canonicalKey": "bel_e_cot",
+    "defaultName": "Bel e cot",
+    "category": "EMBUTIDOS",
+    "aliases": [
+      "Bel e cot",
+      "Belecot"
+    ]
+  },
+  {
+    "canonicalKey": "embutido_cappello_del_prete",
+    "defaultName": "Embutido Cappello del prete",
+    "category": "EMBUTIDOS",
+    "aliases": [
+      "Embutido Cappello del prete",
+      "Cappello del prete embutido",
+      "Cappel da pret"
+    ]
+  },
+  {
+    "canonicalKey": "violino_de_oveja",
+    "defaultName": "Violino de oveja",
+    "category": "EMBUTIDOS",
+    "aliases": [
+      "Violino de oveja",
+      "Coshet",
+      "Violino coscia di pecora"
+    ]
+  },
+  {
+    "canonicalKey": "fiocchetto",
+    "defaultName": "Fiocchetto",
+    "category": "EMBUTIDOS",
+    "aliases": [
+      "Fiocchetto"
+    ]
+  },
+  {
+    "canonicalKey": "salame_al_ajo",
+    "defaultName": "Salame al ajo",
+    "category": "EMBUTIDOS",
+    "aliases": [
+      "Salame al ajo",
+      "Salame all’aglio",
+      "Salam da l’ai"
+    ]
+  },
+  {
+    "canonicalKey": "salsiccia_gialla_fina",
+    "defaultName": "Salsiccia gialla fina",
+    "category": "EMBUTIDOS",
+    "aliases": [
+      "Salsiccia gialla fina",
+      "Sulzezza zala bouna e fina"
+    ]
+  },
+  {
+    "canonicalKey": "salame_para_cocer",
+    "defaultName": "Salame para cocer",
+    "category": "EMBUTIDOS",
+    "aliases": [
+      "Salame para cocer",
+      "Salame da cuocere",
+      "Salam da cotta",
+      "Salcicciotto alla piacentina"
+    ]
+  },
+  {
+    "canonicalKey": "fiambre_cocido_de_oca",
+    "defaultName": "Fiambre cocido de oca",
+    "category": "EMBUTIDOS",
+    "aliases": [
+      "Fiambre cocido de oca",
+      "Cotto d’oca"
+    ]
+  },
+  {
+    "canonicalKey": "marcundela",
+    "defaultName": "Marcundela",
+    "category": "EMBUTIDOS",
+    "aliases": [
+      "Marcundela"
+    ]
+  },
+  {
+    "canonicalKey": "musetto",
+    "defaultName": "Musetto",
+    "category": "EMBUTIDOS",
+    "aliases": [
+      "Musetto"
+    ]
+  },
+  {
+    "canonicalKey": "pancetta_con_lomo",
+    "defaultName": "Pancetta con lomo",
+    "category": "EMBUTIDOS",
+    "aliases": [
+      "Pancetta con lomo",
+      "Pancetta con lonza"
+    ]
+  },
+  {
+    "canonicalKey": "pechuga_de_oca_ahumada",
+    "defaultName": "Pechuga de oca ahumada",
+    "category": "EMBUTIDOS",
+    "aliases": [
+      "Pechuga de oca ahumada",
+      "Petto d’oca affumicato"
+    ]
+  },
+  {
+    "canonicalKey": "polmonarie",
+    "defaultName": "Polmonarie",
+    "category": "EMBUTIDOS",
+    "aliases": [
+      "Polmonarie"
+    ]
+  },
+  {
+    "canonicalKey": "jamon_curado_de_oca",
+    "defaultName": "Jamón curado de oca",
+    "category": "EMBUTIDOS",
+    "aliases": [
+      "Jamón curado de oca",
+      "Prosciuttino crudo d’oca"
+    ]
+  },
+  {
+    "canonicalKey": "salam_di_cueste",
+    "defaultName": "Salam di cueste",
+    "category": "EMBUTIDOS",
+    "aliases": [
+      "Salam di cueste"
+    ]
+  },
+  {
+    "canonicalKey": "mostardella",
+    "defaultName": "Mostardella",
+    "category": "EMBUTIDOS",
+    "aliases": [
+      "Mostardella"
+    ]
+  },
+  {
+    "canonicalKey": "pate_de_lardo",
+    "defaultName": "Paté de lardo",
+    "category": "EMBUTIDOS",
+    "aliases": [
+      "Paté de lardo",
+      "Paté di lardo"
+    ]
+  },
+  {
+    "canonicalKey": "salame_cocido",
+    "defaultName": "Salame cocido",
+    "category": "EMBUTIDOS",
+    "aliases": [
+      "Salame cocido",
+      "Salame cotto"
+    ]
+  },
+  {
+    "canonicalKey": "bresaola_ahumada",
+    "defaultName": "Bresaola ahumada",
+    "category": "EMBUTIDOS",
+    "aliases": [
+      "Bresaola ahumada",
+      "Bresaola affumicata"
+    ]
+  },
+  {
+    "canonicalKey": "bresaola_de_caballo",
+    "defaultName": "Bresaola de caballo",
+    "category": "EMBUTIDOS",
+    "aliases": [
+      "Bresaola de caballo",
+      "Bresaola di cavallo"
+    ]
+  },
+  {
+    "canonicalKey": "chicharrones_de_oca",
+    "defaultName": "Chicharrones de oca",
+    "category": "EMBUTIDOS",
+    "aliases": [
+      "Chicharrones de oca",
+      "Ciccioli d’oca"
+    ]
+  },
+  {
+    "canonicalKey": "luganega_de_caballo",
+    "defaultName": "Luganega de caballo",
+    "category": "EMBUTIDOS",
+    "aliases": [
+      "Luganega de caballo",
+      "Luganega di cavallo"
+    ]
+  },
+  {
+    "canonicalKey": "mortadela_de_higado_al_vino_especiado",
+    "defaultName": "Mortadela de hígado al vino especiado",
+    "category": "EMBUTIDOS",
+    "aliases": [
+      "Mortadela de hígado al vino especiado",
+      "Mortadella di fegato al vin brulè"
+    ]
+  },
+  {
+    "canonicalKey": "pechuga_de_oca_curada",
+    "defaultName": "Pechuga de oca curada",
+    "category": "EMBUTIDOS",
+    "aliases": [
+      "Pechuga de oca curada",
+      "Petto d’oca stagionato"
+    ]
+  },
+  {
+    "canonicalKey": "salame_milano",
+    "defaultName": "Salame Milano",
+    "category": "EMBUTIDOS",
+    "aliases": [
+      "Salame Milano"
+    ]
+  },
+  {
+    "canonicalKey": "salame_pancettato",
+    "defaultName": "Salame pancettato",
+    "category": "EMBUTIDOS",
+    "aliases": [
+      "Salame pancettato"
+    ]
+  },
+  {
+    "canonicalKey": "salame_de_cabra",
+    "defaultName": "Salame de cabra",
+    "category": "EMBUTIDOS",
+    "aliases": [
+      "Salame de cabra",
+      "Salamini di capra"
+    ]
+  },
+  {
+    "canonicalKey": "salame_de_caballo",
+    "defaultName": "Salame de caballo",
+    "category": "EMBUTIDOS",
+    "aliases": [
+      "Salame de caballo",
+      "Salamini di cavallo"
+    ]
+  },
+  {
+    "canonicalKey": "salame_de_ciervo",
+    "defaultName": "Salame de ciervo",
+    "category": "EMBUTIDOS",
+    "aliases": [
+      "Salame de ciervo",
+      "Salamini di cervo"
+    ]
+  },
+  {
+    "canonicalKey": "salsiccia_de_carnero",
+    "defaultName": "Salsiccia de carnero",
+    "category": "EMBUTIDOS",
+    "aliases": [
+      "Salsiccia de carnero",
+      "Salsiccia di castrato ovino"
+    ]
+  },
+  {
+    "canonicalKey": "slinzega_de_vacuno",
+    "defaultName": "Slinzega de vacuno",
+    "category": "EMBUTIDOS",
+    "aliases": [
+      "Slinzega de vacuno",
+      "Slinzega bovina"
+    ]
+  },
+  {
+    "canonicalKey": "slinzega_de_caballo",
+    "defaultName": "Slinzega de caballo",
+    "category": "EMBUTIDOS",
+    "aliases": [
+      "Slinzega de caballo",
+      "Slinzega di cavallo"
+    ]
+  },
+  {
+    "canonicalKey": "violino_de_cabra",
+    "defaultName": "Violino de cabra",
+    "category": "EMBUTIDOS",
+    "aliases": [
+      "Violino de cabra",
+      "Violino di capra"
+    ]
+  },
+  {
+    "canonicalKey": "coppa_de_vallesina_con_pecorino",
+    "defaultName": "Coppa de Vallesina con pecorino",
+    "category": "EMBUTIDOS",
+    "aliases": [
+      "Coppa de Vallesina con pecorino",
+      "Coppa della Vallesina con il pecorino"
+    ]
+  },
+  {
+    "canonicalKey": "salame_di_fabriano",
+    "defaultName": "Salame di Fabriano",
+    "category": "EMBUTIDOS",
+    "aliases": [
+      "Salame di Fabriano"
+    ]
+  },
+  {
+    "canonicalKey": "salame_de_oveja",
+    "defaultName": "Salame de oveja",
+    "category": "EMBUTIDOS",
+    "aliases": [
+      "Salame de oveja",
+      "Salame di pecora"
+    ]
+  },
+  {
+    "canonicalKey": "fidighin_de_higado_crudo",
+    "defaultName": "Fidighin de hígado crudo",
+    "category": "EMBUTIDOS",
+    "aliases": [
+      "Fidighin de hígado crudo",
+      "Fidighin",
+      "Fideghina",
+      "Mortadella di fegato cruda"
+    ]
+  },
+  {
+    "canonicalKey": "filetto_baciato_de_ponzone",
+    "defaultName": "Filetto baciato de Ponzone",
+    "category": "EMBUTIDOS",
+    "aliases": [
+      "Filetto baciato de Ponzone",
+      "Filetto baciato di Ponzone",
+      "Salame filetto baciato"
+    ]
+  },
+  {
+    "canonicalKey": "mustardela",
+    "defaultName": "Mustardela",
+    "category": "EMBUTIDOS",
+    "aliases": [
+      "Mustardela"
+    ]
+  },
+  {
+    "canonicalKey": "salame_de_burro",
+    "defaultName": "Salame de burro",
+    "category": "EMBUTIDOS",
+    "aliases": [
+      "Salame de burro",
+      "Salame d’asino"
+    ]
+  },
+  {
+    "canonicalKey": "salame_de_jabali",
+    "defaultName": "Salame de jabalí",
+    "category": "EMBUTIDOS",
+    "aliases": [
+      "Salame de jabalí",
+      "Salame di cinghiale"
+    ]
+  },
+  {
+    "canonicalKey": "salame_de_patata",
+    "defaultName": "Salame de patata",
+    "category": "EMBUTIDOS",
+    "aliases": [
+      "Salame de patata",
+      "Salame di patate"
+    ]
+  },
+  {
+    "canonicalKey": "salame_de_callos",
+    "defaultName": "Salame de callos",
+    "category": "EMBUTIDOS",
+    "aliases": [
+      "Salame de callos",
+      "Salame di trippa"
+    ]
+  },
+  {
+    "canonicalKey": "salame_di_turgia",
+    "defaultName": "Salame di turgia",
+    "category": "EMBUTIDOS",
+    "aliases": [
+      "Salame di turgia"
+    ]
+  },
+  {
+    "canonicalKey": "salame_d_la_doja",
+    "defaultName": "Salame d’la doja",
+    "category": "EMBUTIDOS",
+    "aliases": [
+      "Salame d’la doja"
+    ]
+  },
+  {
+    "canonicalKey": "salsiccia_al_formentino",
+    "defaultName": "Salsiccia al formentino",
+    "category": "EMBUTIDOS",
+    "aliases": [
+      "Salsiccia al formentino"
+    ]
+  },
+  {
+    "canonicalKey": "salsiccia_di_bra",
+    "defaultName": "Salsiccia di Bra",
+    "category": "EMBUTIDOS",
+    "aliases": [
+      "Salsiccia di Bra"
+    ]
+  },
+  {
+    "canonicalKey": "salsiccia_de_col",
+    "defaultName": "Salsiccia de col",
+    "category": "EMBUTIDOS",
+    "aliases": [
+      "Salsiccia de col",
+      "Salsiccia di cavolo",
+      "Sautissa ’d coi",
+      "Salam ’d coi"
+    ]
+  },
+  {
+    "canonicalKey": "salsiccia_de_arroz",
+    "defaultName": "Salsiccia de arroz",
+    "category": "EMBUTIDOS",
+    "aliases": [
+      "Salsiccia de arroz",
+      "Salsiccia di riso"
+    ]
+  },
+  {
+    "canonicalKey": "ciuighe",
+    "defaultName": "Ciuighe",
+    "category": "EMBUTIDOS",
+    "aliases": [
+      "Ciuighe"
+    ]
+  },
+  {
+    "canonicalKey": "mortandela_ahumada_de_val_di_non",
+    "defaultName": "Mortandela ahumada de Val di Non",
+    "category": "EMBUTIDOS",
+    "aliases": [
+      "Mortandela ahumada de Val di Non",
+      "Mortandela affumicata della Val di Non"
+    ]
+  },
+  {
+    "canonicalKey": "bardiccio",
+    "defaultName": "Bardiccio",
+    "category": "EMBUTIDOS",
+    "aliases": [
+      "Bardiccio"
+    ]
+  },
+  {
+    "canonicalKey": "speck_de_caballo",
+    "defaultName": "Speck de caballo",
+    "category": "EMBUTIDOS",
+    "aliases": [
+      "Speck de caballo",
+      "Speck di cavallo"
+    ]
+  },
+  {
+    "canonicalKey": "caciotta_de_mezcla_de_oveja_y_vaca",
+    "defaultName": "Caciotta de mezcla de oveja y vaca",
+    "category": "QUESOS",
+    "aliases": [
+      "Caciotta de mezcla de oveja y vaca",
+      "Caciotta mista ovi-vaccina del Lazio"
+    ]
+  },
+  {
+    "canonicalKey": "provolone_de_bufala_curado",
+    "defaultName": "Provolone de búfala curado",
+    "category": "QUESOS",
+    "aliases": [
+      "Provolone de búfala curado",
+      "Provolone invecchiato di bufala di Formello"
+    ]
+  },
+  {
+    "canonicalKey": "provola_de_bufala",
+    "defaultName": "Provola de búfala",
+    "category": "QUESOS",
+    "aliases": [
+      "Provola de búfala",
+      "Provola di bufala"
+    ]
+  },
+  {
+    "canonicalKey": "caprino_de_coagulacion_lactica",
+    "defaultName": "Caprino de coagulación láctica",
+    "category": "QUESOS",
+    "aliases": [
+      "Caprino de coagulación láctica",
+      "Caprino a coagulazione lattica"
+    ]
+  },
+  {
+    "canonicalKey": "caprino_de_leche_de_vaca",
+    "defaultName": "Caprino de leche de vaca",
+    "category": "QUESOS",
+    "aliases": [
+      "Caprino de leche de vaca",
+      "Caprino vaccino"
+    ]
+  },
+  {
+    "canonicalKey": "bresaola_de_bufala",
+    "defaultName": "Bresaola de búfala",
+    "category": "EMBUTIDOS",
+    "aliases": [
+      "Bresaola de búfala",
+      "Bresaola di bufala"
+    ]
+  },
+  {
+    "canonicalKey": "jamon_cocido_al_vino_de_cori",
+    "defaultName": "Jamón cocido al vino de Cori",
+    "category": "EMBUTIDOS",
+    "aliases": [
+      "Jamón cocido al vino de Cori",
+      "Prosciutto cotto al vino di Cori"
+    ]
+  },
+  {
+    "canonicalKey": "susianella",
+    "defaultName": "Susianella",
+    "category": "EMBUTIDOS",
+    "aliases": [
+      "Susianella"
+    ]
+  },
+  {
+    "canonicalKey": "queso_de_oveja_curado_en_aceite",
+    "defaultName": "Queso de oveja curado en aceite",
+    "category": "QUESOS",
+    "aliases": [
+      "Queso de oveja curado en aceite",
+      "Formaggio e caciotta di pecora sott’olio"
+    ]
+  },
+  {
+    "canonicalKey": "queso_de_azeitao",
+    "defaultName": "Queso de Azeitão",
+    "category": "QUESOS",
+    "aliases": [
+      "Queso de Azeitão",
+      "Queijo de Azeitão"
+    ]
+  },
+  {
+    "canonicalKey": "queso_de_cabra_transmontano",
+    "defaultName": "Queso de Cabra Transmontano",
+    "category": "QUESOS",
+    "aliases": [
+      "Queso de Cabra Transmontano",
+      "Queijo de Cabra Transmontano"
+    ]
+  },
+  {
+    "canonicalKey": "queso_de_evora",
+    "defaultName": "Queso de Évora",
+    "category": "QUESOS",
+    "aliases": [
+      "Queso de Évora",
+      "Queijo de Évora"
+    ]
+  },
+  {
+    "canonicalKey": "queso_de_nisa",
+    "defaultName": "Queso de Nisa",
+    "category": "QUESOS",
+    "aliases": [
+      "Queso de Nisa",
+      "Queijo de Nisa"
+    ]
+  },
+  {
+    "canonicalKey": "queso_do_pico",
+    "defaultName": "Queso do Pico",
+    "category": "QUESOS",
+    "aliases": [
+      "Queso do Pico",
+      "Queijo do Pico"
+    ]
+  },
+  {
+    "canonicalKey": "queso_mestico_de_tolosa",
+    "defaultName": "Queso Mestiço de Tolosa",
+    "category": "QUESOS",
+    "aliases": [
+      "Queso Mestiço de Tolosa",
+      "Queijo Mestiço de Tolosa"
+    ]
+  },
+  {
+    "canonicalKey": "queso_rabacal",
+    "defaultName": "Queso Rabaçal",
+    "category": "QUESOS",
+    "aliases": [
+      "Queso Rabaçal",
+      "Queijo Rabaçal"
+    ]
+  },
+  {
+    "canonicalKey": "queso_sao_jorge",
+    "defaultName": "Queso São Jorge",
+    "category": "QUESOS",
+    "aliases": [
+      "Queso São Jorge",
+      "Queijo S. Jorge"
+    ]
+  },
+  {
+    "canonicalKey": "queso_serpa",
+    "defaultName": "Queso Serpa",
+    "category": "QUESOS",
+    "aliases": [
+      "Queso Serpa",
+      "Queijo Serpa"
+    ]
+  },
+  {
+    "canonicalKey": "queso_serra_da_estrela",
+    "defaultName": "Queso Serra da Estrela",
+    "category": "QUESOS",
+    "aliases": [
+      "Queso Serra da Estrela",
+      "Queijo Serra da Estrela"
+    ]
+  },
+  {
+    "canonicalKey": "queso_terrincho",
+    "defaultName": "Queso Terrincho",
+    "category": "QUESOS",
+    "aliases": [
+      "Queso Terrincho",
+      "Queijo Terrincho"
+    ]
+  },
+  {
+    "canonicalKey": "requeijao_da_beira_baixa",
+    "defaultName": "Requeijão da Beira Baixa",
+    "category": "QUESOS",
+    "aliases": [
+      "Requeijão da Beira Baixa"
+    ]
+  },
+  {
+    "canonicalKey": "requeijao_da_madeira",
+    "defaultName": "Requeijão da Madeira",
+    "category": "QUESOS",
+    "aliases": [
+      "Requeijão da Madeira"
+    ]
+  },
+  {
+    "canonicalKey": "requeijao_serra_da_estrela",
+    "defaultName": "Requeijão Serra da Estrela",
+    "category": "QUESOS",
+    "aliases": [
+      "Requeijão Serra da Estrela"
+    ]
+  },
+  {
+    "canonicalKey": "queso_de_castelo_branco",
+    "defaultName": "Queso de Castelo Branco",
+    "category": "QUESOS",
+    "aliases": [
+      "Queso de Castelo Branco",
+      "Queijo de Castelo Branco"
+    ]
+  },
+  {
+    "canonicalKey": "queso_amarelo_da_beira_baixa",
+    "defaultName": "Queso Amarelo da Beira Baixa",
+    "category": "QUESOS",
+    "aliases": [
+      "Queso Amarelo da Beira Baixa",
+      "Queijo Amarelo da Beira Baixa"
+    ]
+  },
+  {
+    "canonicalKey": "queso_picante_da_beira_baixa",
+    "defaultName": "Queso Picante da Beira Baixa",
+    "category": "QUESOS",
+    "aliases": [
+      "Queso Picante da Beira Baixa",
+      "Queijo Picante da Beira Baixa"
+    ]
+  },
+  {
+    "canonicalKey": "manouri",
+    "defaultName": "Manouri",
+    "category": "QUESOS",
+    "aliases": [
+      "Manouri"
+    ]
+  },
+  {
+    "canonicalKey": "metsovone",
+    "defaultName": "Metsovone",
+    "category": "QUESOS",
+    "aliases": [
+      "Metsovone"
+    ]
+  },
+  {
+    "canonicalKey": "san_michali",
+    "defaultName": "San Michali",
+    "category": "QUESOS",
+    "aliases": [
+      "San Michali"
+    ]
+  },
+  {
+    "canonicalKey": "kalathaki_de_limnos",
+    "defaultName": "Kalathaki de Limnos",
+    "category": "QUESOS",
+    "aliases": [
+      "Kalathaki de Limnos",
+      "Kalathaki of Limnos"
+    ]
+  },
+  {
+    "canonicalKey": "katiki_de_domokos",
+    "defaultName": "Katiki de Domokos",
+    "category": "QUESOS",
+    "aliases": [
+      "Katiki de Domokos",
+      "Katiki of Domokos"
+    ]
+  },
+  {
+    "canonicalKey": "xygalo_de_siteia",
+    "defaultName": "Xygalo de Siteia",
+    "category": "QUESOS",
+    "aliases": [
+      "Xygalo de Siteia",
+      "Xygalo of Siteia"
+    ]
+  },
+  {
+    "canonicalKey": "anevato",
+    "defaultName": "Anevato",
+    "category": "QUESOS",
+    "aliases": [
+      "Anevato"
+    ]
+  },
+  {
+    "canonicalKey": "arseniko_de_naxos",
+    "defaultName": "Arseniko de Naxos",
+    "category": "QUESOS",
+    "aliases": [
+      "Arseniko de Naxos",
+      "Arseniko of Naxos"
+    ]
+  },
+  {
+    "canonicalKey": "kopanisti_de_mykonos",
+    "defaultName": "Kopanisti de Mykonos",
+    "category": "QUESOS",
+    "aliases": [
+      "Kopanisti de Mykonos",
+      "Kopanisti from Mykonos"
+    ]
+  },
+  {
+    "canonicalKey": "sfela",
+    "defaultName": "Sfela",
+    "category": "QUESOS",
+    "aliases": [
+      "Sfela",
+      "Sfella"
+    ]
+  },
+  {
+    "canonicalKey": "ladotyri_de_mytilene",
+    "defaultName": "Ladotyri de Mytilene",
+    "category": "QUESOS",
+    "aliases": [
+      "Ladotyri de Mytilene",
+      "Ladotyri of Mytilene",
+      "Ladotyri Mytilinis"
+    ]
+  },
+  {
+    "canonicalKey": "kefalograviera",
+    "defaultName": "Kefalograviera",
+    "category": "QUESOS",
+    "aliases": [
+      "Kefalograviera"
+    ]
+  },
+  {
+    "canonicalKey": "graviera_de_naxos",
+    "defaultName": "Graviera de Naxos",
+    "category": "QUESOS",
+    "aliases": [
+      "Graviera de Naxos",
+      "Graviera of Naxos"
+    ]
+  },
+  {
+    "canonicalKey": "arroz_senia",
+    "defaultName": "Arroz Senia",
+    "category": "OTROS",
+    "aliases": [
+      "Arroz Senia",
+      "Arroz Sénia"
+    ]
+  },
+  {
+    "canonicalKey": "arroz_bahia",
+    "defaultName": "Arroz Bahía",
+    "category": "OTROS",
+    "aliases": [
+      "Arroz Bahía"
+    ]
+  },
+  {
+    "canonicalKey": "arroz_bomba",
+    "defaultName": "Arroz Bomba",
+    "category": "OTROS",
+    "aliases": [
+      "Arroz Bomba"
+    ]
+  },
+  {
+    "canonicalKey": "arroz_bombon",
+    "defaultName": "Arroz Bombón",
+    "category": "OTROS",
+    "aliases": [
+      "Arroz Bombón"
+    ]
+  },
+  {
+    "canonicalKey": "arroz_j_sendra",
+    "defaultName": "Arroz J. Sendra",
+    "category": "OTROS",
+    "aliases": [
+      "Arroz J. Sendra"
+    ]
+  },
+  {
+    "canonicalKey": "arroz_copsemar_7",
+    "defaultName": "Arroz Copsemar 7",
+    "category": "OTROS",
+    "aliases": [
+      "Arroz Copsemar 7"
+    ]
+  },
+  {
+    "canonicalKey": "arroz_argila",
+    "defaultName": "Arroz Argila",
+    "category": "OTROS",
+    "aliases": [
+      "Arroz Argila"
+    ]
+  },
+  {
+    "canonicalKey": "arroz_montsianell",
+    "defaultName": "Arroz Montsianell",
+    "category": "OTROS",
+    "aliases": [
+      "Arroz Montsianell"
+    ]
+  },
+  {
+    "canonicalKey": "arroz_gleva",
+    "defaultName": "Arroz Gleva",
+    "category": "OTROS",
+    "aliases": [
+      "Arroz Gleva"
+    ]
+  },
+  {
+    "canonicalKey": "arroz_sarcet",
+    "defaultName": "Arroz Sarçet",
+    "category": "OTROS",
+    "aliases": [
+      "Arroz Sarçet"
+    ]
+  },
+  {
+    "canonicalKey": "arroz_albufera",
+    "defaultName": "Arroz Albufera",
+    "category": "OTROS",
+    "aliases": [
+      "Arroz Albufera"
+    ]
+  },
+  {
+    "canonicalKey": "arroz_campanar_pv",
+    "defaultName": "Arroz Campanar PV",
+    "category": "OTROS",
+    "aliases": [
+      "Arroz Campanar PV"
+    ]
+  },
+  {
+    "canonicalKey": "arroz_regina",
+    "defaultName": "Arroz Regina",
+    "category": "OTROS",
+    "aliases": [
+      "Arroz Regina"
+    ]
+  },
+  {
+    "canonicalKey": "arroz_hispasur",
+    "defaultName": "Arroz Hispasur",
+    "category": "OTROS",
+    "aliases": [
+      "Arroz Hispasur"
+    ]
+  },
+  {
+    "canonicalKey": "arroz_arborio",
+    "defaultName": "Arroz Arborio",
+    "category": "OTROS",
+    "aliases": [
+      "Arroz Arborio"
+    ]
+  },
+  {
+    "canonicalKey": "arroz_carnaroli",
+    "defaultName": "Arroz Carnaroli",
+    "category": "OTROS",
+    "aliases": [
+      "Arroz Carnaroli"
+    ]
+  },
+  {
+    "canonicalKey": "arroz_vialone_nano",
+    "defaultName": "Arroz Vialone Nano",
+    "category": "OTROS",
+    "aliases": [
+      "Arroz Vialone Nano"
+    ]
+  },
+  {
+    "canonicalKey": "arroz_baldo",
+    "defaultName": "Arroz Baldo",
+    "category": "OTROS",
+    "aliases": [
+      "Arroz Baldo"
+    ]
+  },
+  {
+    "canonicalKey": "arroz_roma",
+    "defaultName": "Arroz Roma",
+    "category": "OTROS",
+    "aliases": [
+      "Arroz Roma"
+    ]
+  },
+  {
+    "canonicalKey": "arroz_europa",
+    "defaultName": "Arroz Europa",
+    "category": "OTROS",
+    "aliases": [
+      "Arroz Europa"
+    ]
+  },
+  {
+    "canonicalKey": "arroz_sant_andrea",
+    "defaultName": "Arroz Sant’Andrea",
+    "category": "OTROS",
+    "aliases": [
+      "Arroz Sant’Andrea",
+      "Arroz S. Andrea",
+      "Arroz Sant Andrea"
+    ]
+  },
+  {
+    "canonicalKey": "arroz_ribe",
+    "defaultName": "Arroz Ribe",
+    "category": "OTROS",
+    "aliases": [
+      "Arroz Ribe"
+    ]
+  },
+  {
+    "canonicalKey": "arroz_padano",
+    "defaultName": "Arroz Padano",
+    "category": "OTROS",
+    "aliases": [
+      "Arroz Padano"
+    ]
+  },
+  {
+    "canonicalKey": "arroz_basmati",
+    "defaultName": "Arroz Basmati",
+    "category": "OTROS",
+    "aliases": [
+      "Arroz Basmati"
+    ]
+  },
+  {
+    "canonicalKey": "arroz_rojo",
+    "defaultName": "Arroz rojo",
+    "category": "OTROS",
+    "aliases": [
+      "Arroz rojo"
+    ]
+  },
+  {
+    "canonicalKey": "copos_de_avena",
+    "defaultName": "Copos de avena",
+    "category": "OTROS",
+    "aliases": [
+      "Copos de avena"
+    ]
+  },
+  {
+    "canonicalKey": "copos_de_cebada",
+    "defaultName": "Copos de cebada",
+    "category": "OTROS",
+    "aliases": [
+      "Copos de cebada"
+    ]
+  },
+  {
+    "canonicalKey": "copos_de_espelta",
+    "defaultName": "Copos de espelta",
+    "category": "OTROS",
+    "aliases": [
+      "Copos de espelta"
+    ]
+  },
+  {
+    "canonicalKey": "copos_de_trigo",
+    "defaultName": "Copos de trigo",
+    "category": "OTROS",
+    "aliases": [
+      "Copos de trigo"
+    ]
+  },
+  {
+    "canonicalKey": "copos_de_centeno",
+    "defaultName": "Copos de centeno",
+    "category": "OTROS",
+    "aliases": [
+      "Copos de centeno"
+    ]
+  },
+  {
+    "canonicalKey": "harina_de_espelta",
+    "defaultName": "Harina de espelta",
+    "category": "OTROS",
+    "aliases": [
+      "Harina de espelta",
+      "Harina de trigo espelta"
+    ]
+  },
+  {
+    "canonicalKey": "harina_integral_de_espelta",
+    "defaultName": "Harina integral de espelta",
+    "category": "OTROS",
+    "aliases": [
+      "Harina integral de espelta",
+      "Harina de espelta integral"
+    ]
+  },
+  {
+    "canonicalKey": "harina_integral_de_trigo_khorasan",
+    "defaultName": "Harina integral de trigo khorasan",
+    "category": "OTROS",
+    "aliases": [
+      "Harina integral de trigo khorasan"
+    ]
+  },
+  {
+    "canonicalKey": "harina_de_amaranto",
+    "defaultName": "Harina de amaranto",
+    "category": "OTROS",
+    "aliases": [
+      "Harina de amaranto"
+    ]
+  },
+  {
+    "canonicalKey": "harina_de_guisantes_verdes",
+    "defaultName": "Harina de guisantes verdes",
+    "category": "OTROS",
+    "aliases": [
+      "Harina de guisantes verdes"
+    ]
+  },
+  {
+    "canonicalKey": "harina_de_lentejas_rojas",
+    "defaultName": "Harina de lentejas rojas",
+    "category": "OTROS",
+    "aliases": [
+      "Harina de lentejas rojas"
+    ]
+  },
+  {
+    "canonicalKey": "harina_de_quinoa",
+    "defaultName": "Harina de quinoa",
+    "category": "OTROS",
+    "aliases": [
+      "Harina de quinoa",
+      "Harina de quinua"
+    ]
+  },
+  {
+    "canonicalKey": "harina_de_teff",
+    "defaultName": "Harina de teff",
+    "category": "OTROS",
+    "aliases": [
+      "Harina de teff"
+    ]
+  },
+  {
+    "canonicalKey": "harina_de_coco",
+    "defaultName": "Harina de coco",
+    "category": "OTROS",
+    "aliases": [
+      "Harina de coco"
+    ]
+  },
+  {
+    "canonicalKey": "alubia_caparron",
+    "defaultName": "Alubia Caparrón",
+    "category": "OTROS",
+    "aliases": [
+      "Alubia Caparrón",
+      "Caparrón"
+    ]
+  },
+  {
+    "canonicalKey": "judion_de_la_granja",
+    "defaultName": "Judión de la Granja",
+    "category": "OTROS",
+    "aliases": [
+      "Judión de la Granja"
+    ]
+  },
+  {
+    "canonicalKey": "alubia_palmena_jaspeada",
+    "defaultName": "Alubia Palmeña jaspeada",
+    "category": "OTROS",
+    "aliases": [
+      "Alubia Palmeña jaspeada"
+    ]
+  },
+  {
+    "canonicalKey": "alubia_tolosana",
+    "defaultName": "Alubia Tolosana",
+    "category": "OTROS",
+    "aliases": [
+      "Alubia Tolosana"
+    ]
+  },
+  {
+    "canonicalKey": "lenteja_beluga",
+    "defaultName": "Lenteja Beluga",
+    "category": "OTROS",
+    "aliases": [
+      "Lenteja Beluga"
+    ]
+  },
+  {
+    "canonicalKey": "lenteja_pardina",
+    "defaultName": "Lenteja Pardina",
+    "category": "OTROS",
+    "aliases": [
+      "Lenteja Pardina",
+      "Lenteja Pardiña"
+    ]
+  },
+  {
+    "canonicalKey": "lenteja_verde_de_puy",
+    "defaultName": "Lenteja verde de Puy",
+    "category": "OTROS",
+    "aliases": [
+      "Lenteja verde de Puy",
+      "Lenteja de Puy"
+    ]
+  },
+  {
+    "canonicalKey": "lenteja_rubia_de_la_armuna",
+    "defaultName": "Lenteja Rubia de la Armuña",
+    "category": "OTROS",
+    "aliases": [
+      "Lenteja Rubia de la Armuña",
+      "Lenteja de la Armuña"
+    ]
+  },
+  {
+    "canonicalKey": "lenteja_rubia_castellana",
+    "defaultName": "Lenteja Rubia Castellana",
+    "category": "OTROS",
+    "aliases": [
+      "Lenteja Rubia Castellana"
+    ]
+  },
+  {
+    "canonicalKey": "garbanzo_castellano",
+    "defaultName": "Garbanzo Castellano",
+    "category": "OTROS",
+    "aliases": [
+      "Garbanzo Castellano"
+    ]
+  },
+  {
+    "canonicalKey": "garbanzo_blanco_lechoso",
+    "defaultName": "Garbanzo Blanco lechoso",
+    "category": "OTROS",
+    "aliases": [
+      "Garbanzo Blanco lechoso",
+      "Garbanzo lechoso"
+    ]
+  },
+  {
+    "canonicalKey": "garbanzo_pedrosillano",
+    "defaultName": "Garbanzo Pedrosillano",
+    "category": "OTROS",
+    "aliases": [
+      "Garbanzo Pedrosillano"
+    ]
+  },
+  {
+    "canonicalKey": "garbanzo_venoso_andaluz",
+    "defaultName": "Garbanzo Venoso andaluz",
+    "category": "OTROS",
+    "aliases": [
+      "Garbanzo Venoso andaluz"
+    ]
+  },
+  {
+    "canonicalKey": "garbanzo_chamad",
+    "defaultName": "Garbanzo Chamad",
+    "category": "OTROS",
+    "aliases": [
+      "Garbanzo Chamad"
+    ]
+  },
+  {
+    "canonicalKey": "alubia_canela",
+    "defaultName": "Alubia Canela",
+    "category": "OTROS",
+    "aliases": [
+      "Alubia Canela"
+    ]
+  },
+  {
+    "canonicalKey": "alubia_plancheta",
+    "defaultName": "Alubia Plancheta",
+    "category": "OTROS",
+    "aliases": [
+      "Alubia Plancheta"
+    ]
+  },
+  {
+    "canonicalKey": "harina_de_patata",
+    "defaultName": "Harina de patata",
+    "category": "OTROS",
+    "aliases": [
+      "Harina de patata"
+    ]
+  },
+  {
+    "canonicalKey": "soja_seca",
+    "defaultName": "Soja seca",
+    "category": "OTROS",
+    "aliases": [
+      "Soja seca",
+      "Habas de soja secas"
+    ]
+  },
+  {
+    "canonicalKey": "judia_larga_seca",
+    "defaultName": "Judía larga seca",
+    "category": "OTROS",
+    "aliases": [
+      "Judía larga seca",
+      "Judía de metro seca"
+    ]
+  },
+  {
+    "canonicalKey": "judia_alada_seca",
+    "defaultName": "Judía alada seca",
+    "category": "OTROS",
+    "aliases": [
+      "Judía alada seca"
+    ]
+  },
+  {
+    "canonicalKey": "leche_semidesnatada",
+    "defaultName": "Leche semidesnatada",
+    "category": "OTROS",
+    "aliases": [
+      "Leche semidesnatada"
+    ]
+  },
+  {
+    "canonicalKey": "leche_desnatada",
+    "defaultName": "Leche desnatada",
+    "category": "OTROS",
+    "aliases": [
+      "Leche desnatada",
+      "Leche descremada"
+    ]
+  },
+  {
+    "canonicalKey": "leche_evaporada",
+    "defaultName": "Leche evaporada",
+    "category": "OTROS",
+    "aliases": [
+      "Leche evaporada"
+    ]
+  },
+  {
+    "canonicalKey": "skyr_natural",
+    "defaultName": "Skyr natural",
+    "category": "OTROS",
+    "aliases": [
+      "Skyr natural"
+    ]
+  },
+  {
+    "canonicalKey": "cuajada_lactea",
+    "defaultName": "Cuajada láctea",
+    "category": "OTROS",
+    "aliases": [
+      "Cuajada láctea",
+      "Cuajada (postre lácteo)"
+    ]
+  },
+  {
+    "canonicalKey": "kefir_de_leche_natural",
+    "defaultName": "Kéfir de leche natural",
+    "category": "OTROS",
+    "aliases": [
+      "Kéfir de leche natural",
+      "Kéfir natural"
+    ]
+  },
+  {
+    "canonicalKey": "yogur_natural_de_cabra",
+    "defaultName": "Yogur natural de cabra",
+    "category": "OTROS",
+    "aliases": [
+      "Yogur natural de cabra",
+      "Yogur de cabra"
+    ]
+  },
+  {
+    "canonicalKey": "kefir_de_cabra",
+    "defaultName": "Kéfir de cabra",
+    "category": "OTROS",
+    "aliases": [
+      "Kéfir de cabra"
+    ]
+  },
+  {
+    "canonicalKey": "yogur_natural_de_oveja",
+    "defaultName": "Yogur natural de oveja",
+    "category": "OTROS",
+    "aliases": [
+      "Yogur natural de oveja",
+      "Yogur de oveja"
+    ]
+  },
+  {
+    "canonicalKey": "kefir_de_oveja",
+    "defaultName": "Kéfir de oveja",
+    "category": "OTROS",
+    "aliases": [
+      "Kéfir de oveja"
+    ]
+  },
+  {
+    "canonicalKey": "nata_cuajada_clotted_cream",
+    "defaultName": "Nata cuajada (clotted cream)",
+    "category": "OTROS",
+    "aliases": [
+      "Nata cuajada (clotted cream)",
+      "Clotted cream"
+    ]
+  },
+  {
+    "canonicalKey": "ayran",
+    "defaultName": "Ayran",
+    "category": "OTROS",
+    "aliases": [
+      "Ayran"
+    ]
+  },
+  {
+    "canonicalKey": "huevo_entero_liquido_pasteurizado",
+    "defaultName": "Huevo entero líquido pasteurizado",
+    "category": "OTROS",
+    "aliases": [
+      "Huevo entero líquido pasteurizado",
+      "Huevo líquido pasteurizado"
+    ]
+  },
+  {
+    "canonicalKey": "clara_de_huevo_liquida_pasteurizada",
+    "defaultName": "Clara de huevo líquida pasteurizada",
+    "category": "OTROS",
+    "aliases": [
+      "Clara de huevo líquida pasteurizada",
+      "Clara pasteurizada"
+    ]
+  },
+  {
+    "canonicalKey": "yema_de_huevo_liquida_pasteurizada",
+    "defaultName": "Yema de huevo líquida pasteurizada",
+    "category": "OTROS",
+    "aliases": [
+      "Yema de huevo líquida pasteurizada",
+      "Yema pasteurizada"
+    ]
+  },
+  {
+    "canonicalKey": "dashi_de_katsuobushi",
+    "defaultName": "Dashi de katsuobushi",
+    "category": "SALSAS",
+    "aliases": [
+      "Dashi de katsuobushi",
+      "Katsuo dashi"
+    ]
+  },
+  {
+    "canonicalKey": "dashi_de_kombu",
+    "defaultName": "Dashi de kombu",
+    "category": "SALSAS",
+    "aliases": [
+      "Dashi de kombu",
+      "Kombu dashi"
+    ]
+  },
+  {
+    "canonicalKey": "dashi_de_katsuobushi_y_kombu",
+    "defaultName": "Dashi de katsuobushi y kombu",
+    "category": "SALSAS",
+    "aliases": [
+      "Dashi de katsuobushi y kombu",
+      "Awase dashi"
+    ]
+  },
+  {
+    "canonicalKey": "dashi_de_shiitake",
+    "defaultName": "Dashi de shiitake",
+    "category": "SALSAS",
+    "aliases": [
+      "Dashi de shiitake",
+      "Shiitake dashi"
+    ]
+  },
+  {
+    "canonicalKey": "dashi_de_niboshi",
+    "defaultName": "Dashi de niboshi",
+    "category": "SALSAS",
+    "aliases": [
+      "Dashi de niboshi",
+      "Niboshi dashi"
+    ]
+  },
+  {
+    "canonicalKey": "fondo_concentrado_de_cigala",
+    "defaultName": "Fondo concentrado de cigala",
+    "category": "SALSAS",
+    "aliases": [
+      "Fondo concentrado de cigala"
+    ]
+  },
+  {
+    "canonicalKey": "fondo_concentrado_de_setas",
+    "defaultName": "Fondo concentrado de setas",
+    "category": "SALSAS",
+    "aliases": [
+      "Fondo concentrado de setas"
+    ]
+  },
+  {
+    "canonicalKey": "caldo_de_marisco",
+    "defaultName": "Caldo de marisco",
+    "category": "SALSAS",
+    "aliases": [
+      "Caldo de marisco"
+    ]
+  },
+  {
+    "canonicalKey": "caldo_de_pollo_con_jamon",
+    "defaultName": "Caldo de pollo con jamón",
+    "category": "SALSAS",
+    "aliases": [
+      "Caldo de pollo con jamón"
+    ]
+  },
+  {
+    "canonicalKey": "beurre_manie",
+    "defaultName": "Beurre manié",
+    "category": "SALSAS",
+    "aliases": [
+      "Beurre manié",
+      "Mantequilla amasada con harina"
+    ]
+  },
+  {
+    "canonicalKey": "yogur_natural_desnatado",
+    "defaultName": "Yogur natural desnatado",
+    "category": "OTROS",
+    "aliases": [
+      "Yogur natural desnatado"
+    ]
+  },
+  {
+    "canonicalKey": "mezcla_de_leche_y_nata_half_and_half",
+    "defaultName": "Mezcla de leche y nata (half-and-half)",
+    "category": "OTROS",
+    "aliases": [
+      "Mezcla de leche y nata (half-and-half)",
+      "Half-and-half"
+    ]
+  },
+  {
+    "canonicalKey": "nata_montada",
+    "defaultName": "Nata montada",
+    "category": "OTROS",
+    "aliases": [
+      "Nata montada"
+    ]
+  },
+  {
+    "canonicalKey": "huevo_cocido",
+    "defaultName": "Huevo cocido",
+    "category": "OTROS",
+    "aliases": [
+      "Huevo cocido",
+      "Huevo duro"
+    ]
+  },
+  {
+    "canonicalKey": "huevo_escalfado",
+    "defaultName": "Huevo escalfado",
+    "category": "OTROS",
+    "aliases": [
+      "Huevo escalfado",
+      "Huevo poché"
+    ]
+  },
+  {
+    "canonicalKey": "huevo_revuelto",
+    "defaultName": "Huevo revuelto",
+    "category": "OTROS",
+    "aliases": [
+      "Huevo revuelto",
+      "Huevos revueltos"
+    ]
+  },
+  {
+    "canonicalKey": "caldo_de_vacuno_deshidratado",
+    "defaultName": "Caldo de vacuno deshidratado",
+    "category": "SALSAS",
+    "aliases": [
+      "Caldo de vacuno deshidratado",
+      "Caldo de vacuno en polvo"
+    ]
+  },
+  {
+    "canonicalKey": "caldo_de_pollo_deshidratado",
+    "defaultName": "Caldo de pollo deshidratado",
+    "category": "SALSAS",
+    "aliases": [
+      "Caldo de pollo deshidratado",
+      "Caldo de pollo en polvo"
+    ]
+  },
+  {
+    "canonicalKey": "almendra_antoneta",
+    "defaultName": "Almendra Antoñeta",
+    "category": "OTROS",
+    "aliases": [
+      "Almendra Antoñeta"
+    ]
+  },
+  {
+    "canonicalKey": "almendra_belona",
+    "defaultName": "Almendra Belona",
+    "category": "OTROS",
+    "aliases": [
+      "Almendra Belona"
+    ]
+  },
+  {
+    "canonicalKey": "almendra_ferragnes",
+    "defaultName": "Almendra Ferragnes",
+    "category": "OTROS",
+    "aliases": [
+      "Almendra Ferragnes"
+    ]
+  },
+  {
+    "canonicalKey": "almendra_guara",
+    "defaultName": "Almendra Guara",
+    "category": "OTROS",
+    "aliases": [
+      "Almendra Guara"
+    ]
+  },
+  {
+    "canonicalKey": "almendra_largueta",
+    "defaultName": "Almendra Largueta",
+    "category": "OTROS",
+    "aliases": [
+      "Almendra Largueta"
+    ]
+  },
+  {
+    "canonicalKey": "almendra_lauranne",
+    "defaultName": "Almendra Lauranne",
+    "category": "OTROS",
+    "aliases": [
+      "Almendra Lauranne"
+    ]
+  },
+  {
+    "canonicalKey": "almendra_marcona",
+    "defaultName": "Almendra Marcona",
+    "category": "OTROS",
+    "aliases": [
+      "Almendra Marcona"
+    ]
+  },
+  {
+    "canonicalKey": "almendra_soleta",
+    "defaultName": "Almendra Soleta",
+    "category": "OTROS",
+    "aliases": [
+      "Almendra Soleta"
+    ]
+  },
+  {
+    "canonicalKey": "almendra_vairo",
+    "defaultName": "Almendra Vairo",
+    "category": "OTROS",
+    "aliases": [
+      "Almendra Vairo"
+    ]
+  },
+  {
+    "canonicalKey": "almendra_butte",
+    "defaultName": "Almendra Butte",
+    "category": "OTROS",
+    "aliases": [
+      "Almendra Butte"
+    ]
+  },
+  {
+    "canonicalKey": "almendra_carmel",
+    "defaultName": "Almendra Carmel",
+    "category": "OTROS",
+    "aliases": [
+      "Almendra Carmel"
+    ]
+  },
+  {
+    "canonicalKey": "almendra_nonpareil",
+    "defaultName": "Almendra Nonpareil",
+    "category": "OTROS",
+    "aliases": [
+      "Almendra Nonpareil"
+    ]
+  },
+  {
+    "canonicalKey": "nuez_pizarro",
+    "defaultName": "Nuez Pizarro",
+    "category": "OTROS",
+    "aliases": [
+      "Nuez Pizarro"
+    ]
+  },
+  {
+    "canonicalKey": "nuez_chandler",
+    "defaultName": "Nuez Chandler",
+    "category": "OTROS",
+    "aliases": [
+      "Nuez Chandler"
+    ]
+  },
+  {
+    "canonicalKey": "nuez_hartley",
+    "defaultName": "Nuez Hartley",
+    "category": "OTROS",
+    "aliases": [
+      "Nuez Hartley"
+    ]
+  },
+  {
+    "canonicalKey": "nuez_howard",
+    "defaultName": "Nuez Howard",
+    "category": "OTROS",
+    "aliases": [
+      "Nuez Howard"
+    ]
+  },
+  {
+    "canonicalKey": "nuez_serr",
+    "defaultName": "Nuez Serr",
+    "category": "OTROS",
+    "aliases": [
+      "Nuez Serr"
+    ]
+  },
+  {
+    "canonicalKey": "harina_de_almendra",
+    "defaultName": "Harina de almendra",
+    "category": "OTROS",
+    "aliases": [
+      "Harina de almendra"
+    ]
+  },
+  {
+    "canonicalKey": "harina_de_pistacho",
+    "defaultName": "Harina de pistacho",
+    "category": "OTROS",
+    "aliases": [
+      "Harina de pistacho"
+    ]
+  },
+  {
+    "canonicalKey": "harina_de_avellana",
+    "defaultName": "Harina de avellana",
+    "category": "OTROS",
+    "aliases": [
+      "Harina de avellana"
+    ]
+  },
+  {
+    "canonicalKey": "harina_de_nuez",
+    "defaultName": "Harina de nuez",
+    "category": "OTROS",
+    "aliases": [
+      "Harina de nuez"
+    ]
+  },
+  {
+    "canonicalKey": "pasta_pura_de_almendra",
+    "defaultName": "Pasta pura de almendra",
+    "category": "OTROS",
+    "aliases": [
+      "Pasta pura de almendra",
+      "Mantequilla de almendra"
+    ]
+  },
+  {
+    "canonicalKey": "pasta_pura_de_nuez",
+    "defaultName": "Pasta pura de nuez",
+    "category": "OTROS",
+    "aliases": [
+      "Pasta pura de nuez",
+      "Mantequilla de nuez"
+    ]
+  },
+  {
+    "canonicalKey": "pasta_pura_de_macadamia",
+    "defaultName": "Pasta pura de macadamia",
+    "category": "OTROS",
+    "aliases": [
+      "Pasta pura de macadamia",
+      "Mantequilla de macadamia"
+    ]
+  },
+  {
+    "canonicalKey": "tahini_de_sesamo_negro",
+    "defaultName": "Tahini de sésamo negro",
+    "category": "OTROS",
+    "aliases": [
+      "Tahini de sésamo negro",
+      "Pasta pura de sésamo negro"
+    ]
+  },
+  {
+    "canonicalKey": "pasta_de_semillas_de_calabaza",
+    "defaultName": "Pasta de semillas de calabaza",
+    "category": "OTROS",
+    "aliases": [
+      "Pasta de semillas de calabaza",
+      "Pasta de pipas de calabaza"
+    ]
+  },
+  {
+    "canonicalKey": "pasta_de_nuez_pecana",
+    "defaultName": "Pasta de nuez pecana",
+    "category": "OTROS",
+    "aliases": [
+      "Pasta de nuez pecana",
+      "Pasta de pacana"
+    ]
+  },
+  {
+    "canonicalKey": "praline_de_almendra",
+    "defaultName": "Praliné de almendra",
+    "category": "CREMAS_DULCES",
+    "aliases": [
+      "Praliné de almendra"
+    ]
+  },
+  {
+    "canonicalKey": "praline_de_nuez",
+    "defaultName": "Praliné de nuez",
+    "category": "CREMAS_DULCES",
+    "aliases": [
+      "Praliné de nuez"
+    ]
+  },
+  {
+    "canonicalKey": "metilcelulosa_alimentaria",
+    "defaultName": "Metilcelulosa alimentaria",
+    "category": "OTROS",
+    "aliases": [
+      "Metilcelulosa alimentaria",
+      "Metilcelulosa"
+    ]
+  },
+  {
+    "canonicalKey": "carboximetilcelulosa_sodica_alimentaria",
+    "defaultName": "Carboximetilcelulosa sódica alimentaria",
+    "category": "OTROS",
+    "aliases": [
+      "Carboximetilcelulosa sódica alimentaria",
+      "CMC alimentaria"
+    ]
+  },
+  {
+    "canonicalKey": "goma_konjac",
+    "defaultName": "Goma konjac",
+    "category": "OTROS",
+    "aliases": [
+      "Goma konjac"
+    ]
+  },
+  {
+    "canonicalKey": "citrato_trisodico_alimentario",
+    "defaultName": "Citrato trisódico alimentario",
+    "category": "OTROS",
+    "aliases": [
+      "Citrato trisódico alimentario",
+      "Citrato de sodio alimentario"
+    ]
+  },
+  {
+    "canonicalKey": "cloruro_de_calcio_alimentario",
+    "defaultName": "Cloruro de calcio alimentario",
+    "category": "OTROS",
+    "aliases": [
+      "Cloruro de calcio alimentario",
+      "Cloruro cálcico alimentario"
+    ]
+  },
+  {
+    "canonicalKey": "gluconolactato_de_calcio",
+    "defaultName": "Gluconolactato de calcio",
+    "category": "OTROS",
+    "aliases": [
+      "Gluconolactato de calcio"
+    ]
+  },
+  {
+    "canonicalKey": "preparado_de_pectina_hm_de_gelificacion_rapida",
+    "defaultName": "Preparado de pectina HM de gelificación rápida",
+    "category": "OTROS",
+    "aliases": [
+      "Preparado de pectina HM de gelificación rápida",
+      "Pectina HM rapid set"
+    ]
+  },
+  {
+    "canonicalKey": "preparado_de_pectina_lma_con_calcio",
+    "defaultName": "Preparado de pectina LMA con calcio",
+    "category": "OTROS",
+    "aliases": [
+      "Preparado de pectina LMA con calcio",
+      "Pectina LMA con calcio"
+    ]
+  },
+  {
+    "canonicalKey": "lecitina_de_girasol",
+    "defaultName": "Lecitina de girasol",
+    "category": "OTROS",
+    "aliases": [
+      "Lecitina de girasol"
+    ]
+  },
+  {
+    "canonicalKey": "tofu_sedoso",
+    "defaultName": "Tofu sedoso",
+    "category": "OTROS",
+    "aliases": [
+      "Tofu sedoso",
+      "Silken tofu"
+    ]
+  },
+  {
+    "canonicalKey": "yuba",
+    "defaultName": "Yuba",
+    "category": "OTROS",
+    "aliases": [
+      "Yuba",
+      "Piel de tofu"
+    ]
+  },
+  {
+    "canonicalKey": "tempeh_de_guisante",
+    "defaultName": "Tempeh de guisante",
+    "category": "OTROS",
+    "aliases": [
+      "Tempeh de guisante",
+      "Tempe de guisante"
+    ]
+  },
+  {
+    "canonicalKey": "tempeh_de_garbanzo",
+    "defaultName": "Tempeh de garbanzo",
+    "category": "OTROS",
+    "aliases": [
+      "Tempeh de garbanzo",
+      "Tempe de garbanzo"
+    ]
+  },
+  {
+    "canonicalKey": "lechuga_de_mar",
+    "defaultName": "Lechuga de mar",
+    "category": "VERDURAS",
+    "aliases": [
+      "Lechuga de mar"
+    ]
+  },
+  {
+    "canonicalKey": "codium",
+    "defaultName": "Codium",
+    "category": "VERDURAS",
+    "aliases": [
+      "Codium"
+    ]
+  },
+  {
+    "canonicalKey": "kombu_atlantico",
+    "defaultName": "Kombu atlántico",
+    "category": "VERDURAS",
+    "aliases": [
+      "Kombu atlántico"
+    ]
+  },
+  {
+    "canonicalKey": "musgo_de_irlanda",
+    "defaultName": "Musgo de Irlanda",
+    "category": "VERDURAS",
+    "aliases": [
+      "Musgo de Irlanda"
+    ]
+  },
+  {
+    "canonicalKey": "musgo_estrellado",
+    "defaultName": "Musgo estrellado",
+    "category": "VERDURAS",
+    "aliases": [
+      "Musgo estrellado"
+    ]
+  },
+  {
+    "canonicalKey": "arame",
+    "defaultName": "Arame",
+    "category": "VERDURAS",
+    "aliases": [
+      "Arame"
+    ]
+  },
+  {
+    "canonicalKey": "doenjang",
+    "defaultName": "Doenjang",
+    "category": "SALSAS",
+    "aliases": [
+      "Doenjang",
+      "Pasta coreana de soja fermentada"
+    ]
+  },
+  {
+    "canonicalKey": "ssamjang",
+    "defaultName": "Ssamjang",
+    "category": "SALSAS",
+    "aliases": [
+      "Ssamjang"
+    ]
+  },
+  {
+    "canonicalKey": "miso_de_cebada",
+    "defaultName": "Miso de cebada",
+    "category": "SALSAS",
+    "aliases": [
+      "Miso de cebada",
+      "Mugi miso"
+    ]
+  },
+  {
+    "canonicalKey": "miso_de_arroz_integral",
+    "defaultName": "Miso de arroz integral",
+    "category": "SALSAS",
+    "aliases": [
+      "Miso de arroz integral",
+      "Genmai miso"
+    ]
+  },
+  {
+    "canonicalKey": "miso_blanco_de_arroz",
+    "defaultName": "Miso blanco de arroz",
+    "category": "SALSAS",
+    "aliases": [
+      "Miso blanco de arroz",
+      "Shiro miso"
+    ]
+  },
+  {
+    "canonicalKey": "shio_koji",
+    "defaultName": "Shio koji",
+    "category": "SALSAS",
+    "aliases": [
+      "Shio koji"
+    ]
+  },
+  {
+    "canonicalKey": "shoyu_koji",
+    "defaultName": "Shoyu koji",
+    "category": "SALSAS",
+    "aliases": [
+      "Shoyu koji"
+    ]
+  },
+  {
+    "canonicalKey": "yuzu_kosho",
+    "defaultName": "Yuzu kosho",
+    "category": "SALSAS",
+    "aliases": [
+      "Yuzu kosho",
+      "Pasta picante de yuzu"
+    ]
+  },
+  {
+    "canonicalKey": "doubanjiang",
+    "defaultName": "Doubanjiang",
+    "category": "SALSAS",
+    "aliases": [
+      "Doubanjiang",
+      "Toban djan",
+      "Pasta de habas fermentadas con chile"
+    ]
+  },
+  {
+    "canonicalKey": "salsa_de_soja_negra_fermentada_y_ajo",
+    "defaultName": "Salsa de soja negra fermentada y ajo",
+    "category": "SALSAS",
+    "aliases": [
+      "Salsa de soja negra fermentada y ajo",
+      "Salsa de judías negras fermentadas y ajo"
+    ]
+  },
+  {
+    "canonicalKey": "salsa_char_siu",
+    "defaultName": "Salsa char siu",
+    "category": "SALSAS",
+    "aliases": [
+      "Salsa char siu",
+      "Salsa para char siu"
+    ]
+  },
+  {
+    "canonicalKey": "salsa_xo",
+    "defaultName": "Salsa XO",
+    "category": "SALSAS",
+    "aliases": [
+      "Salsa XO"
+    ]
+  },
+  {
+    "canonicalKey": "gomasio",
+    "defaultName": "Gomasio",
+    "category": "HIERBAS_ESPECIAS",
+    "aliases": [
+      "Gomasio",
+      "Gomashio",
+      "Sal de sésamo"
+    ]
+  },
+  {
+    "canonicalKey": "levadura_nutricional_inactiva",
+    "defaultName": "Levadura nutricional inactiva",
+    "category": "OTROS",
+    "aliases": [
+      "Levadura nutricional inactiva",
+      "Levadura nutricional"
+    ]
+  },
+  {
+    "canonicalKey": "bebida_de_soja",
+    "defaultName": "Bebida de soja",
+    "category": "OTROS",
+    "aliases": [
+      "Bebida de soja",
+      "Leche de soja"
+    ]
+  },
+  {
+    "canonicalKey": "bebida_de_avena",
+    "defaultName": "Bebida de avena",
+    "category": "OTROS",
+    "aliases": [
+      "Bebida de avena",
+      "Leche de avena"
+    ]
+  },
+  {
+    "canonicalKey": "bebida_de_arroz",
+    "defaultName": "Bebida de arroz",
+    "category": "OTROS",
+    "aliases": [
+      "Bebida de arroz",
+      "Leche de arroz"
+    ]
+  },
+  {
+    "canonicalKey": "bebida_de_espelta",
+    "defaultName": "Bebida de espelta",
+    "category": "OTROS",
+    "aliases": [
+      "Bebida de espelta",
+      "Leche de espelta"
+    ]
+  },
+  {
+    "canonicalKey": "bebida_de_mijo",
+    "defaultName": "Bebida de mijo",
+    "category": "OTROS",
+    "aliases": [
+      "Bebida de mijo",
+      "Leche de mijo"
+    ]
+  },
+  {
+    "canonicalKey": "bebida_de_almendra",
+    "defaultName": "Bebida de almendra",
+    "category": "OTROS",
+    "aliases": [
+      "Bebida de almendra",
+      "Leche de almendra",
+      "Bebida de almendras"
+    ]
+  },
+  {
+    "canonicalKey": "bebida_de_avellana",
+    "defaultName": "Bebida de avellana",
+    "category": "OTROS",
+    "aliases": [
+      "Bebida de avellana",
+      "Leche de avellana"
+    ]
+  },
+  {
+    "canonicalKey": "bebida_de_anacardo",
+    "defaultName": "Bebida de anacardo",
+    "category": "OTROS",
+    "aliases": [
+      "Bebida de anacardo",
+      "Leche de anacardo"
+    ]
+  },
+  {
+    "canonicalKey": "bebida_de_canamo",
+    "defaultName": "Bebida de cáñamo",
+    "category": "OTROS",
+    "aliases": [
+      "Bebida de cáñamo",
+      "Leche de cáñamo"
+    ]
+  },
+  {
+    "canonicalKey": "bebida_de_guisante",
+    "defaultName": "Bebida de guisante",
+    "category": "OTROS",
+    "aliases": [
+      "Bebida de guisante",
+      "Leche de guisante"
+    ]
+  },
+  {
+    "canonicalKey": "crema_de_soja_para_cocinar",
+    "defaultName": "Crema de soja para cocinar",
+    "category": "SALSAS",
+    "aliases": [
+      "Crema de soja para cocinar",
+      "Nata vegetal de soja"
+    ]
+  },
+  {
+    "canonicalKey": "crema_de_avena_para_cocinar",
+    "defaultName": "Crema de avena para cocinar",
+    "category": "SALSAS",
+    "aliases": [
+      "Crema de avena para cocinar",
+      "Nata vegetal de avena"
+    ]
+  },
+  {
+    "canonicalKey": "crema_de_arroz_para_cocinar",
+    "defaultName": "Crema de arroz para cocinar",
+    "category": "SALSAS",
+    "aliases": [
+      "Crema de arroz para cocinar",
+      "Nata vegetal de arroz"
+    ]
+  },
+  {
+    "canonicalKey": "crema_de_almendra_para_cocinar",
+    "defaultName": "Crema de almendra para cocinar",
+    "category": "SALSAS",
+    "aliases": [
+      "Crema de almendra para cocinar",
+      "Nata vegetal de almendra"
+    ]
+  },
+  {
+    "canonicalKey": "crema_de_anacardo_para_cocinar",
+    "defaultName": "Crema de anacardo para cocinar",
+    "category": "SALSAS",
+    "aliases": [
+      "Crema de anacardo para cocinar",
+      "Nata vegetal de anacardo"
+    ]
+  },
+  {
+    "canonicalKey": "fermentado_de_soja_natural",
+    "defaultName": "Fermentado de soja natural",
+    "category": "OTROS",
+    "aliases": [
+      "Fermentado de soja natural",
+      "Yogur de soja natural",
+      "Yogur de soja"
+    ]
+  },
+  {
+    "canonicalKey": "alternativa_de_avena_al_yogur_natural",
+    "defaultName": "Alternativa de avena al yogur natural",
+    "category": "OTROS",
+    "aliases": [
+      "Alternativa de avena al yogur natural",
+      "Yogur de avena natural",
+      "Yogur de avena"
+    ]
+  },
+  {
+    "canonicalKey": "fermentado_de_coco_natural",
+    "defaultName": "Fermentado de coco natural",
+    "category": "OTROS",
+    "aliases": [
+      "Fermentado de coco natural",
+      "Yogur de coco natural",
+      "Yogur de coco"
+    ]
+  },
+  {
+    "canonicalKey": "kefir_de_soja",
+    "defaultName": "Kéfir de soja",
+    "category": "OTROS",
+    "aliases": [
+      "Kéfir de soja",
+      "Bebida de soja con cultivos de kéfir"
+    ]
+  },
+  {
+    "canonicalKey": "mizuna",
+    "defaultName": "Mizuna",
+    "category": "VERDURAS",
+    "aliases": [
+      "Mizuna"
+    ]
+  },
+  {
+    "canonicalKey": "choi_sum",
+    "defaultName": "Choi sum",
+    "category": "VERDURAS",
+    "aliases": [
+      "Choi sum"
+    ]
+  },
+  {
+    "canonicalKey": "tatsoi",
+    "defaultName": "Tatsoi",
+    "category": "VERDURAS",
+    "aliases": [
+      "Tatsoi"
+    ]
+  },
+  {
+    "canonicalKey": "komatsuna",
+    "defaultName": "Komatsuna",
+    "category": "VERDURAS",
+    "aliases": [
+      "Komatsuna",
+      "Espinaca japonesa"
+    ]
+  },
+  {
+    "canonicalKey": "romanesco",
+    "defaultName": "Romanesco",
+    "category": "VERDURAS",
+    "aliases": [
+      "Romanesco",
+      "Coliflor romanesco",
+      "Brócoli romanesco"
+    ]
+  },
+  {
+    "canonicalKey": "rabano_daikon",
+    "defaultName": "Rábano daikon",
+    "category": "VERDURAS",
+    "aliases": [
+      "Rábano daikon",
+      "Daikon",
+      "Rábano japonés"
+    ]
+  },
+  {
+    "canonicalKey": "tomatillo",
+    "defaultName": "Tomatillo",
+    "category": "VERDURAS",
+    "aliases": [
+      "Tomatillo"
+    ]
+  },
+  {
+    "canonicalKey": "pimiento_de_padron",
+    "defaultName": "Pimiento de Padrón",
+    "category": "VERDURAS",
+    "aliases": [
+      "Pimiento de Padrón",
+      "Pimientos de Padrón"
+    ]
+  },
+  {
+    "canonicalKey": "aceituna_manzanilla_sevillana",
+    "defaultName": "Aceituna Manzanilla sevillana",
+    "category": "VERDURAS",
+    "aliases": [
+      "Aceituna Manzanilla sevillana",
+      "Aceitunas Manzanilla sevillana"
+    ]
+  },
+  {
+    "canonicalKey": "aceituna_gordal_sevillana",
+    "defaultName": "Aceituna Gordal sevillana",
+    "category": "VERDURAS",
+    "aliases": [
+      "Aceituna Gordal sevillana",
+      "Aceitunas Gordal",
+      "Aceituna Gordal"
+    ]
+  },
+  {
+    "canonicalKey": "aceituna_morona",
+    "defaultName": "Aceituna Morona",
+    "category": "VERDURAS",
+    "aliases": [
+      "Aceituna Morona",
+      "Aceitunas Morona"
+    ]
+  },
+  {
+    "canonicalKey": "aceituna_hojiblanca",
+    "defaultName": "Aceituna Hojiblanca",
+    "category": "VERDURAS",
+    "aliases": [
+      "Aceituna Hojiblanca",
+      "Aceitunas Hojiblanca"
+    ]
+  },
+  {
+    "canonicalKey": "aceituna_verdial_de_huevar",
+    "defaultName": "Aceituna Verdial de Huévar",
+    "category": "VERDURAS",
+    "aliases": [
+      "Aceituna Verdial de Huévar",
+      "Aceitunas Verdial de Huévar"
+    ]
+  },
+  {
+    "canonicalKey": "alcaparrones",
+    "defaultName": "Alcaparrones",
+    "category": "VERDURAS",
+    "aliases": [
+      "Alcaparrones",
+      "Alcaparrón"
+    ]
+  },
+  {
+    "canonicalKey": "ajo_encurtido",
+    "defaultName": "Ajo encurtido",
+    "category": "VERDURAS",
+    "aliases": [
+      "Ajo encurtido",
+      "Ajos en vinagre"
+    ]
+  },
+  {
+    "canonicalKey": "berenjena_de_almagro",
+    "defaultName": "Berenjena de Almagro",
+    "category": "VERDURAS",
+    "aliases": [
+      "Berenjena de Almagro",
+      "Berenjenas de Almagro"
+    ]
+  },
+  {
+    "canonicalKey": "guindilla_de_ibarra_en_vinagre",
+    "defaultName": "Guindilla de Ibarra en vinagre",
+    "category": "VERDURAS",
+    "aliases": [
+      "Guindilla de Ibarra en vinagre",
+      "Piparra de Ibarra en vinagre"
+    ]
+  },
+  {
+    "canonicalKey": "kimchi_de_col_napa",
+    "defaultName": "Kimchi de col napa",
+    "category": "VERDURAS",
+    "aliases": [
+      "Kimchi de col napa",
+      "Kimchi de col china"
+    ]
+  },
+  {
+    "canonicalKey": "kimchi_de_rabano",
+    "defaultName": "Kimchi de rábano",
+    "category": "VERDURAS",
+    "aliases": [
+      "Kimchi de rábano",
+      "Kkakdugi"
+    ]
+  },
+  {
+    "canonicalKey": "kimchi_de_hojas_de_mostaza",
+    "defaultName": "Kimchi de hojas de mostaza",
+    "category": "VERDURAS",
+    "aliases": [
+      "Kimchi de hojas de mostaza",
+      "Gat kimchi"
+    ]
+  },
+  {
+    "canonicalKey": "kimchi_de_cebolleta",
+    "defaultName": "Kimchi de cebolleta",
+    "category": "VERDURAS",
+    "aliases": [
+      "Kimchi de cebolleta",
+      "Kimchi de cebolla tierna"
+    ]
+  },
+  {
+    "canonicalKey": "nora_seca",
+    "defaultName": "Ñora seca",
+    "category": "VERDURAS",
+    "aliases": [
+      "Ñora seca",
+      "Ñora",
+      "Ñoras"
+    ]
+  },
+  {
+    "canonicalKey": "pimiento_choricero_seco",
+    "defaultName": "Pimiento choricero seco",
+    "category": "VERDURAS",
+    "aliases": [
+      "Pimiento choricero seco",
+      "Pimiento choricero"
+    ]
+  },
+  {
+    "canonicalKey": "hoja_santa",
+    "defaultName": "Hoja santa",
+    "category": "HIERBAS_ESPECIAS",
+    "aliases": [
+      "Hoja santa"
+    ]
+  },
+  {
+    "canonicalKey": "culantro",
+    "defaultName": "Culantro",
+    "category": "HIERBAS_ESPECIAS",
+    "aliases": [
+      "Culantro"
+    ]
+  },
+  {
+    "canonicalKey": "oregano_mexicano",
+    "defaultName": "Orégano mexicano",
+    "category": "HIERBAS_ESPECIAS",
+    "aliases": [
+      "Orégano mexicano"
+    ]
+  },
+  {
+    "canonicalKey": "hojas_de_lima_makrut",
+    "defaultName": "Hojas de lima makrut",
+    "category": "HIERBAS_ESPECIAS",
+    "aliases": [
+      "Hojas de lima makrut",
+      "Hojas de lima kaffir"
+    ]
+  },
+  {
+    "canonicalKey": "semillas_de_ajowan",
+    "defaultName": "Semillas de ajowan",
+    "category": "HIERBAS_ESPECIAS",
+    "aliases": [
+      "Semillas de ajowan",
+      "Ajowan",
+      "Ajwain"
+    ]
+  },
+  {
+    "canonicalKey": "semillas_de_nigella",
+    "defaultName": "Semillas de nigella",
+    "category": "HIERBAS_ESPECIAS",
+    "aliases": [
+      "Semillas de nigella",
+      "Nigella sativa",
+      "Kalonji",
+      "Charnushka"
+    ]
+  },
+  {
+    "canonicalKey": "asafetida_en_polvo",
+    "defaultName": "Asafétida en polvo",
+    "category": "HIERBAS_ESPECIAS",
+    "aliases": [
+      "Asafétida en polvo",
+      "Hing en polvo",
+      "Asafoetida en polvo"
+    ]
+  },
+  {
+    "canonicalKey": "chile_ancho_seco",
+    "defaultName": "Chile ancho seco",
+    "category": "VERDURAS",
+    "aliases": [
+      "Chile ancho seco",
+      "Chile ancho"
+    ]
+  },
+  {
+    "canonicalKey": "chile_guajillo_seco",
+    "defaultName": "Chile guajillo seco",
+    "category": "VERDURAS",
+    "aliases": [
+      "Chile guajillo seco",
+      "Chile guajillo"
+    ]
+  },
+  {
+    "canonicalKey": "chile_pasilla_negro_seco",
+    "defaultName": "Chile pasilla negro seco",
+    "category": "VERDURAS",
+    "aliases": [
+      "Chile pasilla negro seco",
+      "Pasilla negro",
+      "Chilaca seco"
+    ]
+  },
+  {
+    "canonicalKey": "chile_mulato_seco",
+    "defaultName": "Chile mulato seco",
+    "category": "VERDURAS",
+    "aliases": [
+      "Chile mulato seco",
+      "Chile mulato"
+    ]
+  },
+  {
+    "canonicalKey": "chile_cascabel_seco",
+    "defaultName": "Chile cascabel seco",
+    "category": "VERDURAS",
+    "aliases": [
+      "Chile cascabel seco",
+      "Chile cascabel"
+    ]
+  },
+  {
+    "canonicalKey": "chile_de_arbol_seco",
+    "defaultName": "Chile de árbol seco",
+    "category": "VERDURAS",
+    "aliases": [
+      "Chile de árbol seco"
+    ]
+  },
+  {
+    "canonicalKey": "chile_piquin_seco",
+    "defaultName": "Chile piquín seco",
+    "category": "VERDURAS",
+    "aliases": [
+      "Chile piquín seco",
+      "Chile pequin seco"
+    ]
+  },
+  {
+    "canonicalKey": "chile_costeno_rojo_seco",
+    "defaultName": "Chile costeño rojo seco",
+    "category": "VERDURAS",
+    "aliases": [
+      "Chile costeño rojo seco"
+    ]
+  },
+  {
+    "canonicalKey": "chile_japones_seco",
+    "defaultName": "Chile japonés seco",
+    "category": "VERDURAS",
+    "aliases": [
+      "Chile japonés seco"
+    ]
+  },
+  {
+    "canonicalKey": "aji_panca_seco",
+    "defaultName": "Ají panca seco",
+    "category": "VERDURAS",
+    "aliases": [
+      "Ají panca seco"
+    ]
+  },
+  {
+    "canonicalKey": "aji_amarillo_seco",
+    "defaultName": "Ají amarillo seco",
+    "category": "VERDURAS",
+    "aliases": [
+      "Ají amarillo seco"
+    ]
+  },
+  {
+    "canonicalKey": "chile_byadgi_seco",
+    "defaultName": "Chile Byadgi seco",
+    "category": "VERDURAS",
+    "aliases": [
+      "Chile Byadgi seco"
+    ]
+  },
+  {
+    "canonicalKey": "chile_puya_seco",
+    "defaultName": "Chile puya seco",
+    "category": "VERDURAS",
+    "aliases": [
+      "Chile puya seco",
+      "Chile puya"
+    ]
+  },
+  {
+    "canonicalKey": "chile_tien_tsin_seco",
+    "defaultName": "Chile Tien Tsin seco",
+    "category": "VERDURAS",
+    "aliases": [
+      "Chile Tien Tsin seco",
+      "Tien Tsin"
+    ]
+  },
+  {
+    "canonicalKey": "chile_kashmiri_seco",
+    "defaultName": "Chile Kashmiri seco",
+    "category": "VERDURAS",
+    "aliases": [
+      "Chile Kashmiri seco",
+      "Chile de Cachemira seco"
+    ]
+  },
+  {
+    "canonicalKey": "cinco_especias_chinas",
+    "defaultName": "Cinco especias chinas",
+    "category": "HIERBAS_ESPECIAS",
+    "aliases": [
+      "Cinco especias chinas",
+      "Chinese five spice"
+    ]
+  },
+  {
+    "canonicalKey": "panch_phoron",
+    "defaultName": "Panch phoron",
+    "category": "HIERBAS_ESPECIAS",
+    "aliases": [
+      "Panch phoron",
+      "Panchpuran"
+    ]
+  },
+  {
+    "canonicalKey": "vadouvan",
+    "defaultName": "Vadouvan",
+    "category": "HIERBAS_ESPECIAS",
+    "aliases": [
+      "Vadouvan",
+      "Curry vadouvan"
+    ]
+  },
+  {
+    "canonicalKey": "mezcla_de_especias_para_shawarma",
+    "defaultName": "Mezcla de especias para shawarma",
+    "category": "HIERBAS_ESPECIAS",
+    "aliases": [
+      "Mezcla de especias para shawarma",
+      "Condimento para shawarma"
+    ]
+  },
+  {
+    "canonicalKey": "condimento_jerk_seco",
+    "defaultName": "Condimento jerk seco",
+    "category": "HIERBAS_ESPECIAS",
+    "aliases": [
+      "Condimento jerk seco",
+      "Mezcla seca jamaicana jerk"
+    ]
+  },
+  {
+    "canonicalKey": "sal_de_apio",
+    "defaultName": "Sal de apio",
+    "category": "HIERBAS_ESPECIAS",
+    "aliases": [
+      "Sal de apio"
+    ]
+  },
+  {
+    "canonicalKey": "condimento_de_pimienta_y_limon",
+    "defaultName": "Condimento de pimienta y limón",
+    "category": "HIERBAS_ESPECIAS",
+    "aliases": [
+      "Condimento de pimienta y limón",
+      "Lemon pepper"
+    ]
+  },
+  {
+    "canonicalKey": "condimento_cajun",
+    "defaultName": "Condimento cajún",
+    "category": "HIERBAS_ESPECIAS",
+    "aliases": [
+      "Condimento cajún",
+      "Mezcla cajún"
+    ]
+  },
+  {
+    "canonicalKey": "tandoori_masala",
+    "defaultName": "Tandoori masala",
+    "category": "HIERBAS_ESPECIAS",
+    "aliases": [
+      "Tandoori masala",
+      "Mezcla de especias tandoori"
+    ]
+  },
+  {
+    "canonicalKey": "masala_para_pav_bhaji",
+    "defaultName": "Masala para pav bhaji",
+    "category": "HIERBAS_ESPECIAS",
+    "aliases": [
+      "Masala para pav bhaji",
+      "Pav bhaji masala"
+    ]
+  },
+  {
+    "canonicalKey": "masala_para_chana",
+    "defaultName": "Masala para chana",
+    "category": "HIERBAS_ESPECIAS",
+    "aliases": [
+      "Masala para chana",
+      "Chana masala en polvo"
+    ]
+  },
+  {
+    "canonicalKey": "masala_para_sambar",
+    "defaultName": "Masala para sambar",
+    "category": "HIERBAS_ESPECIAS",
+    "aliases": [
+      "Masala para sambar",
+      "Sambar masala",
+      "Sambhar masala"
+    ]
+  },
+  {
+    "canonicalKey": "masala_para_rasam",
+    "defaultName": "Masala para rasam",
+    "category": "HIERBAS_ESPECIAS",
+    "aliases": [
+      "Masala para rasam",
+      "Rasam masala"
+    ]
+  },
+  {
+    "canonicalKey": "jal_jeera_masala",
+    "defaultName": "Jal jeera masala",
+    "category": "HIERBAS_ESPECIAS",
+    "aliases": [
+      "Jal jeera masala",
+      "Mezcla de especias jal jeera"
+    ]
+  },
+  {
+    "canonicalKey": "cuatro_especias_francesas",
+    "defaultName": "Cuatro especias francesas",
+    "category": "HIERBAS_ESPECIAS",
+    "aliases": [
+      "Cuatro especias francesas",
+      "Quatre épices"
+    ]
+  },
+  {
+    "canonicalKey": "mezcla_de_finas_hierbas",
+    "defaultName": "Mezcla de finas hierbas",
+    "category": "HIERBAS_ESPECIAS",
+    "aliases": [
+      "Mezcla de finas hierbas",
+      "Fines herbes"
+    ]
+  },
+  {
+    "canonicalKey": "advieh",
+    "defaultName": "Advieh",
+    "category": "HIERBAS_ESPECIAS",
+    "aliases": [
+      "Advieh"
+    ]
+  },
+  {
+    "canonicalKey": "goda_masala",
+    "defaultName": "Goda masala",
+    "category": "HIERBAS_ESPECIAS",
+    "aliases": [
+      "Goda masala"
+    ]
+  },
+  {
+    "canonicalKey": "khmeli_suneli",
+    "defaultName": "Khmeli suneli",
+    "category": "HIERBAS_ESPECIAS",
+    "aliases": [
+      "Khmeli suneli"
+    ]
+  },
+  {
+    "canonicalKey": "tabil",
+    "defaultName": "Tabil",
+    "category": "HIERBAS_ESPECIAS",
+    "aliases": [
+      "Tabil",
+      "Tabil tunecino"
+    ]
+  },
+  {
+    "canonicalKey": "especias_para_speculaas",
+    "defaultName": "Especias para speculaas",
+    "category": "HIERBAS_ESPECIAS",
+    "aliases": [
+      "Especias para speculaas",
+      "Speculaas spice"
+    ]
+  },
+  {
+    "canonicalKey": "especias_para_tarta_de_manzana",
+    "defaultName": "Especias para tarta de manzana",
+    "category": "HIERBAS_ESPECIAS",
+    "aliases": [
+      "Especias para tarta de manzana",
+      "Apple pie spice"
+    ]
+  },
+  {
+    "canonicalKey": "amchur",
+    "defaultName": "Amchur",
+    "category": "HIERBAS_ESPECIAS",
+    "aliases": [
+      "Amchur",
+      "Amchoor",
+      "Mango verde seco en polvo"
+    ]
+  },
+  {
+    "canonicalKey": "preparado_de_especias_para_chai",
+    "defaultName": "Preparado de especias para chai",
+    "category": "HIERBAS_ESPECIAS",
+    "aliases": [
+      "Preparado de especias para chai",
+      "Chai spices"
+    ]
+  },
+  {
+    "canonicalKey": "anardana",
+    "defaultName": "Anardana",
+    "category": "HIERBAS_ESPECIAS",
+    "aliases": [
+      "Anardana",
+      "Granos de granada secos para condimentar"
+    ]
+  },
+  {
+    "canonicalKey": "besar",
+    "defaultName": "Besar",
+    "category": "HIERBAS_ESPECIAS",
+    "aliases": [
+      "Besar"
+    ]
+  },
+  {
+    "canonicalKey": "condimento_adobo_seco",
+    "defaultName": "Condimento adobo seco",
+    "category": "HIERBAS_ESPECIAS",
+    "aliases": [
+      "Condimento adobo seco",
+      "Adobo seco en polvo"
+    ]
+  },
+  {
+    "canonicalKey": "mezcla_de_especias_para_vino_caliente",
+    "defaultName": "Mezcla de especias para vino caliente",
+    "category": "HIERBAS_ESPECIAS",
+    "aliases": [
+      "Mezcla de especias para vino caliente",
+      "Mulling spices"
+    ]
+  },
+  {
+    "canonicalKey": "mezcla_seca_para_chermoula",
+    "defaultName": "Mezcla seca para chermoula",
+    "category": "HIERBAS_ESPECIAS",
+    "aliases": [
+      "Mezcla seca para chermoula",
+      "Condimento seco chermoula"
+    ]
+  },
+  {
+    "canonicalKey": "masala_para_dhansak",
+    "defaultName": "Masala para dhansak",
+    "category": "HIERBAS_ESPECIAS",
+    "aliases": [
+      "Masala para dhansak",
+      "Dhanshak masala"
+    ]
+  },
+  {
+    "canonicalKey": "aceite_de_pistacho",
+    "defaultName": "Aceite de pistacho",
+    "category": "ACEITES_GRASAS_VINAGRES",
+    "aliases": [
+      "Aceite de pistacho"
+    ]
+  },
+  {
+    "canonicalKey": "aceite_de_semilla_de_calabaza",
+    "defaultName": "Aceite de semilla de calabaza",
+    "category": "ACEITES_GRASAS_VINAGRES",
+    "aliases": [
+      "Aceite de semilla de calabaza",
+      "Aceite de pepita de calabaza"
+    ]
+  },
+  {
+    "canonicalKey": "aceite_de_nuez_pecana",
+    "defaultName": "Aceite de nuez pecana",
+    "category": "ACEITES_GRASAS_VINAGRES",
+    "aliases": [
+      "Aceite de nuez pecana",
+      "Aceite de pacana"
+    ]
+  },
+  {
+    "canonicalKey": "aceite_de_macadamia",
+    "defaultName": "Aceite de macadamia",
+    "category": "ACEITES_GRASAS_VINAGRES",
+    "aliases": [
+      "Aceite de macadamia"
+    ]
+  },
+  {
+    "canonicalKey": "aceite_de_semilla_de_canamo",
+    "defaultName": "Aceite de semilla de cáñamo",
+    "category": "ACEITES_GRASAS_VINAGRES",
+    "aliases": [
+      "Aceite de semilla de cáñamo",
+      "Aceite de cáñamo alimentario"
+    ]
+  },
+  {
+    "canonicalKey": "aceite_de_camelina",
+    "defaultName": "Aceite de camelina",
+    "category": "ACEITES_GRASAS_VINAGRES",
+    "aliases": [
+      "Aceite de camelina"
+    ]
+  },
+  {
+    "canonicalKey": "aceite_de_argan_alimentario",
+    "defaultName": "Aceite de argán alimentario",
+    "category": "ACEITES_GRASAS_VINAGRES",
+    "aliases": [
+      "Aceite de argán alimentario",
+      "Aceite culinario de argán"
+    ]
+  },
+  {
+    "canonicalKey": "grasa_de_pato",
+    "defaultName": "Grasa de pato",
+    "category": "ACEITES_GRASAS_VINAGRES",
+    "aliases": [
+      "Grasa de pato"
+    ]
+  },
+  {
+    "canonicalKey": "grasa_de_cordero",
+    "defaultName": "Grasa de cordero",
+    "category": "ACEITES_GRASAS_VINAGRES",
+    "aliases": [
+      "Grasa de cordero",
+      "Sebo de cordero"
+    ]
+  },
+  {
+    "canonicalKey": "vinagre_rojo_de_lias_de_sake",
+    "defaultName": "Vinagre rojo de lías de sake",
+    "category": "ACEITES_GRASAS_VINAGRES",
+    "aliases": [
+      "Vinagre rojo de lías de sake",
+      "Akazu"
+    ]
+  },
+  {
+    "canonicalKey": "vinagre_negro_japones_de_arroz",
+    "defaultName": "Vinagre negro japonés de arroz",
+    "category": "ACEITES_GRASAS_VINAGRES",
+    "aliases": [
+      "Vinagre negro japonés de arroz",
+      "Kurozu"
+    ]
+  },
+  {
+    "canonicalKey": "vinagre_de_miel",
+    "defaultName": "Vinagre de miel",
+    "category": "ACEITES_GRASAS_VINAGRES",
+    "aliases": [
+      "Vinagre de miel"
+    ]
+  },
+  {
+    "canonicalKey": "alubia_granja_asturiana",
+    "defaultName": "Alubia Granja Asturiana",
+    "category": "OTROS",
+    "aliases": [
+      "Alubia Granja Asturiana"
+    ]
+  },
+  {
+    "canonicalKey": "faba_galaica",
+    "defaultName": "Faba Galaica",
+    "category": "OTROS",
+    "aliases": [
+      "Faba Galaica",
+      "Alubia Galaica"
+    ]
+  },
+  {
+    "canonicalKey": "alubia_del_ganxet",
+    "defaultName": "Alubia del Ganxet",
+    "category": "OTROS",
+    "aliases": [
+      "Alubia del Ganxet",
+      "Mongeta del ganxet",
+      "Judía de gancho"
+    ]
+  },
+  {
+    "canonicalKey": "garbanzo_de_fuentesauco",
+    "defaultName": "Garbanzo de Fuentesaúco",
+    "category": "OTROS",
+    "aliases": [
+      "Garbanzo de Fuentesaúco"
+    ]
+  },
+  {
+    "canonicalKey": "alubias_cranberry",
+    "defaultName": "Alubias cranberry",
+    "category": "OTROS",
+    "aliases": [
+      "Alubias cranberry"
+    ]
+  },
+  {
+    "canonicalKey": "alubias_flageolet",
+    "defaultName": "Alubias flageolet",
+    "category": "OTROS",
+    "aliases": [
+      "Alubias flageolet",
+      "Flageolets verdes"
+    ]
+  },
+  {
+    "canonicalKey": "proteina_texturizada_de_guisante",
+    "defaultName": "Proteína texturizada de guisante",
+    "category": "OTROS",
+    "aliases": [
+      "Proteína texturizada de guisante",
+      "Guisante texturizado"
+    ]
+  },
+  {
+    "canonicalKey": "proteina_aislada_de_haba",
+    "defaultName": "Proteína aislada de haba",
+    "category": "OTROS",
+    "aliases": [
+      "Proteína aislada de haba"
+    ]
+  },
+  {
+    "canonicalKey": "okara_de_soja",
+    "defaultName": "Okara de soja",
+    "category": "OTROS",
+    "aliases": [
+      "Okara de soja",
+      "Pulpa de soja para cocinar"
+    ]
+  },
+  {
+    "canonicalKey": "tofu_deshidratado_por_congelacion",
+    "defaultName": "Tofu deshidratado por congelación",
+    "category": "OTROS",
+    "aliases": [
+      "Tofu deshidratado por congelación",
+      "Koya-dofu",
+      "Kori-dofu"
+    ]
+  },
+  {
+    "canonicalKey": "aburaage",
+    "defaultName": "Aburaage",
+    "category": "OTROS",
+    "aliases": [
+      "Aburaage",
+      "Láminas de tofu fritas"
+    ]
+  },
+  {
+    "canonicalKey": "yaki_fu",
+    "defaultName": "Yaki-fu",
+    "category": "OTROS",
+    "aliases": [
+      "Yaki-fu",
+      "Gluten de trigo horneado japonés"
+    ]
+  },
+  {
+    "canonicalKey": "fideos_udon",
+    "defaultName": "Fideos udon",
+    "category": "OTROS",
+    "aliases": [
+      "Fideos udon",
+      "Udon"
+    ]
+  },
+  {
+    "canonicalKey": "fideos_ramen_de_trigo",
+    "defaultName": "Fideos ramen de trigo",
+    "category": "OTROS",
+    "aliases": [
+      "Fideos ramen de trigo",
+      "Fideos alcalinos para ramen"
+    ]
+  },
+  {
+    "canonicalKey": "fideos_shirataki_de_konjac",
+    "defaultName": "Fideos shirataki de konjac",
+    "category": "OTROS",
+    "aliases": [
+      "Fideos shirataki de konjac",
+      "Shirataki de konjac"
+    ]
+  },
+  {
+    "canonicalKey": "fideos_de_almidon_de_boniato",
+    "defaultName": "Fideos de almidón de boniato",
+    "category": "OTROS",
+    "aliases": [
+      "Fideos de almidón de boniato",
+      "Fideos de almidón de batata"
+    ]
+  },
+  {
+    "canonicalKey": "fideos_de_almidon_de_guisante_y_mungo",
+    "defaultName": "Fideos de almidón de guisante y mungo",
+    "category": "OTROS",
+    "aliases": [
+      "Fideos de almidón de guisante y mungo"
+    ]
+  },
+  {
+    "canonicalKey": "arroz_jazmin",
+    "defaultName": "Arroz jazmín",
+    "category": "OTROS",
+    "aliases": [
+      "Arroz jazmín",
+      "Arroz jasmine"
+    ]
+  },
+  {
+    "canonicalKey": "arroz_negro_en_grano",
+    "defaultName": "Arroz negro en grano",
+    "category": "OTROS",
+    "aliases": [
+      "Arroz negro en grano"
+    ]
+  },
+  {
+    "canonicalKey": "arroz_koshihikari",
+    "defaultName": "Arroz Koshihikari",
+    "category": "OTROS",
+    "aliases": [
+      "Arroz Koshihikari"
+    ]
+  },
+  {
+    "canonicalKey": "arroz_carolino",
+    "defaultName": "Arroz Carolino",
+    "category": "OTROS",
+    "aliases": [
+      "Arroz Carolino"
+    ]
+  },
+  {
+    "canonicalKey": "fonio_en_grano",
+    "defaultName": "Fonio en grano",
+    "category": "OTROS",
+    "aliases": [
+      "Fonio en grano",
+      "Fonio"
+    ]
+  },
+  {
+    "canonicalKey": "freekeh",
+    "defaultName": "Freekeh",
+    "category": "OTROS",
+    "aliases": [
+      "Freekeh",
+      "Trigo verde tostado"
+    ]
+  },
+  {
+    "canonicalKey": "trigo_einkorn_en_grano",
+    "defaultName": "Trigo einkorn en grano",
+    "category": "OTROS",
+    "aliases": [
+      "Trigo einkorn en grano",
+      "Escaña menor en grano"
+    ]
+  },
+  {
+    "canonicalKey": "trigo_emmer_en_grano",
+    "defaultName": "Trigo emmer en grano",
+    "category": "OTROS",
+    "aliases": [
+      "Trigo emmer en grano",
+      "Farro emmer"
+    ]
+  },
+  {
+    "canonicalKey": "pasta_de_garbanzo",
+    "defaultName": "Pasta de garbanzo",
+    "category": "OTROS",
+    "aliases": [
+      "Pasta de garbanzo"
+    ]
+  },
+  {
+    "canonicalKey": "pasta_de_lenteja_roja",
+    "defaultName": "Pasta de lenteja roja",
+    "category": "OTROS",
+    "aliases": [
+      "Pasta de lenteja roja"
+    ]
+  },
+  {
+    "canonicalKey": "harina_de_yuca",
+    "defaultName": "Harina de yuca",
+    "category": "OTROS",
+    "aliases": [
+      "Harina de yuca",
+      "Harina de mandioca"
+    ]
+  },
+  {
+    "canonicalKey": "harina_de_castana",
+    "defaultName": "Harina de castaña",
+    "category": "OTROS",
+    "aliases": [
+      "Harina de castaña"
+    ]
+  },
+  {
+    "canonicalKey": "harina_de_altramuz",
+    "defaultName": "Harina de altramuz",
+    "category": "OTROS",
+    "aliases": [
+      "Harina de altramuz",
+      "Harina de lupino"
+    ]
+  },
+  {
+    "canonicalKey": "harina_de_banana_verde",
+    "defaultName": "Harina de banana verde",
+    "category": "OTROS",
+    "aliases": [
+      "Harina de banana verde"
+    ]
+  },
+  {
+    "canonicalKey": "harina_de_maiz_precocida",
+    "defaultName": "Harina de maíz precocida",
+    "category": "OTROS",
+    "aliases": [
+      "Harina de maíz precocida"
+    ]
+  },
+  {
+    "canonicalKey": "pan_lavash",
+    "defaultName": "Pan lavash",
+    "category": "OTROS",
+    "aliases": [
+      "Pan lavash",
+      "Lavash"
+    ]
+  },
+  {
+    "canonicalKey": "piadina",
+    "defaultName": "Piadina",
+    "category": "OTROS",
+    "aliases": [
+      "Piadina"
+    ]
+  },
+  {
+    "canonicalKey": "arepa_de_maiz_sin_relleno",
+    "defaultName": "Arepa de maíz sin relleno",
+    "category": "OTROS",
+    "aliases": [
+      "Arepa de maíz sin relleno",
+      "Arepa para rellenar"
+    ]
+  },
+  {
+    "canonicalKey": "pan_bao_sin_relleno",
+    "defaultName": "Pan bao sin relleno",
+    "category": "OTROS",
+    "aliases": [
+      "Pan bao sin relleno",
+      "Gua bao sin relleno"
+    ]
+  },
+  {
+    "canonicalKey": "panecillo_pretzel",
+    "defaultName": "Panecillo pretzel",
+    "category": "OTROS",
+    "aliases": [
+      "Panecillo pretzel",
+      "Panecillo bretzel"
+    ]
+  },
+  {
+    "canonicalKey": "masa_quebrada",
+    "defaultName": "Masa quebrada",
+    "category": "OTROS",
+    "aliases": [
+      "Masa quebrada",
+      "Masa brisa"
+    ]
+  },
+  {
+    "canonicalKey": "masa_de_pizza",
+    "defaultName": "Masa de pizza",
+    "category": "OTROS",
+    "aliases": [
+      "Masa de pizza"
+    ]
+  },
+  {
+    "canonicalKey": "laminas_para_gyoza",
+    "defaultName": "Láminas para gyoza",
+    "category": "OTROS",
+    "aliases": [
+      "Láminas para gyoza",
+      "Masa para gyoza"
+    ]
+  },
+  {
+    "canonicalKey": "papel_de_arroz_para_rollitos",
+    "defaultName": "Papel de arroz para rollitos",
+    "category": "OTROS",
+    "aliases": [
+      "Papel de arroz para rollitos",
+      "Láminas de arroz para rollitos"
+    ]
+  },
+  {
+    "canonicalKey": "kecap_manis",
+    "defaultName": "Kecap manis",
+    "category": "SALSAS",
+    "aliases": [
+      "Kecap manis",
+      "Ketjap manis",
+      "Salsa de soja dulce indonesia"
+    ]
+  },
+  {
+    "canonicalKey": "salsa_tonkatsu",
+    "defaultName": "Salsa tonkatsu",
+    "category": "SALSAS",
+    "aliases": [
+      "Salsa tonkatsu"
+    ]
+  },
+  {
+    "canonicalKey": "salsa_okonomiyaki",
+    "defaultName": "Salsa okonomiyaki",
+    "category": "SALSAS",
+    "aliases": [
+      "Salsa okonomiyaki",
+      "Salsa okonomi"
+    ]
+  },
+  {
+    "canonicalKey": "salsa_yakisoba",
+    "defaultName": "Salsa yakisoba",
+    "category": "SALSAS",
+    "aliases": [
+      "Salsa yakisoba"
+    ]
+  },
+  {
+    "canonicalKey": "chermoula_en_pasta",
+    "defaultName": "Chermoula en pasta",
+    "category": "SALSAS",
+    "aliases": [
+      "Chermoula en pasta",
+      "Pasta chermoula"
+    ]
+  },
+  {
+    "canonicalKey": "salsa_amba_de_mango",
+    "defaultName": "Salsa amba de mango",
+    "category": "SALSAS",
+    "aliases": [
+      "Salsa amba de mango",
+      "Amba de mango"
+    ]
+  },
+  {
+    "canonicalKey": "salmorreta",
+    "defaultName": "Salmorreta",
+    "category": "SALSAS",
+    "aliases": [
+      "Salmorreta",
+      "Salmoreta"
+    ]
+  },
+  {
+    "canonicalKey": "salsa_rouille",
+    "defaultName": "Salsa rouille",
+    "category": "SALSAS",
+    "aliases": [
+      "Salsa rouille"
+    ]
+  },
+  {
+    "canonicalKey": "mole_rojo_con_cacao",
+    "defaultName": "Mole rojo con cacao",
+    "category": "SALSAS",
+    "aliases": [
+      "Mole rojo con cacao"
+    ]
+  },
+  {
+    "canonicalKey": "pipian_de_semillas_de_calabaza",
+    "defaultName": "Pipián de semillas de calabaza",
+    "category": "SALSAS",
+    "aliases": [
+      "Pipián de semillas de calabaza",
+      "Mole pipián"
+    ]
+  },
+  {
+    "canonicalKey": "salsa_gribiche",
+    "defaultName": "Salsa gribiche",
+    "category": "SALSAS",
+    "aliases": [
+      "Salsa gribiche"
+    ]
+  },
+  {
+    "canonicalKey": "impulsor_quimico_de_reposteria",
+    "defaultName": "Impulsor químico de repostería",
+    "category": "OTROS",
+    "aliases": [
+      "Impulsor químico de repostería",
+      "Polvo de hornear",
+      "Levadura química"
+    ]
+  },
+  {
+    "canonicalKey": "preparado_de_bicarbonato_amonico_para_galletas",
+    "defaultName": "Preparado de bicarbonato amónico para galletas",
+    "category": "OTROS",
+    "aliases": [
+      "Preparado de bicarbonato amónico para galletas",
+      "Gasificante amónico para galletas"
+    ]
+  },
+  {
+    "canonicalKey": "nibs_de_cacao_tostado",
+    "defaultName": "Nibs de cacao tostado",
+    "category": "OTROS",
+    "aliases": [
+      "Nibs de cacao tostado",
+      "Trocitos de cacao tostado descascarillado"
+    ]
+  },
+  {
+    "canonicalKey": "feuilletine_crujiente",
+    "defaultName": "Feuilletine crujiente",
+    "category": "OTROS",
+    "aliases": [
+      "Feuilletine crujiente",
+      "Pailleté feuilletine"
+    ]
+  },
+  {
+    "canonicalKey": "crema_de_limon_con_huevo",
+    "defaultName": "Crema de limón con huevo",
+    "category": "CREMAS_DULCES",
+    "aliases": [
+      "Crema de limón con huevo",
+      "Lemon curd"
+    ]
+  },
+  {
+    "canonicalKey": "crema_inglesa",
+    "defaultName": "Crema inglesa",
+    "category": "CREMAS_DULCES",
+    "aliases": [
+      "Crema inglesa",
+      "Crème anglaise"
+    ]
+  },
+  {
+    "canonicalKey": "fondant_para_extender",
+    "defaultName": "Fondant para extender",
+    "category": "ENDULZANTES",
+    "aliases": [
+      "Fondant para extender",
+      "Pasta de azúcar para cubrir tartas"
+    ]
+  },
+  {
+    "canonicalKey": "fondant_para_bano_de_pasteleria",
+    "defaultName": "Fondant para baño de pastelería",
+    "category": "ENDULZANTES",
+    "aliases": [
+      "Fondant para baño de pastelería",
+      "Fondant para glasear en caliente"
+    ]
+  },
+  {
+    "canonicalKey": "preparado_en_polvo_para_glasa_real",
+    "defaultName": "Preparado en polvo para glasa real",
+    "category": "ENDULZANTES",
+    "aliases": [
+      "Preparado en polvo para glasa real",
+      "Preparado para royal icing"
+    ]
+  },
+  {
+    "canonicalKey": "glaseado_neutro_de_pasteleria",
+    "defaultName": "Glaseado neutro de pastelería",
+    "category": "CREMAS_DULCES",
+    "aliases": [
+      "Glaseado neutro de pastelería",
+      "Nappage neutro"
+    ]
+  },
+  {
+    "canonicalKey": "salicornia",
+    "defaultName": "Salicornia",
+    "category": "VERDURAS",
+    "aliases": [
+      "Salicornia"
+    ]
+  },
+  {
+    "canonicalKey": "agretti",
+    "defaultName": "Agretti",
+    "category": "VERDURAS",
+    "aliases": [
+      "Agretti"
+    ]
+  },
+  {
+    "canonicalKey": "oca_andina",
+    "defaultName": "Oca andina",
+    "category": "VERDURAS",
+    "aliases": [
+      "Oca andina",
+      "Oca tubérculo"
+    ]
+  },
+  {
+    "canonicalKey": "ulluco",
+    "defaultName": "Ulluco",
+    "category": "VERDURAS",
+    "aliases": [
+      "Ulluco",
+      "Olluco"
+    ]
+  },
+  {
+    "canonicalKey": "mashua",
+    "defaultName": "Mashua",
+    "category": "VERDURAS",
+    "aliases": [
+      "Mashua"
+    ]
+  },
+  {
+    "canonicalKey": "arracacha",
+    "defaultName": "Arracacha",
+    "category": "VERDURAS",
+    "aliases": [
+      "Arracacha"
+    ]
+  },
+  {
+    "canonicalKey": "yacon_raiz",
+    "defaultName": "Yacón raíz",
+    "category": "VERDURAS",
+    "aliases": [
+      "Yacón raíz",
+      "Raíz de yacón"
+    ]
+  },
+  {
+    "canonicalKey": "crosne",
+    "defaultName": "Crosne",
+    "category": "VERDURAS",
+    "aliases": [
+      "Crosne",
+      "Alcachofa china"
+    ]
+  },
+  {
+    "canonicalKey": "espinaca_de_nueva_zelanda",
+    "defaultName": "Espinaca de Nueva Zelanda",
+    "category": "VERDURAS",
+    "aliases": [
+      "Espinaca de Nueva Zelanda"
+    ]
+  },
+  {
+    "canonicalKey": "kombu_japones",
+    "defaultName": "Kombu japonés",
+    "category": "VERDURAS",
+    "aliases": [
+      "Kombu japonés"
+    ]
+  },
+  {
+    "canonicalKey": "mozuku_de_okinawa",
+    "defaultName": "Mozuku de Okinawa",
+    "category": "VERDURAS",
+    "aliases": [
+      "Mozuku de Okinawa"
+    ]
+  },
+  {
+    "canonicalKey": "rambutan",
+    "defaultName": "Rambután",
+    "category": "FRUTAS",
+    "aliases": [
+      "Rambután"
+    ]
+  },
+  {
+    "canonicalKey": "pulasan",
+    "defaultName": "Pulasan",
+    "category": "FRUTAS",
+    "aliases": [
+      "Pulasan"
+    ]
+  },
+  {
+    "canonicalKey": "mangostan",
+    "defaultName": "Mangostán",
+    "category": "FRUTAS",
+    "aliases": [
+      "Mangostán"
+    ]
+  },
+  {
+    "canonicalKey": "santol",
+    "defaultName": "Santol",
+    "category": "FRUTAS",
+    "aliases": [
+      "Santol",
+      "Sentul"
+    ]
+  },
+  {
+    "canonicalKey": "langsat",
+    "defaultName": "Langsat",
+    "category": "FRUTAS",
+    "aliases": [
+      "Langsat"
+    ]
+  },
+  {
+    "canonicalKey": "salak",
+    "defaultName": "Salak",
+    "category": "FRUTAS",
+    "aliases": [
+      "Salak"
+    ]
+  },
+  {
+    "canonicalKey": "abiu",
+    "defaultName": "Abiu",
+    "category": "FRUTAS",
+    "aliases": [
+      "Abiu",
+      "Caimito amarillo"
+    ]
+  },
+  {
+    "canonicalKey": "canistel",
+    "defaultName": "Canistel",
+    "category": "FRUTAS",
+    "aliases": [
+      "Canistel",
+      "Zapote amarillo"
+    ]
+  },
+  {
+    "canonicalKey": "atemoya",
+    "defaultName": "Atemoya",
+    "category": "FRUTAS",
+    "aliases": [
+      "Atemoya"
+    ]
+  },
+  {
+    "canonicalKey": "zapote_blanco",
+    "defaultName": "Zapote blanco",
+    "category": "FRUTAS",
+    "aliases": [
+      "Zapote blanco"
+    ]
+  },
+  {
+    "canonicalKey": "zapote_negro",
+    "defaultName": "Zapote negro",
+    "category": "FRUTAS",
+    "aliases": [
+      "Zapote negro",
+      "Zapote prieto"
+    ]
+  },
+  {
+    "canonicalKey": "lulo",
+    "defaultName": "Lulo",
+    "category": "FRUTAS",
+    "aliases": [
+      "Lulo",
+      "Naranjilla"
+    ]
+  },
+  {
+    "canonicalKey": "tamarillo",
+    "defaultName": "Tamarillo",
+    "category": "FRUTAS",
+    "aliases": [
+      "Tamarillo",
+      "Tomate de árbol"
+    ]
+  },
+  {
+    "canonicalKey": "lucuma",
+    "defaultName": "Lúcuma",
+    "category": "FRUTAS",
+    "aliases": [
+      "Lúcuma"
+    ]
+  },
+  {
+    "canonicalKey": "pepino_dulce",
+    "defaultName": "Pepino dulce",
+    "category": "FRUTAS",
+    "aliases": [
+      "Pepino dulce"
+    ]
+  },
+  {
+    "canonicalKey": "galanga_mayor",
+    "defaultName": "Galanga mayor",
+    "category": "HIERBAS_ESPECIAS",
+    "aliases": [
+      "Galanga mayor",
+      "Lengkuas"
+    ]
+  },
+  {
+    "canonicalKey": "hojas_de_pandan",
+    "defaultName": "Hojas de pandán",
+    "category": "HIERBAS_ESPECIAS",
+    "aliases": [
+      "Hojas de pandán"
+    ]
+  },
+  {
+    "canonicalKey": "cilantro_vietnamita",
+    "defaultName": "Cilantro vietnamita",
+    "category": "HIERBAS_ESPECIAS",
+    "aliases": [
+      "Cilantro vietnamita",
+      "Hojas de laksa"
+    ]
+  },
+  {
+    "canonicalKey": "huacatay",
+    "defaultName": "Huacatay",
+    "category": "HIERBAS_ESPECIAS",
+    "aliases": [
+      "Huacatay"
+    ]
+  },
+  {
+    "canonicalKey": "rizoma_de_fingerroot",
+    "defaultName": "Rizoma de fingerroot",
+    "category": "HIERBAS_ESPECIAS",
+    "aliases": [
+      "Rizoma de fingerroot",
+      "Fingerroot"
+    ]
+  },
+  {
+    "canonicalKey": "rizoma_de_kencur",
+    "defaultName": "Rizoma de kencur",
+    "category": "HIERBAS_ESPECIAS",
+    "aliases": [
+      "Rizoma de kencur",
+      "Kencur"
+    ]
+  },
+  {
+    "canonicalKey": "pimienta_cubeba",
+    "defaultName": "Pimienta cubeba",
+    "category": "HIERBAS_ESPECIAS",
+    "aliases": [
+      "Pimienta cubeba",
+      "Cubeba"
+    ]
+  },
+  {
+    "canonicalKey": "bayas_de_pimienta_de_tasmania",
+    "defaultName": "Bayas de pimienta de Tasmania",
+    "category": "HIERBAS_ESPECIAS",
+    "aliases": [
+      "Bayas de pimienta de Tasmania"
+    ]
+  },
+  {
+    "canonicalKey": "lima_negra_seca_en_polvo",
+    "defaultName": "Lima negra seca en polvo",
+    "category": "HIERBAS_ESPECIAS",
+    "aliases": [
+      "Lima negra seca en polvo",
+      "Loomi en polvo"
+    ]
+  },
+  {
+    "canonicalKey": "mahlab",
+    "defaultName": "Mahlab",
+    "category": "HIERBAS_ESPECIAS",
+    "aliases": [
+      "Mahlab",
+      "Mahleb"
+    ]
+  },
+  {
+    "canonicalKey": "almaciga_culinaria",
+    "defaultName": "Almáciga culinaria",
+    "category": "HIERBAS_ESPECIAS",
+    "aliases": [
+      "Almáciga culinaria",
+      "Mastiha en resina"
+    ]
+  },
+  {
+    "canonicalKey": "nueces_de_baru_tostadas",
+    "defaultName": "Nueces de baru tostadas",
+    "category": "OTROS",
+    "aliases": [
+      "Nueces de baru tostadas",
+      "Almendras de baru tostadas"
+    ]
+  },
+  {
+    "canonicalKey": "semillas_de_sacha_inchi_tostadas",
+    "defaultName": "Semillas de sacha inchi tostadas",
+    "category": "OTROS",
+    "aliases": [
+      "Semillas de sacha inchi tostadas"
+    ]
+  },
+  {
+    "canonicalKey": "makhana_inflado",
+    "defaultName": "Makhana inflado",
+    "category": "OTROS",
+    "aliases": [
+      "Makhana inflado",
+      "Makhana tostado e inflado"
+    ]
+  },
+  {
+    "canonicalKey": "semillas_de_melon_peladas",
+    "defaultName": "Semillas de melón peladas",
+    "category": "OTROS",
+    "aliases": [
+      "Semillas de melón peladas",
+      "Pepitas de melón"
+    ]
+  },
+  {
+    "canonicalKey": "nueces_de_galip",
+    "defaultName": "Nueces de galip",
+    "category": "OTROS",
+    "aliases": [
+      "Nueces de galip"
+    ]
+  },
+  {
+    "canonicalKey": "semillas_de_camansi_cocidas",
+    "defaultName": "Semillas de camansi cocidas",
+    "category": "OTROS",
+    "aliases": [
+      "Semillas de camansi cocidas",
+      "Semillas de breadnut cocidas"
+    ]
+  },
+  {
+    "canonicalKey": "semillas_de_yaca_cocidas",
+    "defaultName": "Semillas de yaca cocidas",
+    "category": "OTROS",
+    "aliases": [
+      "Semillas de yaca cocidas",
+      "Semillas de jaca cocidas"
+    ]
+  },
+  {
+    "canonicalKey": "nueces_de_mongongo_tostadas",
+    "defaultName": "Nueces de mongongo tostadas",
+    "category": "OTROS",
+    "aliases": [
+      "Nueces de mongongo tostadas",
+      "Nueces de manketti tostadas"
+    ]
+  },
+  {
+    "canonicalKey": "judias_bambara_secas",
+    "defaultName": "Judías bambara secas",
+    "category": "OTROS",
+    "aliases": [
+      "Judías bambara secas",
+      "Voandzou seco"
+    ]
+  },
+  {
+    "canonicalKey": "judias_tepary_secas",
+    "defaultName": "Judías tepary secas",
+    "category": "OTROS",
+    "aliases": [
+      "Judías tepary secas",
+      "Frijoles tepary secos"
+    ]
+  },
+  {
+    "canonicalKey": "judias_horsegram_secas",
+    "defaultName": "Judías horsegram secas",
+    "category": "OTROS",
+    "aliases": [
+      "Judías horsegram secas",
+      "Horse gram en grano seco"
+    ]
+  },
+  {
+    "canonicalKey": "judias_arroz_secas",
+    "defaultName": "Judías arroz secas",
+    "category": "OTROS",
+    "aliases": [
+      "Judías arroz secas",
+      "Ricebean seco"
+    ]
+  },
+  {
+    "canonicalKey": "copos_de_arroz",
+    "defaultName": "Copos de arroz",
+    "category": "OTROS",
+    "aliases": [
+      "Copos de arroz",
+      "Arroz aplanado",
+      "Poha sin condimentar"
+    ]
+  },
+  {
+    "canonicalKey": "maiz_blanco_nixtamalizado_cocido",
+    "defaultName": "Maíz blanco nixtamalizado cocido",
+    "category": "OTROS",
+    "aliases": [
+      "Maíz blanco nixtamalizado cocido",
+      "Hominy blanco cocido"
+    ]
+  },
+  {
+    "canonicalKey": "fecula_de_patata",
+    "defaultName": "Fécula de patata",
+    "category": "OTROS",
+    "aliases": [
+      "Fécula de patata",
+      "Almidón de patata"
+    ]
+  },
+  {
+    "canonicalKey": "almidon_de_trigo",
+    "defaultName": "Almidón de trigo",
+    "category": "OTROS",
+    "aliases": [
+      "Almidón de trigo",
+      "Fécula de trigo"
+    ]
+  },
+  {
+    "canonicalKey": "almidon_de_guisante",
+    "defaultName": "Almidón de guisante",
+    "category": "OTROS",
+    "aliases": [
+      "Almidón de guisante",
+      "Fécula de guisante"
+    ]
+  },
+  {
+    "canonicalKey": "almidon_de_kudzu",
+    "defaultName": "Almidón de kudzu",
+    "category": "OTROS",
+    "aliases": [
+      "Almidón de kudzu",
+      "Almidón de kuzu"
+    ]
+  },
+  {
+    "canonicalKey": "almidon_de_mandioca_fermentado",
+    "defaultName": "Almidón de mandioca fermentado",
+    "category": "OTROS",
+    "aliases": [
+      "Almidón de mandioca fermentado",
+      "Polvilho azedo"
+    ]
+  },
+  {
+    "canonicalKey": "harina_de_habas",
+    "defaultName": "Harina de habas",
+    "category": "OTROS",
+    "aliases": [
+      "Harina de habas"
+    ]
+  },
+  {
+    "canonicalKey": "harina_de_trigo_malteado",
+    "defaultName": "Harina de trigo malteado",
+    "category": "OTROS",
+    "aliases": [
+      "Harina de trigo malteado",
+      "Harina de malta de trigo"
+    ]
+  },
+  {
+    "canonicalKey": "inulina_de_achicoria",
+    "defaultName": "Inulina de achicoria",
+    "category": "OTROS",
+    "aliases": [
+      "Inulina de achicoria"
+    ]
+  },
+  {
+    "canonicalKey": "carrillera_de_cerdo",
+    "defaultName": "Carrillera de cerdo",
+    "category": "CARNES",
+    "aliases": [
+      "Carrillera de cerdo",
+      "Carrillada de cerdo",
+      "Carrilleras de cerdo"
+    ]
+  },
+  {
+    "canonicalKey": "carrillera_de_vacuno",
+    "defaultName": "Carrillera de vacuno",
+    "category": "CARNES",
+    "aliases": [
+      "Carrillera de vacuno",
+      "Carrillada de vacuno",
+      "Carrilleras de vacuno"
+    ]
+  },
+  {
+    "canonicalKey": "secreto_de_cerdo",
+    "defaultName": "Secreto de cerdo",
+    "category": "CARNES",
+    "aliases": [
+      "Secreto de cerdo"
+    ]
+  },
+  {
+    "canonicalKey": "presa_de_cerdo",
+    "defaultName": "Presa de cerdo",
+    "category": "CARNES",
+    "aliases": [
+      "Presa de cerdo"
+    ]
+  },
+  {
+    "canonicalKey": "pluma_de_cerdo",
+    "defaultName": "Pluma de cerdo",
+    "category": "CARNES",
+    "aliases": [
+      "Pluma de cerdo"
+    ]
+  },
+  {
+    "canonicalKey": "salchichon",
+    "defaultName": "Salchichón",
+    "category": "EMBUTIDOS",
+    "aliases": [
+      "Salchichón",
+      "Salchichón de cerdo"
+    ]
+  },
+  {
+    "canonicalKey": "placas_para_canelones",
+    "defaultName": "Placas para canelones",
+    "category": "OTROS",
+    "aliases": [
+      "Placas para canelones",
+      "Pasta para canelones"
+    ]
+  },
+  {
+    "canonicalKey": "margarina",
+    "defaultName": "Margarina",
+    "category": "ACEITES_GRASAS_VINAGRES",
+    "aliases": [
+      "Margarina"
+    ]
+  },
+  {
+    "canonicalKey": "vino_blanco",
+    "defaultName": "Vino blanco",
+    "category": "OTROS",
+    "aliases": [
+      "Vino blanco",
+      "Vino blanco para cocinar"
+    ]
+  },
+  {
+    "canonicalKey": "vino_tinto",
+    "defaultName": "Vino tinto",
+    "category": "OTROS",
+    "aliases": [
+      "Vino tinto",
+      "Vino tinto para cocinar"
+    ]
+  },
+  {
+    "canonicalKey": "cafe_soluble",
+    "defaultName": "Café soluble",
+    "category": "OTROS",
+    "aliases": [
+      "Café soluble",
+      "Café instantáneo"
+    ]
+  },
+  {
+    "canonicalKey": "boqueron_fresco",
+    "defaultName": "Boquerón fresco",
+    "category": "PESCADOS_Y_MARISCOS",
+    "aliases": [
+      "Boquerón fresco"
+    ]
+  },
+  {
+    "canonicalKey": "atun_claro_en_conserva_al_natural",
+    "defaultName": "Atún claro en conserva al natural",
+    "category": "PESCADOS_Y_MARISCOS",
+    "aliases": [
+      "Atún claro en conserva al natural"
+    ]
+  },
+  {
+    "canonicalKey": "nata_para_cocinar",
+    "defaultName": "Nata para cocinar",
+    "category": "OTROS",
+    "aliases": [
+      "Nata para cocinar",
+      "Nata líquida para cocinar"
+    ]
+  },
+  {
+    "canonicalKey": "nata_para_montar",
+    "defaultName": "Nata para montar",
+    "category": "OTROS",
+    "aliases": [
+      "Nata para montar",
+      "Nata líquida para montar"
+    ]
+  },
+  {
+    "canonicalKey": "tomate_triturado",
+    "defaultName": "Tomate triturado",
+    "category": "SALSAS",
+    "aliases": [
+      "Tomate triturado"
+    ]
+  },
+  {
+    "canonicalKey": "tomate_frito",
+    "defaultName": "Tomate frito",
+    "category": "SALSAS",
+    "aliases": [
+      "Tomate frito"
+    ]
+  },
+  {
+    "canonicalKey": "pasta_fregola",
+    "defaultName": "Pasta fregola",
+    "category": "OTROS",
+    "aliases": [
+      "Pasta fregola",
+      "Fregola",
+      "Fregula"
+    ]
+  },
+  {
+    "canonicalKey": "pasta_lorighittas",
+    "defaultName": "Pasta lorighittas",
+    "category": "OTROS",
+    "aliases": [
+      "Pasta lorighittas",
+      "Lorighittas"
+    ]
+  },
+  {
+    "canonicalKey": "culurgiones_de_patata_queso_y_menta",
+    "defaultName": "Culurgiones de patata, queso y menta",
+    "category": "OTROS",
+    "aliases": [
+      "Culurgiones de patata, queso y menta"
+    ]
+  },
+  {
+    "canonicalKey": "pasta_pizzoccheri_de_trigo_sarraceno",
+    "defaultName": "Pasta pizzoccheri de trigo sarraceno",
+    "category": "OTROS",
+    "aliases": [
+      "Pasta pizzoccheri de trigo sarraceno",
+      "Pizzoccheri"
+    ]
+  },
+  {
+    "canonicalKey": "pasta_scialatielli",
+    "defaultName": "Pasta scialatielli",
+    "category": "OTROS",
+    "aliases": [
+      "Pasta scialatielli",
+      "Scialatielli"
+    ]
+  },
+  {
+    "canonicalKey": "testaroli_sin_salsa",
+    "defaultName": "Testaroli sin salsa",
+    "category": "OTROS",
+    "aliases": [
+      "Testaroli sin salsa",
+      "Testaroli"
+    ]
+  },
+  {
+    "canonicalKey": "fideos_para_fideua",
+    "defaultName": "Fideos para fideuá",
+    "category": "OTROS",
+    "aliases": [
+      "Fideos para fideuá",
+      "Pasta para fideuá"
+    ]
+  },
+  {
+    "canonicalKey": "anolini_de_carne",
+    "defaultName": "Anolini de carne",
+    "category": "OTROS",
+    "aliases": [
+      "Anolini de carne"
+    ]
+  },
+  {
+    "canonicalKey": "anolini_de_queso",
+    "defaultName": "Anolini de queso",
+    "category": "OTROS",
+    "aliases": [
+      "Anolini de queso"
+    ]
+  },
+  {
+    "canonicalKey": "tortellini_de_carne",
+    "defaultName": "Tortellini de carne",
+    "category": "OTROS",
+    "aliases": [
+      "Tortellini de carne"
+    ]
+  },
+  {
+    "canonicalKey": "pasta_margherite_de_setas",
+    "defaultName": "Pasta margherite de setas",
+    "category": "OTROS",
+    "aliases": [
+      "Pasta margherite de setas"
+    ]
+  },
+  {
+    "canonicalKey": "ravioli_de_ricotta_y_salmon",
+    "defaultName": "Ravioli de ricotta y salmón",
+    "category": "OTROS",
+    "aliases": [
+      "Ravioli de ricotta y salmón"
+    ]
+  },
+  {
+    "canonicalKey": "pasta_caramelle_de_ricotta_y_espinacas",
+    "defaultName": "Pasta caramelle de ricotta y espinacas",
+    "category": "OTROS",
+    "aliases": [
+      "Pasta caramelle de ricotta y espinacas"
+    ]
+  },
+  {
+    "canonicalKey": "pisarei_de_pan_y_harina",
+    "defaultName": "Pisarei de pan y harina",
+    "category": "OTROS",
+    "aliases": [
+      "Pisarei de pan y harina",
+      "Pisarei"
+    ]
+  },
+  {
+    "canonicalKey": "pan_bataro",
+    "defaultName": "Pan batarö",
+    "category": "OTROS",
+    "aliases": [
+      "Pan batarö",
+      "Batarö"
+    ]
+  },
+  {
+    "canonicalKey": "borlenghi_sin_relleno",
+    "defaultName": "Borlenghi sin relleno",
+    "category": "OTROS",
+    "aliases": [
+      "Borlenghi sin relleno",
+      "Borlenghi"
+    ]
+  },
+  {
+    "canonicalKey": "pan_coppia_ferrarese",
+    "defaultName": "Pan coppia ferrarese",
+    "category": "OTROS",
+    "aliases": [
+      "Pan coppia ferrarese",
+      "Coppia ferrarese"
+    ]
+  },
+  {
+    "canonicalKey": "crescente_bolonesa",
+    "defaultName": "Crescente boloñesa",
+    "category": "OTROS",
+    "aliases": [
+      "Crescente boloñesa",
+      "Crescente bolognese"
+    ]
+  },
+  {
+    "canonicalKey": "panecillos_tigelle",
+    "defaultName": "Panecillos tigelle",
+    "category": "OTROS",
+    "aliases": [
+      "Panecillos tigelle",
+      "Tigelle",
+      "Crescentine de Módena"
+    ]
+  },
+  {
+    "canonicalKey": "pan_col_bollo",
+    "defaultName": "Pan col bollo",
+    "category": "OTROS",
+    "aliases": [
+      "Pan col bollo",
+      "Pane col bollo"
+    ]
+  },
+  {
+    "canonicalKey": "pan_toscano_sin_sal",
+    "defaultName": "Pan toscano sin sal",
+    "category": "OTROS",
+    "aliases": [
+      "Pan toscano sin sal",
+      "Pane toscano"
+    ]
+  },
+  {
+    "canonicalKey": "pan_marocca_de_casola",
+    "defaultName": "Pan marocca de Casola",
+    "category": "OTROS",
+    "aliases": [
+      "Pan marocca de Casola",
+      "Marocca di Casola"
+    ]
+  },
+  {
+    "canonicalKey": "pan_de_altopascio",
+    "defaultName": "Pan de Altopascio",
+    "category": "OTROS",
+    "aliases": [
+      "Pan de Altopascio",
+      "Pane di Altopascio"
+    ]
+  },
+  {
+    "canonicalKey": "pan_marocco_de_montignoso",
+    "defaultName": "Pan marocco de Montignoso",
+    "category": "OTROS",
+    "aliases": [
+      "Pan marocco de Montignoso",
+      "Pane marocco di Montignoso"
+    ]
+  },
+  {
+    "canonicalKey": "panigacci_de_podenzana",
+    "defaultName": "Panigacci de Podenzana",
+    "category": "OTROS",
+    "aliases": [
+      "Panigacci de Podenzana",
+      "Panigaccio di Podenzana"
+    ]
+  },
+  {
+    "canonicalKey": "pan_pistoccu",
+    "defaultName": "Pan pistoccu",
+    "category": "OTROS",
+    "aliases": [
+      "Pan pistoccu",
+      "Pistoccu"
+    ]
+  },
+  {
+    "canonicalKey": "pan_civraxiu",
+    "defaultName": "Pan civraxiu",
+    "category": "OTROS",
+    "aliases": [
+      "Pan civraxiu",
+      "Civraxiu"
+    ]
+  },
+  {
+    "canonicalKey": "pan_coccoi",
+    "defaultName": "Pan coccoi",
+    "category": "OTROS",
+    "aliases": [
+      "Pan coccoi",
+      "Coccoi"
+    ]
   }
 ]
