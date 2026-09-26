@@ -802,6 +802,7 @@ export const formatSale = (sale) => {
     createdAt: sale.createdAt,
     type: sale.type,
     delivery: sale.delivery,
+    deliveryReviewRequired: customerData.delivery?.manualReviewRequired === true,
     status: sale.status,
     channel: sale.channel,
     currency: sale.currency,

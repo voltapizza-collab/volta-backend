@@ -1,0 +1,22 @@
+{
+  "verifiedAt": "2026-09-18T11:41:38.393Z",
+  "environment": "isolated_loopback_copy",
+  "cold": {
+    "durationMs": 161,
+    "dishes": 48,
+    "sqlQueries": 12
+  },
+  "warm": {
+    "durationMs": 127,
+    "dishes": 48,
+    "sqlQueries": 10
+  },
+  "concurrent": {
+    "requests": 12,
+    "batchMs": 1013,
+    "p50": 981,
+    "p95": 1008,
+    "sqlQueries": 120
+  },
+  "writesObserved": []
+}

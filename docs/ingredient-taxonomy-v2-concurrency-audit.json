@@ -1,0 +1,10 @@
+{
+  "checks": [
+    "disable_first_checkout_waits_then_rejects",
+    "checkout_first_disable_waits_until_commit"
+  ],
+  "database": "isolated_loopback_copy",
+  "paymentsOrMessagesSent": false,
+  "tablesRestored": 43,
+  "verifiedAt": "2026-09-18T11:45:16.041Z"
+}

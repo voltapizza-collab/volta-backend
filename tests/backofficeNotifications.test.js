@@ -1,12 +1,23 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { ingredientRemovalAnnouncement } from "../data/backofficeAnnouncements.js";
+import { ingredientRestaurantTaxonomyAnnouncementDraft } from '../data/backofficeAnnouncements.js';
 import express from "express";
 import { backofficeAnnouncements } from "../data/backofficeAnnouncements.js";
 import { buildSmsBalanceNotification, buildBackofficeNotifications, validateAnnouncement } from "../services/backofficeNotifications.js";
 import backofficeNotificationsRoutes from "../routes/backofficeNotifications.js";
 
 const partner = { id: 7, smsCredits: 10, smsLowBalanceThreshold: 50 };
+
+test('restaurant taxonomy announcement stays out of the feed until the coordinated release', () => {
+  const draft = ingredientRestaurantTaxonomyAnnouncementDraft;
+  assert.ok(!backofficeAnnouncements.some(row => row.id === draft.id));
+  for (const locale of ['en', 'it', 'fr', 'pt']) {
+    assert.ok(draft.translations[locale].title);
+    assert.ok(draft.translations[locale].message);
+    assert.ok(draft.translations[locale].detail);
+  }
+});
 const note = {
   id: "test-improvement", revision: 1, category: "improvement", severity: "info",
   title: "Una mejora", message: "Así funciona ahora", publishedAt: "2026-09-10T00:00:00Z",

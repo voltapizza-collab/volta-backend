@@ -1,0 +1,1084 @@
+{
+  "verifiedAt": "2026-09-18T09:29:18.822Z",
+  "database": "isolated_loopback_copy",
+  "tablesRestored": 43,
+  "exercisedIngredients": 97,
+  "familiesExercised": [
+    "EMBUTIDOS_CHARCUTERIA",
+    "CARNES_AVES",
+    "REPOSTERIA_AUXILIARES",
+    "FRUTAS",
+    "SALSAS_CONDIMENTOS_BASES",
+    "PANES_MASAS_HARINAS",
+    "PESCADOS_Y_MARISCOS",
+    "QUESOS",
+    "OPERATIONAL",
+    "VERDURAS_SETAS_ALGAS"
+  ],
+  "checks": [
+    {
+      "storeId": 1,
+      "ingredientId": 28,
+      "family": "EMBUTIDOS_CHARCUTERIA",
+      "affectedDishes": 7,
+      "extrasCategories": 4,
+      "disableReactivate": true,
+      "unrelatedStockUnchanged": true
+    },
+    {
+      "storeId": 1,
+      "ingredientId": 112,
+      "family": "CARNES_AVES",
+      "affectedDishes": 5,
+      "extrasCategories": 3,
+      "disableReactivate": true,
+      "unrelatedStockUnchanged": true
+    },
+    {
+      "storeId": 1,
+      "ingredientId": 30,
+      "family": "EMBUTIDOS_CHARCUTERIA",
+      "affectedDishes": 4,
+      "extrasCategories": 2,
+      "disableReactivate": true,
+      "unrelatedStockUnchanged": true
+    },
+    {
+      "storeId": 1,
+      "ingredientId": 31,
+      "family": "EMBUTIDOS_CHARCUTERIA",
+      "affectedDishes": 4,
+      "extrasCategories": 3,
+      "disableReactivate": true,
+      "unrelatedStockUnchanged": true
+    },
+    {
+      "storeId": 1,
+      "ingredientId": 32,
+      "family": "CARNES_AVES",
+      "affectedDishes": 4,
+      "extrasCategories": 3,
+      "disableReactivate": true,
+      "unrelatedStockUnchanged": true
+    },
+    {
+      "storeId": 1,
+      "ingredientId": 57,
+      "family": "REPOSTERIA_AUXILIARES",
+      "affectedDishes": 1,
+      "extrasCategories": 1,
+      "disableReactivate": true,
+      "unrelatedStockUnchanged": true
+    },
+    {
+      "storeId": 1,
+      "ingredientId": 58,
+      "family": "REPOSTERIA_AUXILIARES",
+      "affectedDishes": 2,
+      "extrasCategories": 1,
+      "disableReactivate": true,
+      "unrelatedStockUnchanged": true
+    },
+    {
+      "storeId": 1,
+      "ingredientId": 60,
+      "family": "REPOSTERIA_AUXILIARES",
+      "affectedDishes": 1,
+      "extrasCategories": 1,
+      "disableReactivate": true,
+      "unrelatedStockUnchanged": true
+    },
+    {
+      "storeId": 1,
+      "ingredientId": 61,
+      "family": "REPOSTERIA_AUXILIARES",
+      "affectedDishes": 1,
+      "extrasCategories": 1,
+      "disableReactivate": true,
+      "unrelatedStockUnchanged": true
+    },
+    {
+      "storeId": 1,
+      "ingredientId": 4,
+      "family": "EMBUTIDOS_CHARCUTERIA",
+      "affectedDishes": 6,
+      "extrasCategories": 5,
+      "disableReactivate": true,
+      "unrelatedStockUnchanged": true
+    },
+    {
+      "storeId": 1,
+      "ingredientId": 23,
+      "family": "EMBUTIDOS_CHARCUTERIA",
+      "affectedDishes": 1,
+      "extrasCategories": 1,
+      "disableReactivate": true,
+      "unrelatedStockUnchanged": true
+    },
+    {
+      "storeId": 1,
+      "ingredientId": 55,
+      "family": "REPOSTERIA_AUXILIARES",
+      "affectedDishes": 1,
+      "extrasCategories": 1,
+      "disableReactivate": true,
+      "unrelatedStockUnchanged": true
+    },
+    {
+      "storeId": 1,
+      "ingredientId": 122,
+      "family": "REPOSTERIA_AUXILIARES",
+      "affectedDishes": 1,
+      "extrasCategories": 1,
+      "disableReactivate": true,
+      "unrelatedStockUnchanged": true
+    },
+    {
+      "storeId": 1,
+      "ingredientId": 144,
+      "family": "FRUTAS",
+      "affectedDishes": 1,
+      "extrasCategories": 1,
+      "disableReactivate": true,
+      "unrelatedStockUnchanged": true
+    },
+    {
+      "storeId": 1,
+      "ingredientId": 17,
+      "family": "FRUTAS",
+      "affectedDishes": 3,
+      "extrasCategories": 4,
+      "disableReactivate": true,
+      "unrelatedStockUnchanged": true
+    },
+    {
+      "storeId": 1,
+      "ingredientId": 109,
+      "family": "FRUTAS",
+      "affectedDishes": 1,
+      "extrasCategories": 1,
+      "disableReactivate": true,
+      "unrelatedStockUnchanged": true
+    },
+    {
+      "storeId": 1,
+      "ingredientId": 145,
+      "family": "SALSAS_CONDIMENTOS_BASES",
+      "affectedDishes": 1,
+      "extrasCategories": 1,
+      "disableReactivate": true,
+      "unrelatedStockUnchanged": true
+    },
+    {
+      "storeId": 1,
+      "ingredientId": 113,
+      "family": "PANES_MASAS_HARINAS",
+      "affectedDishes": 1,
+      "extrasCategories": 1,
+      "disableReactivate": true,
+      "unrelatedStockUnchanged": true
+    },
+    {
+      "storeId": 1,
+      "ingredientId": 92,
+      "family": "PESCADOS_Y_MARISCOS",
+      "affectedDishes": 1,
+      "extrasCategories": 1,
+      "disableReactivate": true,
+      "unrelatedStockUnchanged": true
+    },
+    {
+      "storeId": 1,
+      "ingredientId": 93,
+      "family": "PESCADOS_Y_MARISCOS",
+      "affectedDishes": 1,
+      "extrasCategories": 1,
+      "disableReactivate": true,
+      "unrelatedStockUnchanged": true
+    },
+    {
+      "storeId": 1,
+      "ingredientId": 94,
+      "family": "PESCADOS_Y_MARISCOS",
+      "affectedDishes": 1,
+      "extrasCategories": 1,
+      "disableReactivate": true,
+      "unrelatedStockUnchanged": true
+    },
+    {
+      "storeId": 1,
+      "ingredientId": 126,
+      "family": "QUESOS",
+      "affectedDishes": 5,
+      "extrasCategories": 1,
+      "disableReactivate": true,
+      "unrelatedStockUnchanged": true
+    },
+    {
+      "storeId": 1,
+      "ingredientId": 89,
+      "family": "QUESOS",
+      "affectedDishes": 1,
+      "extrasCategories": 1,
+      "disableReactivate": true,
+      "unrelatedStockUnchanged": true
+    },
+    {
+      "storeId": 1,
+      "ingredientId": 34,
+      "family": "QUESOS",
+      "affectedDishes": 7,
+      "extrasCategories": 3,
+      "disableReactivate": true,
+      "unrelatedStockUnchanged": true
+    },
+    {
+      "storeId": 1,
+      "ingredientId": 3,
+      "family": "QUESOS",
+      "affectedDishes": 23,
+      "extrasCategories": 3,
+      "disableReactivate": true,
+      "unrelatedStockUnchanged": true
+    },
+    {
+      "storeId": 1,
+      "ingredientId": 133,
+      "family": "QUESOS",
+      "affectedDishes": 3,
+      "extrasCategories": 3,
+      "disableReactivate": true,
+      "unrelatedStockUnchanged": true
+    },
+    {
+      "storeId": 1,
+      "ingredientId": 6,
+      "family": "QUESOS",
+      "affectedDishes": 4,
+      "extrasCategories": 2,
+      "disableReactivate": true,
+      "unrelatedStockUnchanged": true
+    },
+    {
+      "storeId": 1,
+      "ingredientId": 7,
+      "family": "QUESOS",
+      "affectedDishes": 3,
+      "extrasCategories": 3,
+      "disableReactivate": true,
+      "unrelatedStockUnchanged": true
+    },
+    {
+      "storeId": 1,
+      "ingredientId": 123,
+      "family": "QUESOS",
+      "affectedDishes": 1,
+      "extrasCategories": 1,
+      "disableReactivate": true,
+      "unrelatedStockUnchanged": true
+    },
+    {
+      "storeId": 1,
+      "ingredientId": 54,
+      "family": "QUESOS",
+      "affectedDishes": 3,
+      "extrasCategories": 2,
+      "disableReactivate": true,
+      "unrelatedStockUnchanged": true
+    },
+    {
+      "storeId": 1,
+      "ingredientId": 137,
+      "family": "OPERATIONAL",
+      "affectedDishes": 1,
+      "extrasCategories": 1,
+      "disableReactivate": true,
+      "unrelatedStockUnchanged": true
+    },
+    {
+      "storeId": 1,
+      "ingredientId": 136,
+      "family": "SALSAS_CONDIMENTOS_BASES",
+      "affectedDishes": 1,
+      "extrasCategories": 1,
+      "disableReactivate": true,
+      "unrelatedStockUnchanged": true
+    },
+    {
+      "storeId": 1,
+      "ingredientId": 50,
+      "family": "SALSAS_CONDIMENTOS_BASES",
+      "affectedDishes": 3,
+      "extrasCategories": 3,
+      "disableReactivate": true,
+      "unrelatedStockUnchanged": true
+    },
+    {
+      "storeId": 1,
+      "ingredientId": 56,
+      "family": "SALSAS_CONDIMENTOS_BASES",
+      "affectedDishes": 1,
+      "extrasCategories": 1,
+      "disableReactivate": true,
+      "unrelatedStockUnchanged": true
+    },
+    {
+      "storeId": 1,
+      "ingredientId": 53,
+      "family": "SALSAS_CONDIMENTOS_BASES",
+      "affectedDishes": 26,
+      "extrasCategories": 5,
+      "disableReactivate": true,
+      "unrelatedStockUnchanged": true
+    },
+    {
+      "storeId": 1,
+      "ingredientId": 52,
+      "family": "SALSAS_CONDIMENTOS_BASES",
+      "affectedDishes": 1,
+      "extrasCategories": 1,
+      "disableReactivate": true,
+      "unrelatedStockUnchanged": true
+    },
+    {
+      "storeId": 1,
+      "ingredientId": 22,
+      "family": "SALSAS_CONDIMENTOS_BASES",
+      "affectedDishes": 4,
+      "extrasCategories": 3,
+      "disableReactivate": true,
+      "unrelatedStockUnchanged": true
+    },
+    {
+      "storeId": 1,
+      "ingredientId": 5,
+      "family": "VERDURAS_SETAS_ALGAS",
+      "affectedDishes": 4,
+      "extrasCategories": 4,
+      "disableReactivate": true,
+      "unrelatedStockUnchanged": true
+    },
+    {
+      "storeId": 1,
+      "ingredientId": 9,
+      "family": "VERDURAS_SETAS_ALGAS",
+      "affectedDishes": 1,
+      "extrasCategories": 2,
+      "disableReactivate": true,
+      "unrelatedStockUnchanged": true
+    },
+    {
+      "storeId": 1,
+      "ingredientId": 43,
+      "family": "VERDURAS_SETAS_ALGAS",
+      "affectedDishes": 2,
+      "extrasCategories": 1,
+      "disableReactivate": true,
+      "unrelatedStockUnchanged": true
+    },
+    {
+      "storeId": 1,
+      "ingredientId": 46,
+      "family": "VERDURAS_SETAS_ALGAS",
+      "affectedDishes": 3,
+      "extrasCategories": 2,
+      "disableReactivate": true,
+      "unrelatedStockUnchanged": true
+    },
+    {
+      "storeId": 1,
+      "ingredientId": 125,
+      "family": "VERDURAS_SETAS_ALGAS",
+      "affectedDishes": 1,
+      "extrasCategories": 1,
+      "disableReactivate": true,
+      "unrelatedStockUnchanged": true
+    },
+    {
+      "storeId": 1,
+      "ingredientId": 124,
+      "family": "VERDURAS_SETAS_ALGAS",
+      "affectedDishes": 2,
+      "extrasCategories": 2,
+      "disableReactivate": true,
+      "unrelatedStockUnchanged": true
+    },
+    {
+      "storeId": 1,
+      "ingredientId": 134,
+      "family": "VERDURAS_SETAS_ALGAS",
+      "affectedDishes": 1,
+      "extrasCategories": 1,
+      "disableReactivate": true,
+      "unrelatedStockUnchanged": true
+    },
+    {
+      "storeId": 1,
+      "ingredientId": 48,
+      "family": "VERDURAS_SETAS_ALGAS",
+      "affectedDishes": 2,
+      "extrasCategories": 1,
+      "disableReactivate": true,
+      "unrelatedStockUnchanged": true
+    },
+    {
+      "storeId": 1,
+      "ingredientId": 49,
+      "family": "VERDURAS_SETAS_ALGAS",
+      "affectedDishes": 2,
+      "extrasCategories": 1,
+      "disableReactivate": true,
+      "unrelatedStockUnchanged": true
+    },
+    {
+      "storeId": 1,
+      "ingredientId": 135,
+      "family": "VERDURAS_SETAS_ALGAS",
+      "affectedDishes": 1,
+      "extrasCategories": 1,
+      "disableReactivate": true,
+      "unrelatedStockUnchanged": true
+    },
+    {
+      "storeId": 1,
+      "ingredientId": 107,
+      "family": "VERDURAS_SETAS_ALGAS",
+      "affectedDishes": 4,
+      "extrasCategories": 1,
+      "disableReactivate": true,
+      "unrelatedStockUnchanged": true
+    },
+    {
+      "storeId": 2,
+      "ingredientId": 28,
+      "family": "EMBUTIDOS_CHARCUTERIA",
+      "affectedDishes": 6,
+      "extrasCategories": 4,
+      "disableReactivate": true,
+      "unrelatedStockUnchanged": true
+    },
+    {
+      "storeId": 2,
+      "ingredientId": 112,
+      "family": "CARNES_AVES",
+      "affectedDishes": 3,
+      "extrasCategories": 3,
+      "disableReactivate": true,
+      "unrelatedStockUnchanged": true
+    },
+    {
+      "storeId": 2,
+      "ingredientId": 30,
+      "family": "EMBUTIDOS_CHARCUTERIA",
+      "affectedDishes": 2,
+      "extrasCategories": 2,
+      "disableReactivate": true,
+      "unrelatedStockUnchanged": true
+    },
+    {
+      "storeId": 2,
+      "ingredientId": 31,
+      "family": "EMBUTIDOS_CHARCUTERIA",
+      "affectedDishes": 3,
+      "extrasCategories": 3,
+      "disableReactivate": true,
+      "unrelatedStockUnchanged": true
+    },
+    {
+      "storeId": 2,
+      "ingredientId": 32,
+      "family": "CARNES_AVES",
+      "affectedDishes": 1,
+      "extrasCategories": 3,
+      "disableReactivate": true,
+      "unrelatedStockUnchanged": true
+    },
+    {
+      "storeId": 2,
+      "ingredientId": 57,
+      "family": "REPOSTERIA_AUXILIARES",
+      "affectedDishes": 1,
+      "extrasCategories": 1,
+      "disableReactivate": true,
+      "unrelatedStockUnchanged": true
+    },
+    {
+      "storeId": 2,
+      "ingredientId": 58,
+      "family": "REPOSTERIA_AUXILIARES",
+      "affectedDishes": 2,
+      "extrasCategories": 1,
+      "disableReactivate": true,
+      "unrelatedStockUnchanged": true
+    },
+    {
+      "storeId": 2,
+      "ingredientId": 60,
+      "family": "REPOSTERIA_AUXILIARES",
+      "affectedDishes": 1,
+      "extrasCategories": 1,
+      "disableReactivate": true,
+      "unrelatedStockUnchanged": true
+    },
+    {
+      "storeId": 2,
+      "ingredientId": 61,
+      "family": "REPOSTERIA_AUXILIARES",
+      "affectedDishes": 1,
+      "extrasCategories": 1,
+      "disableReactivate": true,
+      "unrelatedStockUnchanged": true
+    },
+    {
+      "storeId": 2,
+      "ingredientId": 4,
+      "family": "EMBUTIDOS_CHARCUTERIA",
+      "affectedDishes": 5,
+      "extrasCategories": 5,
+      "disableReactivate": true,
+      "unrelatedStockUnchanged": true
+    },
+    {
+      "storeId": 2,
+      "ingredientId": 23,
+      "family": "EMBUTIDOS_CHARCUTERIA",
+      "affectedDishes": 1,
+      "extrasCategories": 1,
+      "disableReactivate": true,
+      "unrelatedStockUnchanged": true
+    },
+    {
+      "storeId": 2,
+      "ingredientId": 55,
+      "family": "REPOSTERIA_AUXILIARES",
+      "affectedDishes": 0,
+      "extrasCategories": 1,
+      "disableReactivate": true,
+      "unrelatedStockUnchanged": true
+    },
+    {
+      "storeId": 2,
+      "ingredientId": 122,
+      "family": "REPOSTERIA_AUXILIARES",
+      "affectedDishes": 1,
+      "extrasCategories": 1,
+      "disableReactivate": true,
+      "unrelatedStockUnchanged": true
+    },
+    {
+      "storeId": 2,
+      "ingredientId": 17,
+      "family": "FRUTAS",
+      "affectedDishes": 3,
+      "extrasCategories": 4,
+      "disableReactivate": true,
+      "unrelatedStockUnchanged": true
+    },
+    {
+      "storeId": 2,
+      "ingredientId": 77,
+      "family": "SALSAS_CONDIMENTOS_BASES",
+      "affectedDishes": 1,
+      "extrasCategories": 1,
+      "disableReactivate": true,
+      "unrelatedStockUnchanged": true
+    },
+    {
+      "storeId": 2,
+      "ingredientId": 113,
+      "family": "PANES_MASAS_HARINAS",
+      "affectedDishes": 1,
+      "extrasCategories": 1,
+      "disableReactivate": true,
+      "unrelatedStockUnchanged": true
+    },
+    {
+      "storeId": 2,
+      "ingredientId": 92,
+      "family": "PESCADOS_Y_MARISCOS",
+      "affectedDishes": 1,
+      "extrasCategories": 1,
+      "disableReactivate": true,
+      "unrelatedStockUnchanged": true
+    },
+    {
+      "storeId": 2,
+      "ingredientId": 93,
+      "family": "PESCADOS_Y_MARISCOS",
+      "affectedDishes": 1,
+      "extrasCategories": 1,
+      "disableReactivate": true,
+      "unrelatedStockUnchanged": true
+    },
+    {
+      "storeId": 2,
+      "ingredientId": 94,
+      "family": "PESCADOS_Y_MARISCOS",
+      "affectedDishes": 1,
+      "extrasCategories": 1,
+      "disableReactivate": true,
+      "unrelatedStockUnchanged": true
+    },
+    {
+      "storeId": 2,
+      "ingredientId": 10,
+      "family": "PESCADOS_Y_MARISCOS",
+      "affectedDishes": 2,
+      "extrasCategories": 2,
+      "disableReactivate": true,
+      "unrelatedStockUnchanged": true
+    },
+    {
+      "storeId": 2,
+      "ingredientId": 89,
+      "family": "QUESOS",
+      "affectedDishes": 2,
+      "extrasCategories": 1,
+      "disableReactivate": true,
+      "unrelatedStockUnchanged": true
+    },
+    {
+      "storeId": 2,
+      "ingredientId": 34,
+      "family": "QUESOS",
+      "affectedDishes": 5,
+      "extrasCategories": 3,
+      "disableReactivate": true,
+      "unrelatedStockUnchanged": true
+    },
+    {
+      "storeId": 2,
+      "ingredientId": 3,
+      "family": "QUESOS",
+      "affectedDishes": 24,
+      "extrasCategories": 3,
+      "disableReactivate": true,
+      "unrelatedStockUnchanged": true
+    },
+    {
+      "storeId": 2,
+      "ingredientId": 6,
+      "family": "QUESOS",
+      "affectedDishes": 3,
+      "extrasCategories": 2,
+      "disableReactivate": true,
+      "unrelatedStockUnchanged": true
+    },
+    {
+      "storeId": 2,
+      "ingredientId": 7,
+      "family": "QUESOS",
+      "affectedDishes": 2,
+      "extrasCategories": 3,
+      "disableReactivate": true,
+      "unrelatedStockUnchanged": true
+    },
+    {
+      "storeId": 2,
+      "ingredientId": 123,
+      "family": "QUESOS",
+      "affectedDishes": 1,
+      "extrasCategories": 1,
+      "disableReactivate": true,
+      "unrelatedStockUnchanged": true
+    },
+    {
+      "storeId": 2,
+      "ingredientId": 54,
+      "family": "QUESOS",
+      "affectedDishes": 3,
+      "extrasCategories": 2,
+      "disableReactivate": true,
+      "unrelatedStockUnchanged": true
+    },
+    {
+      "storeId": 2,
+      "ingredientId": 137,
+      "family": "OPERATIONAL",
+      "affectedDishes": 1,
+      "extrasCategories": 1,
+      "disableReactivate": true,
+      "unrelatedStockUnchanged": true
+    },
+    {
+      "storeId": 2,
+      "ingredientId": 50,
+      "family": "SALSAS_CONDIMENTOS_BASES",
+      "affectedDishes": 1,
+      "extrasCategories": 3,
+      "disableReactivate": true,
+      "unrelatedStockUnchanged": true
+    },
+    {
+      "storeId": 2,
+      "ingredientId": 56,
+      "family": "SALSAS_CONDIMENTOS_BASES",
+      "affectedDishes": 0,
+      "extrasCategories": 1,
+      "disableReactivate": true,
+      "unrelatedStockUnchanged": true
+    },
+    {
+      "storeId": 2,
+      "ingredientId": 53,
+      "family": "SALSAS_CONDIMENTOS_BASES",
+      "affectedDishes": 22,
+      "extrasCategories": 5,
+      "disableReactivate": true,
+      "unrelatedStockUnchanged": true
+    },
+    {
+      "storeId": 2,
+      "ingredientId": 52,
+      "family": "SALSAS_CONDIMENTOS_BASES",
+      "affectedDishes": 1,
+      "extrasCategories": 1,
+      "disableReactivate": true,
+      "unrelatedStockUnchanged": true
+    },
+    {
+      "storeId": 2,
+      "ingredientId": 22,
+      "family": "SALSAS_CONDIMENTOS_BASES",
+      "affectedDishes": 4,
+      "extrasCategories": 3,
+      "disableReactivate": true,
+      "unrelatedStockUnchanged": true
+    },
+    {
+      "storeId": 2,
+      "ingredientId": 5,
+      "family": "VERDURAS_SETAS_ALGAS",
+      "affectedDishes": 4,
+      "extrasCategories": 4,
+      "disableReactivate": true,
+      "unrelatedStockUnchanged": true
+    },
+    {
+      "storeId": 2,
+      "ingredientId": 9,
+      "family": "VERDURAS_SETAS_ALGAS",
+      "affectedDishes": 1,
+      "extrasCategories": 2,
+      "disableReactivate": true,
+      "unrelatedStockUnchanged": true
+    },
+    {
+      "storeId": 2,
+      "ingredientId": 43,
+      "family": "VERDURAS_SETAS_ALGAS",
+      "affectedDishes": 2,
+      "extrasCategories": 1,
+      "disableReactivate": true,
+      "unrelatedStockUnchanged": true
+    },
+    {
+      "storeId": 2,
+      "ingredientId": 46,
+      "family": "VERDURAS_SETAS_ALGAS",
+      "affectedDishes": 2,
+      "extrasCategories": 2,
+      "disableReactivate": true,
+      "unrelatedStockUnchanged": true
+    },
+    {
+      "storeId": 2,
+      "ingredientId": 125,
+      "family": "VERDURAS_SETAS_ALGAS",
+      "affectedDishes": 1,
+      "extrasCategories": 1,
+      "disableReactivate": true,
+      "unrelatedStockUnchanged": true
+    },
+    {
+      "storeId": 2,
+      "ingredientId": 124,
+      "family": "VERDURAS_SETAS_ALGAS",
+      "affectedDishes": 2,
+      "extrasCategories": 2,
+      "disableReactivate": true,
+      "unrelatedStockUnchanged": true
+    },
+    {
+      "storeId": 2,
+      "ingredientId": 48,
+      "family": "VERDURAS_SETAS_ALGAS",
+      "affectedDishes": 2,
+      "extrasCategories": 1,
+      "disableReactivate": true,
+      "unrelatedStockUnchanged": true
+    },
+    {
+      "storeId": 2,
+      "ingredientId": 49,
+      "family": "VERDURAS_SETAS_ALGAS",
+      "affectedDishes": 2,
+      "extrasCategories": 1,
+      "disableReactivate": true,
+      "unrelatedStockUnchanged": true
+    },
+    {
+      "storeId": 2,
+      "ingredientId": 107,
+      "family": "VERDURAS_SETAS_ALGAS",
+      "affectedDishes": 3,
+      "extrasCategories": 1,
+      "disableReactivate": true,
+      "unrelatedStockUnchanged": true
+    },
+    {
+      "storeId": 5,
+      "ingredientId": 118,
+      "family": "QUESOS",
+      "affectedDishes": 1,
+      "extrasCategories": 1,
+      "disableReactivate": true,
+      "unrelatedStockUnchanged": true
+    },
+    {
+      "storeId": 5,
+      "ingredientId": 120,
+      "family": "SALSAS_CONDIMENTOS_BASES",
+      "affectedDishes": 1,
+      "extrasCategories": 1,
+      "disableReactivate": true,
+      "unrelatedStockUnchanged": true
+    },
+    {
+      "storeId": 5,
+      "ingredientId": 121,
+      "family": "VERDURAS_SETAS_ALGAS",
+      "affectedDishes": 1,
+      "extrasCategories": 1,
+      "disableReactivate": true,
+      "unrelatedStockUnchanged": true
+    },
+    {
+      "storeId": 5,
+      "ingredientId": 124,
+      "family": "VERDURAS_SETAS_ALGAS",
+      "affectedDishes": 1,
+      "extrasCategories": 1,
+      "disableReactivate": true,
+      "unrelatedStockUnchanged": true
+    },
+    {
+      "storeId": 6,
+      "ingredientId": 85,
+      "family": "EMBUTIDOS_CHARCUTERIA",
+      "affectedDishes": 1,
+      "extrasCategories": 1,
+      "disableReactivate": true,
+      "unrelatedStockUnchanged": true
+    },
+    {
+      "storeId": 6,
+      "ingredientId": 3,
+      "family": "QUESOS",
+      "affectedDishes": 1,
+      "extrasCategories": 1,
+      "disableReactivate": true,
+      "unrelatedStockUnchanged": true
+    },
+    {
+      "storeId": 6,
+      "ingredientId": 53,
+      "family": "SALSAS_CONDIMENTOS_BASES",
+      "affectedDishes": 1,
+      "extrasCategories": 1,
+      "disableReactivate": true,
+      "unrelatedStockUnchanged": true
+    }
+  ],
+  "findings": [
+    {
+      "code": "PUBLIC_MENU_CACHE_RETAINS_DISABLED",
+      "storeId": 1,
+      "ingredientId": 28,
+      "retainedPizzaIds": [
+        2,
+        10,
+        20,
+        37,
+        38,
+        52,
+        69
+      ],
+      "configuredTtlMs": 30000
+    }
+  ],
+  "tableDigests": {
+    "_prisma_migrations": {
+      "count": 64,
+      "sha256": "e0c3e45dbd1273d9e74f830ec6607e2d0458390d1568c50f4e2b553b90952503"
+    },
+    "BoostSetting": {
+      "count": 1,
+      "sha256": "32f7e81668a15e52fc18a7ad5f46bce88cc7da0609df4aff13a65ac943256bc1"
+    },
+    "Category": {
+      "count": 16,
+      "sha256": "ed9b6ea1671e45772ad82ac2fd787d460903ef23162f9e858987d2972a0e3b65"
+    },
+    "Coupon": {
+      "count": 409,
+      "sha256": "d1616b4ae80795f478c55b2d40dc35651e92e94a108d77fe3c2189eb541d40a6"
+    },
+    "CouponRedemption": {
+      "count": 33,
+      "sha256": "351fc7bdd37d0f48c20aaac42c51decf090df8beadfd9653520b9d64af993c03"
+    },
+    "CouponReservation": {
+      "count": 16,
+      "sha256": "f48f836a6267d1be02867c9bcf184826d8353baada329815e616107b368e1f82"
+    },
+    "Customer": {
+      "count": 419,
+      "sha256": "9c2aaa96634304a16a81d984f886ec58b04773e0e5381d581d9b5a518ab7eb5a"
+    },
+    "DirectDiscount": {
+      "count": 5,
+      "sha256": "d682cdf0ea725e5e58b88d722df4e5967d81165fd3fd714151145e7944278ee6"
+    },
+    "Game": {
+      "count": 7,
+      "sha256": "15d2a483369768e0d93d439d38bed10eafb50de20404944d58327e1c2730ae6d"
+    },
+    "GamePlay": {
+      "count": 186,
+      "sha256": "cb811d65de92662d073866dba4b67b10d2c225bc5725d724671cd7b2c8134a91"
+    },
+    "Incentive": {
+      "count": 2,
+      "sha256": "197fb260f6fd9e60d8bc3eb0c5d0bc61ca691c238cbcd4c37b98333ee5b9e6f7"
+    },
+    "Ingredient": {
+      "count": 135,
+      "sha256": "e8017cf22b51ce905284d33f9b691de46d832906bcc81d6e1d1cab1cefaa47fd"
+    },
+    "IngredientAlias": {
+      "count": 1112,
+      "sha256": "4771b83bff6d32a7ba407e49f069a4d7c553f69f133d9d09adfa1ce52d2412cb"
+    },
+    "IngredientCatalogState": {
+      "count": 1,
+      "sha256": "5c26a2c58392cb58f746c002ace2266105b946bcee654e18090485bfafb856f6"
+    },
+    "IngredientCategoryUse": {
+      "count": 104,
+      "sha256": "5b329416d40927ef9dd7da7d85fcb4acf0250a1d5b40ab4469188b216e9ca7a2"
+    },
+    "IngredientExtra": {
+      "count": 17,
+      "sha256": "12aaa3555ebd9ef1dc5a69bc8e4f0495c5109a6dc4d3e3948a65f632c43033d1"
+    },
+    "IngredientLocalSemanticMapping": {
+      "count": 0,
+      "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+    },
+    "IngredientSemanticCategory": {
+      "count": 16,
+      "sha256": "7662567fdc079ff77e24a296547226805d7a0c2f223de22284d47eb6456a0726"
+    },
+    "IngredientSemanticCategoryTranslation": {
+      "count": 112,
+      "sha256": "865ae9139c5bdfec65e33838d4e17b5fc51247f31f2642cc4218b10a00844623"
+    },
+    "IngredientSuggestion": {
+      "count": 7,
+      "sha256": "3247a8cc911b699b84945ad8ce6988fd3b4534ea0d4378879aff0239a913e4e4"
+    },
+    "IngredientTranslation": {
+      "count": 856,
+      "sha256": "d84c8f911ac9eec1e0bdadf6a6345d592c3831cd09519364a94b122d08c895f5"
+    },
+    "MenuPizza": {
+      "count": 55,
+      "sha256": "e16f6ac71ac7e9a8d8716272aa36a7503da5852b4e9a695a2e7967e2e3ffec65"
+    },
+    "MenuPizzaIngredient": {
+      "count": 172,
+      "sha256": "6838bcea4d05f042f6ec245b0344c35170167a375a8afca6acc43d98eedc38b0"
+    },
+    "OnboardingRequest": {
+      "count": 8,
+      "sha256": "b1ab4cd1dfd40539846bc421e0b14247bc219903746f9eb548bc7020d627df18"
+    },
+    "Partner": {
+      "count": 8,
+      "sha256": "d61e3009dd22b1607de3d484e15a8d4e4c49ba40ca0c26bded8c2a61615306c6"
+    },
+    "PartnerCategory": {
+      "count": 88,
+      "sha256": "85cc1f1adb34fff63b46000c710c5b74aeb4ea05f35ef212d7694d981c7d1ad4"
+    },
+    "PartnerIngredientProfile": {
+      "count": 9,
+      "sha256": "0b394db93b7382ddb17f97b7e5214ce37708b1de747cf637eae55c15df441f33"
+    },
+    "PosDevice": {
+      "count": 1,
+      "sha256": "da7baa69f4260e7f8365950477546c8145ce25dd07d14dcae5f732f7e12f63c4"
+    },
+    "PosDeviceAudit": {
+      "count": 30,
+      "sha256": "79b867e8f6ee5a20d778092172b1ca6d4c86aef4eca9a7a782b2e23c7ea20134"
+    },
+    "PosDeviceNonce": {
+      "count": 248,
+      "sha256": "221515efc4da5e0c75b0cc36635dc4f253d4ea8f4223ce5fc4f4def42c2d1280"
+    },
+    "PosEnrollment": {
+      "count": 1,
+      "sha256": "735936c51210a748e966d5ca7c02620e80fab4988c0d7e81783a1fc4ea5fcfc7"
+    },
+    "PosLoginThrottle": {
+      "count": 3,
+      "sha256": "5ad32c47125f6dc88bd845d054d4eea8db69a9133c9e345acc61e9850d9516aa"
+    },
+    "PosSession": {
+      "count": 1,
+      "sha256": "3a2c7e3dec45de3e7998c8ece1be9c511a1027b8ac6157d49560cb82272693ec"
+    },
+    "ProductReviewRequest": {
+      "count": 121,
+      "sha256": "e106f866404dd055d7dad2179a810b028c85ac41840ce90ac6e3cc9fa0585818"
+    },
+    "ProductReviewVote": {
+      "count": 21,
+      "sha256": "763c22d38fafe3949bd05d426a350d6b2acb04a6f767c89a46bd40230689b06d"
+    },
+    "Promo": {
+      "count": 5,
+      "sha256": "8cb67f3941bf00ffd4b4d00680c88664268caeca05ff35b526d0e4209a2ea004"
+    },
+    "Reservation": {
+      "count": 16,
+      "sha256": "9fc0b25ec4a65181de595aed5b8d8d6110da1779bf41df289ea1f27705475e25"
+    },
+    "Sale": {
+      "count": 582,
+      "sha256": "e1047dd889d6c222a8c31e3127032d37b79856dddc7b18419978188824288bed"
+    },
+    "SmsCreditLedger": {
+      "count": 717,
+      "sha256": "502acc6f2bc49db2eaf1c48b0c3da8aebce4ffceb1b7544cefa3c5be2f6ac695"
+    },
+    "Store": {
+      "count": 9,
+      "sha256": "3be70af806ff16b6346605f2621f89367e62e138c2f3f19aec15ae441a13ec4f"
+    },
+    "StoreHours": {
+      "count": 28,
+      "sha256": "64d2f976d4d9fbc0b0dc8f9e0ebddd5df83e1f4ac76e65b7fe2a235d78eafa52"
+    },
+    "StoreIngredientStock": {
+      "count": 209,
+      "sha256": "a7666a0955626527b225da3db59a8eb385f732aab8078bc37283e758d05961f5"
+    },
+    "StorePizzaStock": {
+      "count": 105,
+      "sha256": "0b5fd048e3286838c852311843b2699b5e119c72ee29b7611fc0193bbd9d95cd"
+    }
+  }
+}

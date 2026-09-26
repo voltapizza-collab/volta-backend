@@ -1,3 +1,4 @@
+import { resolveIngredientTaxonomy } from './ingredientTaxonomy.js';
 const DEFAULT_FALLBACK_LOCALES = ["en", "es"];
 const DEFAULT_MAX_DISPLAY_ALIASES = 6;
 
@@ -206,6 +207,8 @@ export const resolveIngredientDisplay = (
     ingredient?.description ||
     "";
 
+  const taxonomy = resolveIngredientTaxonomy(ingredient, locale);
+
   const searchText = buildIngredientSearchText(ingredient, {
     displayName,
     displayDescription,
@@ -216,6 +219,7 @@ export const resolveIngredientDisplay = (
   return {
     displayName,
     displayDescription,
+    taxonomy,
     displayCategory: categoryResolution.displayCategory,
     aliases: aliasResolution.displayAliases,
     searchAliases: aliasResolution.searchAliases,

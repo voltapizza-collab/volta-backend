@@ -1,0 +1,124 @@
+{
+  "verifiedAt": "2026-09-18T09:32:19.207Z",
+  "database": "isolated_loopback_copy",
+  "tablesRestored": 43,
+  "saleTransactionsRolledBack": true,
+  "paymentsOrMessagesSent": false,
+  "checks": [
+    {
+      "kind": "recipe",
+      "ingredientActive": true,
+      "recipeDishVisible": true,
+      "responseStatus": 418,
+      "error": "AUDIT_ROLLBACK_AFTER_SALE",
+      "wouldCreateSale": {
+        "status": "PAID",
+        "productIds": [
+          1
+        ],
+        "total": 9.99
+      }
+    },
+    {
+      "kind": "extra",
+      "ingredientActive": true,
+      "recipeDishVisible": true,
+      "responseStatus": 418,
+      "error": "AUDIT_ROLLBACK_AFTER_SALE",
+      "wouldCreateSale": {
+        "status": "PAID",
+        "productIds": [
+          2
+        ],
+        "total": 9.99
+      }
+    },
+    {
+      "kind": "custom",
+      "ingredientActive": true,
+      "recipeDishVisible": true,
+      "responseStatus": 418,
+      "error": "AUDIT_ROLLBACK_AFTER_SALE",
+      "wouldCreateSale": {
+        "status": "PAID",
+        "productIds": [
+          2
+        ],
+        "total": 9.99
+      }
+    },
+    {
+      "kind": "half",
+      "ingredientActive": true,
+      "recipeDishVisible": true,
+      "responseStatus": 418,
+      "error": "AUDIT_ROLLBACK_AFTER_SALE",
+      "wouldCreateSale": {
+        "status": "PAID",
+        "productIds": [
+          1
+        ],
+        "total": 9.99
+      }
+    },
+    {
+      "kind": "recipe",
+      "ingredientActive": false,
+      "recipeDishVisible": false,
+      "responseStatus": 418,
+      "error": "AUDIT_ROLLBACK_AFTER_SALE",
+      "wouldCreateSale": {
+        "status": "PAID",
+        "productIds": [
+          1
+        ],
+        "total": 9.99
+      }
+    },
+    {
+      "kind": "extra",
+      "ingredientActive": false,
+      "recipeDishVisible": false,
+      "responseStatus": 418,
+      "error": "AUDIT_ROLLBACK_AFTER_SALE",
+      "wouldCreateSale": {
+        "status": "PAID",
+        "productIds": [
+          2
+        ],
+        "total": 9.99
+      }
+    },
+    {
+      "kind": "custom",
+      "ingredientActive": false,
+      "recipeDishVisible": false,
+      "responseStatus": 418,
+      "error": "AUDIT_ROLLBACK_AFTER_SALE",
+      "wouldCreateSale": {
+        "status": "PAID",
+        "productIds": [
+          2
+        ],
+        "total": 9.99
+      }
+    },
+    {
+      "kind": "half",
+      "ingredientActive": false,
+      "recipeDishVisible": false,
+      "responseStatus": 418,
+      "error": "AUDIT_ROLLBACK_AFTER_SALE",
+      "wouldCreateSale": {
+        "status": "PAID",
+        "productIds": [
+          1
+        ],
+        "total": 9.99
+      }
+    }
+  ],
+  "findings": [
+    "CHECKOUT_ACCEPTS_DISH_WITH_DISABLED_INGREDIENT"
+  ]
+}

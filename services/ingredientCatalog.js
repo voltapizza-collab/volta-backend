@@ -79,8 +79,8 @@ export async function saveCatalogIngredient({ prisma, id, body, file, uploadImag
         if (!found) await tx.ingredientAlias.create({ data: { ingredientId: id, ...alias } });
       }
       return tx.ingredient.update({ where: { id }, data: {
-        name: data.name, category: data.category, canonicalKey,
-        semanticCategoryId: category.id, semanticStatus: 'REVIEWED',
+        name: data.name, category: body.preserveClassification === true ? current.category : data.category, canonicalKey,
+        semanticCategoryId: body.preserveClassification === true ? current.semanticCategoryId : category.id, semanticStatus: 'REVIEWED',
         status: body.status || (restore ? current.catalogState?.previousStatus : current.status) || 'ACTIVE',
         ...(uploaded ? { image: uploaded.image, imagePublicId: uploaded.imagePublicId,
           imageStatus: 'GENERATED', imageSource: 'MANUAL_UPLOAD', imageVersion: (current.imageVersion || 0) + 1,

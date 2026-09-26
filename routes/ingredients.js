@@ -9,6 +9,7 @@ import {
   resolveProtectedSemanticStatus,
 } from "../services/ingredientSemanticAdmin.js";
 import { resolveIngredientDisplay } from "../services/ingredientSemantics.js";
+import { resolveIngredientTaxonomy } from "../services/ingredientTaxonomy.js";
 import {
   suggestLocalSemanticMapping,
   suggestLocalSemanticMappings,
@@ -247,6 +248,7 @@ const mapSemanticIngredient = (ingredient, locale = "es") => {
     ...rest,
     displayName: semantic.displayName,
     displayCategory: semantic.displayCategory,
+    taxonomy: semantic.taxonomy,
     semanticCategoryKey: semanticCategory?.canonicalKey || null,
     searchText: semantic.searchText,
     requestedLocale: semantic.requestedLocale,
@@ -407,6 +409,7 @@ router.get("/", async (req, res) => {
 
       return {
         ...ingredient,
+        taxonomy: resolveIngredientTaxonomy(ingredient, normalizeLocaleParam(req.query.locale) || "es"),
         usageStoreCount,
         usageStorePercent,
         usageStoreTotal: activeStoreTotal,

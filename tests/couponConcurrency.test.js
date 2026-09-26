@@ -26,6 +26,7 @@ test("MySQL: concurrent allocation, duplicate consumption, release and unlimited
     await prisma.customer.deleteMany({ where: { partnerId: partner.id } });
     await prisma.coupon.deleteMany({ where: { partnerId: partner.id } });
     await prisma.store.delete({ where: { id: store.id } });
+    await prisma.menuPizza.deleteMany({ where: { partnerId: partner.id } });
     await prisma.partner.delete({ where: { id: partner.id } });
     await prisma.$disconnect();
   });
@@ -72,7 +73,8 @@ test("MySQL: concurrent allocation, duplicate consumption, release and unlimited
   const request = { partnerId: partner.id, storeId: store.id, code: unlimited.code };
   const preview = await post("/coupons/validate", { ...request, cart: [{ type: "PROMO", subtotal: 12 }] });
   assert.equal(preview.body.status, "no_eligible_products");
-  const mixed = [{ pizzaId: 1, subtotal: 12, qty: 1 }, { type: "PROMO", subtotal: 8, qty: 1 }];
+  const product = await prisma.menuPizza.create({ data: { partnerId: partner.id, name: "Coupon test dish", type: "SELLABLE", status: "ACTIVE", selectSize: ["M"], priceBySize: { M: 12 }, stocks: { create: { storeId: store.id, active: true } } } });
+  const mixed = [{ pizzaId: product.id, size: "M", price:12, subtotal: 12, qty: 1 }, { type: "PROMO", subtotal: 8, qty: 1 }];
   const ready = await post("/coupons/validate", { ...request, cart: mixed, subtotal: 9999 });
   assert.equal(ready.body.subtotal, 12); assert.equal(ready.body.discount, 5);
   await prisma.partner.update({ where: { id: partner.id }, data: { minimumPaymentAmount: 10, paymentPolicySettings: { cash: true } } });
@@ -81,11 +83,12 @@ test("MySQL: concurrent allocation, duplicate consumption, release and unlimited
   const blocked = await post("/checkout/session", checkout);
   assert.equal(blocked.status, 400); assert.equal(blocked.body.error, "minimum_payment_not_met");
   // At the exact boundary, minimum payment passes and the next required step is the customer profile.
-  const boundary = await post("/checkout/session", { ...checkout, cart: [{ ...mixed[0], subtotal: 15 }, checkout.cart[1]] });
+  await prisma.menuPizza.update({where:{id:product.id},data:{priceBySize:{M:15}}});
+  const boundary = await post("/checkout/session", { ...checkout, cart: [{ ...mixed[0], price:15, subtotal: 15 }, checkout.cart[1]] });
   assert.equal(boundary.body.error, "customer_profile_required");
 
   const customer = { name: "Cliente prueba", phone: "600000001" };
-  const cash = await post("/checkout/session", { ...checkout, customer, cart: [{ ...mixed[0], subtotal: 15 }, checkout.cart[1]] });
+  const cash = await post("/checkout/session", { ...checkout, customer, cart: [{ ...mixed[0], price:15, subtotal: 15 }, checkout.cart[1]] });
   assert.equal(cash.status, 200);
   assert.equal(await prisma.couponRedemption.count({ where: { saleId: cash.body.saleId } }), 1);
 
@@ -105,7 +108,7 @@ test("MySQL: concurrent allocation, duplicate consumption, release and unlimited
     return previousFetch(url, options);
   };
   try {
-    const payload = { ...checkout, customer, paymentMode: "card", cart: [{ ...mixed[0], subtotal: 15 }, { ...checkout.cart[1], couponCode: cardCoupon.code }] };
+    const payload = { ...checkout, customer, paymentMode: "card", cart: [{ ...mixed[0], price:15, subtotal: 15 }, { ...checkout.cart[1], couponCode: cardCoupon.code }] };
     const card = await post("/checkout/session", payload);
     assert.equal(card.status, 200);
     assert.equal(await prisma.couponRedemption.count({ where: { saleId: card.body.saleId } }), 0);

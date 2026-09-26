@@ -33,13 +33,13 @@ test("checkout delivery fee uses variable pricing when distance is available", (
   );
 });
 
-test("checkout delivery fee falls back to resolved fee for manual delivery coverage", () => {
+test("internal delivery fee calculation uses server base, never the client fee as fallback", () => {
   assert.equal(
     computeCheckoutDeliveryFee(
       { deliveryPricingMode: "VARIABLE", deliveryFeeBase: 3 },
       { method: "COURIER", deliveryFee: 4.5 }
     ),
-    4.5
+    3
   );
 
   assert.equal(

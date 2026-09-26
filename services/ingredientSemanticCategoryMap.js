@@ -1,3 +1,4 @@
+import { getLegacyIngredientCategory } from './ingredientTaxonomy.js';
 const LEGACY_CATEGORY_TO_SEMANTIC_KEY = {
   ACEITES: "oils_fats_vinegars",
   ACEITES_GRASAS_VINAGRES: "oils_fats_vinegars",
@@ -38,7 +39,7 @@ export const resolveSemanticCategoryKey = (category) => {
   const normalized = normalizeLegacyIngredientCategory(category);
   if (!normalized) return null;
 
-  return LEGACY_CATEGORY_TO_SEMANTIC_KEY[normalized] || null;
+  return LEGACY_CATEGORY_TO_SEMANTIC_KEY[normalized] || LEGACY_CATEGORY_TO_SEMANTIC_KEY[getLegacyIngredientCategory(normalized)] || null;
 };
 
 export const getLegacySemanticCategoryMap = () => ({

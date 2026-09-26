@@ -102,11 +102,15 @@ export default function ingredientExtrasRoutes(prisma) {
         req.query.storeId
       );
       const categoryId = Number(req.query.categoryId);
+      const storeId = normalizeStoreId(req.query.storeId);
 
       if (!partnerId || !Number.isInteger(categoryId) || categoryId <= 0) {
         return res
           .status(400)
           .json({ error: "partnerId or storeId, and categoryId required" });
+      }
+      if (storeId && !await prisma.store.findFirst({ where: { id: storeId, partnerId }, select: { id: true } })) {
+        return res.status(404).json({ error: "store_not_found" });
       }
 
       const rows = await prisma.ingredientExtra.findMany({
@@ -117,7 +121,8 @@ export default function ingredientExtrasRoutes(prisma) {
         },
         include: {
           ingredient: {
-            select: { id: true, name: true, allergens: true },
+            select: { id: true, name: true, allergens: true, status: true,
+              ...(storeId ? { storeStocks: { where: { storeId }, select: { active: true } } } : {}) },
           },
         },
         orderBy: {
@@ -125,8 +130,9 @@ export default function ingredientExtrasRoutes(prisma) {
         },
       });
 
+      res.set("Cache-Control", "no-store");
       res.json(
-        rows.map((row) => ({
+        rows.filter(row => row.ingredient?.status === "ACTIVE" && (!storeId || row.ingredient.storeStocks?.[0]?.active === true)).map((row) => ({
           ingredientId: row.ingredientId,
           name: row.ingredient?.name || `Ingrediente ${row.ingredientId}`,
           allergens: Array.isArray(row.ingredient?.allergens)

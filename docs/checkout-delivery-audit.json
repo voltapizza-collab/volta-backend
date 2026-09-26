@@ -1,0 +1,264 @@
+{
+  "verifiedAt": "2026-09-23T22:23:17.389Z",
+  "environment": "isolated_loopback_copy",
+  "complete": true,
+  "checks": [
+    {
+      "name": "valid_server_route",
+      "paymentMode": "cash",
+      "status": 418,
+      "error": "AUDIT_ROLLBACK_AFTER_SALE",
+      "acceptedAndRolledBack": true,
+      "chargedFee": 6.75,
+      "mapCalls": 2,
+      "manualReview": false
+    },
+    {
+      "name": "valid_server_route",
+      "paymentMode": "card",
+      "status": 418,
+      "error": "AUDIT_ROLLBACK_AFTER_SALE",
+      "acceptedAndRolledBack": true,
+      "chargedFee": 6.75,
+      "mapCalls": 2,
+      "manualReview": false
+    },
+    {
+      "name": "forged_zero_fee",
+      "paymentMode": "cash",
+      "status": 409,
+      "error": "delivery_price_changed",
+      "acceptedAndRolledBack": false,
+      "quotedFee": 6.75,
+      "mapCalls": 2
+    },
+    {
+      "name": "forged_zero_fee",
+      "paymentMode": "card",
+      "status": 409,
+      "error": "delivery_price_changed",
+      "acceptedAndRolledBack": false,
+      "quotedFee": 6.75,
+      "mapCalls": 2
+    },
+    {
+      "name": "forged_short_distance",
+      "paymentMode": "cash",
+      "status": 409,
+      "error": "delivery_price_changed",
+      "acceptedAndRolledBack": false,
+      "quotedFee": 6.75,
+      "mapCalls": 2
+    },
+    {
+      "name": "forged_short_distance",
+      "paymentMode": "card",
+      "status": 409,
+      "error": "delivery_price_changed",
+      "acceptedAndRolledBack": false,
+      "quotedFee": 6.75,
+      "mapCalls": 2
+    },
+    {
+      "name": "kilometer_boundary",
+      "paymentMode": "cash",
+      "status": 409,
+      "error": "delivery_price_changed",
+      "acceptedAndRolledBack": false,
+      "quotedFee": 5.5,
+      "mapCalls": 2
+    },
+    {
+      "name": "kilometer_boundary",
+      "paymentMode": "card",
+      "status": 409,
+      "error": "delivery_price_changed",
+      "acceptedAndRolledBack": false,
+      "quotedFee": 5.5,
+      "mapCalls": 2
+    },
+    {
+      "name": "outside_radius",
+      "paymentMode": "cash",
+      "status": 409,
+      "error": "delivery_outside_area",
+      "acceptedAndRolledBack": false,
+      "mapCalls": 2
+    },
+    {
+      "name": "outside_radius",
+      "paymentMode": "card",
+      "status": 409,
+      "error": "delivery_outside_area",
+      "acceptedAndRolledBack": false,
+      "mapCalls": 2
+    },
+    {
+      "name": "manual_review_notice",
+      "paymentMode": "cash",
+      "status": 409,
+      "error": "delivery_price_changed",
+      "acceptedAndRolledBack": false,
+      "quotedFee": 3,
+      "mapCalls": 2
+    },
+    {
+      "name": "manual_review_notice",
+      "paymentMode": "card",
+      "status": 409,
+      "error": "delivery_price_changed",
+      "acceptedAndRolledBack": false,
+      "quotedFee": 3,
+      "mapCalls": 2
+    },
+    {
+      "name": "manual_review_accepted",
+      "paymentMode": "cash",
+      "status": 418,
+      "error": "AUDIT_ROLLBACK_AFTER_SALE",
+      "acceptedAndRolledBack": true,
+      "chargedFee": 3,
+      "mapCalls": 2,
+      "manualReview": true
+    },
+    {
+      "name": "manual_review_accepted",
+      "paymentMode": "card",
+      "status": 418,
+      "error": "AUDIT_ROLLBACK_AFTER_SALE",
+      "acceptedAndRolledBack": true,
+      "chargedFee": 3,
+      "mapCalls": 2,
+      "manualReview": true
+    },
+    {
+      "name": "manual_forged_fee",
+      "paymentMode": "cash",
+      "status": 409,
+      "error": "delivery_price_changed",
+      "acceptedAndRolledBack": false,
+      "quotedFee": 3,
+      "mapCalls": 2
+    },
+    {
+      "name": "manual_forged_fee",
+      "paymentMode": "card",
+      "status": 409,
+      "error": "delivery_price_changed",
+      "acceptedAndRolledBack": false,
+      "quotedFee": 3,
+      "mapCalls": 2
+    },
+    {
+      "name": "missing_address",
+      "paymentMode": "cash",
+      "status": 409,
+      "error": "delivery_address_required",
+      "acceptedAndRolledBack": false,
+      "mapCalls": 0
+    },
+    {
+      "name": "missing_address",
+      "paymentMode": "card",
+      "status": 409,
+      "error": "delivery_address_required",
+      "acceptedAndRolledBack": false,
+      "mapCalls": 0
+    },
+    {
+      "name": "policy_changes_before_sale",
+      "paymentMode": "cash",
+      "status": 409,
+      "error": "delivery_policy_changed",
+      "acceptedAndRolledBack": false,
+      "mapCalls": 2
+    },
+    {
+      "name": "policy_changes_before_sale",
+      "paymentMode": "card",
+      "status": 409,
+      "error": "delivery_policy_changed",
+      "acceptedAndRolledBack": false,
+      "mapCalls": 2
+    },
+    {
+      "name": "store_disables_delivery",
+      "paymentMode": "cash",
+      "status": 409,
+      "error": "delivery_method_not_allowed",
+      "acceptedAndRolledBack": false,
+      "mapCalls": 2
+    },
+    {
+      "name": "store_disables_delivery",
+      "paymentMode": "card",
+      "status": 409,
+      "error": "delivery_method_not_allowed",
+      "acceptedAndRolledBack": false,
+      "mapCalls": 2
+    },
+    {
+      "name": "fixed_control",
+      "paymentMode": "cash",
+      "status": 418,
+      "error": "AUDIT_ROLLBACK_AFTER_SALE",
+      "acceptedAndRolledBack": true,
+      "chargedFee": 2.5,
+      "mapCalls": 0,
+      "manualReview": false
+    },
+    {
+      "name": "fixed_control",
+      "paymentMode": "card",
+      "status": 418,
+      "error": "AUDIT_ROLLBACK_AFTER_SALE",
+      "acceptedAndRolledBack": true,
+      "chargedFee": 2.5,
+      "mapCalls": 0,
+      "manualReview": false
+    },
+    {
+      "name": "pickup_control",
+      "paymentMode": "cash",
+      "status": 418,
+      "error": "AUDIT_ROLLBACK_AFTER_SALE",
+      "acceptedAndRolledBack": true,
+      "chargedFee": 0,
+      "mapCalls": 0,
+      "manualReview": false
+    },
+    {
+      "name": "pickup_control",
+      "paymentMode": "card",
+      "status": 418,
+      "error": "AUDIT_ROLLBACK_AFTER_SALE",
+      "acceptedAndRolledBack": true,
+      "chargedFee": 0,
+      "mapCalls": 0,
+      "manualReview": false
+    },
+    {
+      "name": "free_delivery_exceeds_products",
+      "paymentMode": "cash",
+      "status": 418,
+      "error": "AUDIT_ROLLBACK_AFTER_SALE",
+      "acceptedAndRolledBack": true,
+      "chargedFee": 10.5,
+      "mapCalls": 2,
+      "manualReview": false
+    },
+    {
+      "name": "free_delivery_exceeds_products",
+      "paymentMode": "card",
+      "status": 418,
+      "error": "AUDIT_ROLLBACK_AFTER_SALE",
+      "acceptedAndRolledBack": true,
+      "chargedFee": 10.5,
+      "mapCalls": 2,
+      "manualReview": false
+    }
+  ],
+  "allTablesRestored": 43,
+  "externalMapsCalls": false,
+  "paymentsOrMessagesSent": false
+}

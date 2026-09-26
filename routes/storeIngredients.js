@@ -108,6 +108,7 @@ const ingredientBaseSelect = {
 };
 
 const ingredientSemanticSelect = {
+  catalogState: { select: { masterCanonicalKey: true } },
   translations: {
     select: {
       locale: true,
@@ -234,8 +235,11 @@ const serializeIngredient = (ing, storeStock, context = {}, extra = {}) => {
     name: ing.name,
     displayName: semantic.displayName,
     canonicalKey: ing.canonicalKey || null,
+    masterCanonicalKey: ing.catalogState?.masterCanonicalKey || null,
+    isSystem: ing.isSystem,
     category: ing.category,
     displayCategory: semantic.displayCategory,
+    taxonomy: semantic.taxonomy,
     requestedLocale: semantic.requestedLocale,
     resolvedLocale: semantic.resolvedLocale,
     fallbackUsed: semantic.fallbackUsed,
@@ -264,8 +268,10 @@ const serializeIngredient = (ing, storeStock, context = {}, extra = {}) => {
             name: mappedGlobal.name,
             displayName: mappedSemantic.displayName,
             canonicalKey: mappedGlobal.canonicalKey || null,
+            masterCanonicalKey: mappedGlobal.catalogState?.masterCanonicalKey || null,
             category: mappedGlobal.category,
             displayCategory: mappedSemantic.displayCategory,
+            taxonomy: mappedSemantic.taxonomy,
             semanticStatus: mappedSemantic.semanticStatus,
             aliases: mappedSemantic.aliases,
             searchAliases: mappedSemantic.searchAliases,

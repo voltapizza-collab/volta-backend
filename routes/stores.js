@@ -1,7 +1,7 @@
 import express from "express";
+import { loadStoreMenuProducts } from "../services/storeMenuProducts.js";
 import { getBoostSettings } from "../services/boostSettings.js";
 import { sendStoreStatusTrackingSms } from "../services/trackingNotifications.js";
-import { createTtlCache } from "../services/responseCache.js";
 import {
   buildPosPinData,
   decryptPin,
@@ -19,11 +19,6 @@ import {
 
 const TZ = process.env.TIMEZONE || "Europe/Madrid";
 const TRENDING_PRICE_BAND = 0.5;
-const publicMenuCache = createTtlCache({
-  name: "public-store-menu",
-  ttlMs: Number(process.env.PUBLIC_MENU_CACHE_MS || 30_000),
-  maxEntries: Number(process.env.PUBLIC_MENU_CACHE_MAX || 500),
-});
 
 const roundMoney = (value) => Math.round(Number(value || 0) * 100) / 100;
 
@@ -323,7 +318,7 @@ const attachTrendingPricing = (pizza) => ({
   trendingPricing: buildTrendingPricing(pizza.priceBySize),
 });
 
-const buildTrendingMenu = async (prisma, { storeId, menu, now }) => {
+const buildTrendingMenu = async (prisma, { storeId, menu, now, sales: loadedSales }) => {
   const menuById = new Map(menu.map((pizza) => [pizza.pizzaId, pizza]));
   const pizzaIdByName = new Map(
     menu.map((pizza) => [normalizeProductKey(pizza.name), pizza.pizzaId])
@@ -333,7 +328,7 @@ const buildTrendingMenu = async (prisma, { storeId, menu, now }) => {
   const previousWeekStart = new Date(now);
   previousWeekStart.setDate(previousWeekStart.getDate() - 14);
 
-  const sales = await prisma.sale.findMany({
+  const sales = loadedSales || await prisma.sale.findMany({
     where: {
       storeId,
       status: { not: "CANCELED" },
@@ -647,17 +642,31 @@ const applyDirectDiscountToPizza = (pizza, discount) => {
   };
 };
 
+// Checkout uses the same pricing rules and trending membership as the menu.
+export async function loadStorefrontPricing(prisma, { partner, store, activeTopDeals, reference = new Date() }) {
+  const products = await loadStoreMenuProducts(prisma, partner.id, store.id);
+  const references = products.filter(p => p.stocks[0]?.active === true &&
+    (!p.launchAt || p.launchAt <= reference) && (!p.availableUntil || p.availableUntil > reference));
+  const available = references.filter(p => p.ingredients.every(r => r.ingredient.status === "ACTIVE" && r.ingredient.storeStocks[0]?.active === true));
+  const trending = await buildTrendingMenu(prisma, { storeId: store.id, menu: available.map(p => ({ ...p, pizzaId: p.id })), now: reference });
+  const trendIds = new Set(trending.map(p => p.pizzaId));
+  const rules = normalizePriceAdjustmentRules(partner.priceAdjustmentRules).filter(rule => isPriceAdjustmentWithinWindow(rule, nowInTZ()));
+  const price = p => {
+    if (trendIds.has(p.id)) return { ...p, trending: true, directDiscount: null };
+    const discount = chooseBestDiscountForPizza(p, activeTopDeals.filter(d => !isDirectDiscountSoldOut(d)), store.id);
+    return applyDirectDiscountToPizza(discount ? p : applyPriceAdjustmentRulesToPizza(p, rules, store.id), discount);
+  };
+  return { menu:available.map(price), references:references.map(price), products };
+}
+
 const attachStorePublicMenu = (router, prisma) => {
   router.get("/:partnerSlug/:storeSlug/menu", async (req, res) => {
     try {
       const { partnerSlug, storeSlug } = req.params;
-      const cacheKey = `${partnerSlug}:${storeSlug}`;
-      const cachedPayload = publicMenuCache.get(cacheKey);
-
-      if (cachedPayload) {
-        res.set("X-Volta-Cache", "HIT public-store-menu");
-        return res.json(cachedPayload);
-      }
+      // Availability changes can originate in any backend process or POS.
+      // Never reuse a complete menu response, including in browsers/proxies.
+      res.set("Cache-Control", "no-store");
+      res.set("X-Volta-Cache", "BYPASS public-store-menu");
 
       const partner = await prisma.partner.findUnique({
         where: { slug: partnerSlug },
@@ -667,18 +676,7 @@ const attachStorePublicMenu = (router, prisma) => {
         return res.status(404).json({ error: "Partner not found" });
       }
 
-      let priceAdjustmentRows = [];
-      try {
-        priceAdjustmentRows = await prisma.$queryRawUnsafe(
-          "SELECT priceAdjustmentRules FROM Partner WHERE id = ?",
-          partner.id
-        );
-      } catch (priceAdjustmentError) {
-        console.warn(
-          "[stores.menu] price adjustments unavailable:",
-          priceAdjustmentError?.code || priceAdjustmentError?.message
-        );
-      }
+      const priceAdjustmentRows = [partner];
 
       const store = await prisma.store.findFirst({
         where: {
@@ -695,74 +693,20 @@ const attachStorePublicMenu = (router, prisma) => {
         return res.status(404).json({ error: "Store not active" });
       }
 
-      const pizzas = await prisma.menuPizza.findMany({
-        where: {
-          partnerId: store.partnerId,
-          status: "ACTIVE",
-          type: "SELLABLE",
-        },
-        select: {
-          id: true,
-          name: true,
-          category: true,
-          categoryId: true,
-          cookingMethod: true,
-          selectSize: true,
-          priceBySize: true,
-          image: true,
-          launchAt: true,
-          availableUntil: true,
-          productTags: true,
-          categoryRef: {
-            select: {
-              position: true,
-              customizable: true,
-            },
-          },
-          stocks: {
-            where: { storeId: store.id },
-            select: {
-              active: true,
-              stock: true,
-            },
-          },
-          ingredients: {
-            select: {
-              qtyBySize: true,
-              ingredient: {
-                select: {
-                  id: true,
-                  name: true,
-                  canonicalKey: true,
-                  allergens: true,
-                  status: true,
-                  storeStocks: {
-                    where: { storeId: store.id },
-                    select: { active: true },
-                  },
-                },
-              },
-            },
-          },
-        },
-        orderBy: { id: "asc" },
-      });
+      const now = new Date();
+      const [pizzas, approvalRows, boostSettings, promos, salesSummary, trendingSales, directDiscountRows] = await Promise.all([
+        loadStoreMenuProducts(prisma, store.partnerId, store.id),
+        prisma.productReviewVote.groupBy({ by: ["productId", "vote"], where: { storeId: store.id, vote: { in: ["LIKE", "DISLIKE"] } }, _count: { _all: true } }).catch(error => { console.warn("[stores.menu] approvals unavailable:", error?.code); return []; }),
+        getBoostSettings(prisma),
+        prisma.promo.findMany({ where: { partnerId: store.partnerId, status: "ACTIVE", AND: [{ OR: [{ activeFrom: null }, { activeFrom: { lte: now } }] }, { OR: [{ expiresAt: null }, { expiresAt: { gt: now } }] }] }, orderBy: { createdAt: "desc" } }),
+        prisma.sale.aggregate({ where: { storeId: store.id, status: { not: "CANCELED" } }, _avg: { total: true } }),
+        prisma.sale.findMany({ where: { storeId: store.id, status: { not: "CANCELED" } }, select: { date: true, createdAt: true, products: true }, orderBy: { date: "desc" } }),
+        (async () => {
+          await ensureDirectDiscountUsageLimitColumn(prisma);
+          return prisma.directDiscount.findMany({ where: { partnerId: store.partnerId, status: "ACTIVE", AND: [{ OR: [{ activeFrom: null }, { activeFrom: { lte: now } }] }, { OR: [{ expiresAt: null }, { expiresAt: { gt: now } }] }] }, orderBy: { createdAt: "desc" } });
+        })(),
+      ]);
 
-      const categoryIds = [
-        ...new Set(
-          pizzas
-            .map((pizza) => Number(pizza.categoryId))
-            .filter((id) => Number.isInteger(id) && id > 0)
-        ),
-      ];
-      const categoryHalfRows = categoryIds.length
-        ? await prisma.$queryRawUnsafe(
-            `SELECT id, halfAndHalf FROM Category WHERE id IN (${categoryIds.join(",")})`
-          )
-        : [];
-      const categoryHalfAndHalfById = new Map(
-        categoryHalfRows.map((row) => [Number(row.id), Boolean(row.halfAndHalf)])
-      );
 
       const availablePizzas = pizzas.filter((pizza) => {
         const storePizzaState = pizza.stocks?.[0];
@@ -788,16 +732,6 @@ const attachStorePublicMenu = (router, prisma) => {
 
       if (approvalPizzaIds.length) {
         try {
-          const approvalRows = await prisma.productReviewVote.groupBy({
-            by: ["productId", "vote"],
-            where: {
-              storeId: store.id,
-              productId: { in: approvalPizzaIds },
-              vote: { in: ["LIKE", "DISLIKE"] },
-            },
-            _count: { _all: true },
-          });
-
           approvalRows.forEach((row) => {
             const productId = Number(row.productId);
             if (!Number.isInteger(productId) || productId <= 0) return;
@@ -824,35 +758,6 @@ const attachStorePublicMenu = (router, prisma) => {
         }
       }
 
-      const now = new Date();
-      let directDiscountRows = [];
-      try {
-        await ensureDirectDiscountUsageLimitColumn(prisma);
-        directDiscountRows = await prisma.directDiscount.findMany({
-          where: {
-            partnerId: store.partnerId,
-            status: "ACTIVE",
-            AND: [
-              {
-                OR: [
-                  { activeFrom: null },
-                  { activeFrom: { lte: now } },
-                ],
-              },
-              {
-                OR: [
-                  { expiresAt: null },
-                  { expiresAt: { gt: now } },
-                ],
-              },
-            ],
-          },
-          orderBy: { createdAt: "desc" },
-        });
-      } catch (discountError) {
-        console.warn("[stores.menu] direct discounts unavailable:", discountError?.code || discountError?.message);
-        directDiscountRows = [];
-      }
       const directDiscountWindowNow = nowInTZ();
       let directDiscountUsageSummary = { totalCounts: new Map(), dailyCounts: new Map() };
       if (directDiscountRows.length) {
@@ -891,7 +796,7 @@ const attachStorePublicMenu = (router, prisma) => {
           categoryPosition: pizza.categoryRef?.position ?? 999,
           categoryCustomizable: pizza.categoryRef?.customizable ?? false,
           categoryHalfAndHalf:
-            categoryHalfAndHalfById.get(Number(pizza.categoryId)) ?? false,
+            pizza.categoryRef?.halfAndHalf ?? false,
           cookingMethod: pizza.cookingMethod ?? null,
           selectSize: pizza.selectSize ?? [],
           priceBySize: pizza.priceBySize ?? {},
@@ -948,6 +853,7 @@ const attachStorePublicMenu = (router, prisma) => {
       const trending = await buildTrendingMenu(prisma, {
         storeId: store.id,
         menu: trendingSourceMenu,
+        sales: trendingSales,
         now,
       });
       const trendingByPizzaId = new Map(
@@ -970,40 +876,10 @@ const attachStorePublicMenu = (router, prisma) => {
             }
           : pizza
       );
-      const boostSettings = await getBoostSettings(prisma);
-      const promos = await prisma.promo.findMany({
-        where: {
-          partnerId: store.partnerId,
-          status: "ACTIVE",
-          AND: [
-            {
-              OR: [
-                { activeFrom: null },
-                { activeFrom: { lte: now } },
-              ],
-            },
-            {
-              OR: [
-                { expiresAt: null },
-                { expiresAt: { gt: now } },
-              ],
-            },
-          ],
-        },
-        orderBy: { createdAt: "desc" },
-      });
       const promoWindowNow = nowInTZ();
       const visiblePromos = promos.filter((promo) =>
         isPromoWithinWindow(promo, promoWindowNow)
       );
-      const salesSummary = await prisma.sale.aggregate({
-        where: {
-          storeId: store.id,
-          status: { not: "CANCELED" },
-        },
-        _avg: { total: true },
-      });
-
       const payload = {
         store: {
           id: store.id,
@@ -1039,8 +915,6 @@ const attachStorePublicMenu = (router, prisma) => {
         })),
       };
 
-      publicMenuCache.set(cacheKey, payload);
-      res.set("X-Volta-Cache", "MISS public-store-menu");
       return res.json(payload);
     } catch (error) {
       console.error("GET /stores/:partnerSlug/:storeSlug/menu", error);

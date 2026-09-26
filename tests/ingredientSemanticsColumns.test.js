@@ -5,6 +5,15 @@ import {
   ensureIngredientSemanticsAvailable,
 } from "../services/ingredientSemanticsColumns.js";
 
+test('Windows MySQL lower-case table names retain semantic availability', async () => {
+  clearIngredientSemanticsAvailabilityCache();
+  assert.equal(await ensureIngredientSemanticsAvailable({ $queryRawUnsafe: async sql => {
+    if (sql === 'SHOW TABLES') return ['ingredienttranslation', 'ingredientalias', 'ingredientsemanticcategory', 'ingredientsemanticcategorytranslation'].map(name => ({ table: name }));
+    if (sql.includes('`Ingredient`')) return ['canonicalKey', 'semanticStatus', 'semanticCategoryId'].map(Field => ({ Field }));
+    return [{ Field: 'backofficeLocale' }];
+  } }), true);
+});
+
 test("ensureIngredientSemanticsAvailable returns true when tables and columns exist", async () => {
   clearIngredientSemanticsAvailabilityCache();
 

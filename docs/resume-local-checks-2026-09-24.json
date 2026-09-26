@@ -1,0 +1,25 @@
+{
+  "verifiedAt": "2026-09-23T22:25:01.7934116Z",
+  "environment": "isolated_loopback_copy",
+  "menu": [
+    {
+      "status": 200,
+      "milliseconds": 404,
+      "dishes": 48,
+      "cache": "no-store"
+    },
+    {
+      "status": 200,
+      "milliseconds": 212,
+      "dishes": 48,
+      "cache": "no-store"
+    },
+    {
+      "status": 200,
+      "milliseconds": 200,
+      "dishes": 48,
+      "cache": "no-store"
+    }
+  ],
+  "inventoryCount": 131
+}

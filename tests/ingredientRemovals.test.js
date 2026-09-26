@@ -68,12 +68,15 @@ test("HTTP checkout saves canonical removals and rejects invalid requests before
   const store = { id: 3, partnerId: 7, active: true, acceptingOrders: true, pickupEnabled: true, hours: [] };
   const customer = { id: 5, name: "Cliente", phone: "+34612345678", address_1: "Calle de prueba" };
   const prisma = { ...mock(),
+    menuPizza: { findMany: async query => query.where.stocks ? mock().menuPizza.findMany(query) :
+      [{ ...pizza, status: "ACTIVE", type: "SELLABLE", stocks: [{ active: true }] }] },
+    ingredient: { findMany: async () => [10, 11].map(id => ({ id, status: "ACTIVE", storeStocks: [{ active: true }] })) },
     $executeRawUnsafe: async () => {},
-    $queryRawUnsafe: async (sql) => sql.includes("FROM Partner") ? [{ id: 7, paymentPolicySettings: { cash: true } }] : [],
+    $queryRawUnsafe: async (sql) => sql.includes("FROM Partner") ? [{ id: 7, currency: "EUR", paymentPolicySettings: { cash: true } }] : sql.includes("FROM MenuPizza p") ? [{ id: 1, name:"Barbacoa", category:"Pizza", categoryId:1, selectSize:['M','L'],priceBySize:{M:10,L:14},productActive:true,recipeId:null }] : [],
     store: { findFirst: async () => store, findUnique: async () => store },
     customer: { findFirst: async () => customer },
     directDiscount: { findMany: async () => [] },
-    sale: { findFirst: async () => null, findUnique: async () => null, create: async ({ data }) => { const sale = { id: 42, ...data }; saved.push(sale); return sale; } },
+    sale: { findMany: async () => [], findFirst: async () => null, findUnique: async () => null, create: async ({ data }) => { const sale = { id: 42, ...data }; saved.push(sale); return sale; } },
   };
   prisma.$transaction = async (fn) => fn(prisma);
   const app = express(); app.use(express.json()); app.use(checkoutRoutes(prisma));

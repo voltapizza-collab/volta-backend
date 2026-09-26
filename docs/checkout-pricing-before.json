@@ -1,0 +1,125 @@
+{
+  "verifiedAt": "2026-09-18T11:29:55.730Z",
+  "database": "isolated_loopback_copy",
+  "tablesRestored": 43,
+  "saleTransactionsRolledBack": true,
+  "paymentsOrMessagesSent": false,
+  "checks": [
+    {
+      "kind": "underpriced",
+      "paymentMode": "cash",
+      "ingredientActive": true,
+      "recipeDishVisible": true,
+      "responseStatus": 418,
+      "error": "AUDIT_ROLLBACK_AFTER_SALE",
+      "wouldCreateSale": {
+        "status": "PAID",
+        "productIds": [
+          1
+        ],
+        "total": 0.5
+      }
+    },
+    {
+      "kind": "underpriced",
+      "paymentMode": "card",
+      "ingredientActive": true,
+      "recipeDishVisible": true,
+      "responseStatus": 418,
+      "error": "AUDIT_ROLLBACK_AFTER_SALE",
+      "wouldCreateSale": {
+        "status": "AWAITING_PAYMENT",
+        "productIds": [
+          1
+        ],
+        "total": 0.5
+      }
+    },
+    {
+      "kind": "forged_subtotal",
+      "paymentMode": "cash",
+      "ingredientActive": true,
+      "recipeDishVisible": true,
+      "responseStatus": 418,
+      "error": "AUDIT_ROLLBACK_AFTER_SALE",
+      "wouldCreateSale": {
+        "status": "PAID",
+        "productIds": [
+          1
+        ],
+        "total": 0.5
+      }
+    },
+    {
+      "kind": "forged_subtotal",
+      "paymentMode": "card",
+      "ingredientActive": true,
+      "recipeDishVisible": true,
+      "responseStatus": 418,
+      "error": "AUDIT_ROLLBACK_AFTER_SALE",
+      "wouldCreateSale": {
+        "status": "AWAITING_PAYMENT",
+        "productIds": [
+          1
+        ],
+        "total": 0.5
+      }
+    },
+    {
+      "kind": "unknown_promo",
+      "paymentMode": "cash",
+      "ingredientActive": true,
+      "recipeDishVisible": true,
+      "responseStatus": 418,
+      "error": "AUDIT_ROLLBACK_AFTER_SALE",
+      "wouldCreateSale": {
+        "status": "PAID",
+        "productIds": [
+          null
+        ],
+        "total": 9.99
+      }
+    },
+    {
+      "kind": "unknown_promo",
+      "paymentMode": "card",
+      "ingredientActive": true,
+      "recipeDishVisible": true,
+      "responseStatus": 418,
+      "error": "AUDIT_ROLLBACK_AFTER_SALE",
+      "wouldCreateSale": {
+        "status": "AWAITING_PAYMENT",
+        "productIds": [
+          null
+        ],
+        "total": 9.99
+      }
+    },
+    {
+      "kind": "unearned_reward",
+      "paymentMode": "cash",
+      "ingredientActive": true,
+      "recipeDishVisible": true,
+      "responseStatus": 500,
+      "error": "checkout_failed",
+      "wouldCreateSale": null
+    },
+    {
+      "kind": "unearned_reward",
+      "paymentMode": "card",
+      "ingredientActive": true,
+      "recipeDishVisible": true,
+      "responseStatus": 500,
+      "error": "checkout_failed",
+      "wouldCreateSale": null
+    }
+  ],
+  "findings": [
+    "underpriced:cash",
+    "underpriced:card",
+    "forged_subtotal:cash",
+    "forged_subtotal:card",
+    "unknown_promo:cash",
+    "unknown_promo:card"
+  ]
+}

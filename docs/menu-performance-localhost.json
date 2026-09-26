@@ -1,0 +1,32 @@
+{
+  "verifiedAt": "2026-09-18T11:45:01.349Z",
+  "environment": "usual_localhost_read_only",
+  "menu": [
+    {
+      "status": 200,
+      "ms": 4394,
+      "dishes": 48,
+      "cache": "no-store"
+    },
+    {
+      "status": 200,
+      "ms": 2739,
+      "dishes": 48,
+      "cache": "no-store"
+    },
+    {
+      "status": 200,
+      "ms": 2704,
+      "dishes": 48,
+      "cache": "no-store"
+    }
+  ],
+  "inventory": {
+    "status": 200,
+    "ingredients": 131
+  },
+  "frontend": {
+    "status": 200,
+    "script": "/static/js/main.efbc4463.js"
+  }
+}

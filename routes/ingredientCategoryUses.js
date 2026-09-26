@@ -1,4 +1,5 @@
 import express from "express";
+import { resolveIngredientTaxonomy } from "../services/ingredientTaxonomy.js";
 import { loadPartnerIngredientProfiles, withPartnerIngredientProfile } from "../services/partnerIngredientProfiles.js";
 
 const normalizePositiveId = (value) => {
@@ -123,6 +124,9 @@ export default function ingredientCategoryUsesRoutes(prisma) {
               id: true,
               name: true,
               category: true,
+              canonicalKey: true,
+              catalogState: { select: { masterCanonicalKey: true } },
+              isSystem: true,
               allergens: true,
               costPrice: true,
               status: true,
@@ -163,6 +167,10 @@ export default function ingredientCategoryUsesRoutes(prisma) {
             ingredientId: row.ingredientId,
             name: row.ingredient?.name || `Ingrediente ${row.ingredientId}`,
             category: row.ingredient?.category || "OTROS",
+            canonicalKey: row.ingredient?.canonicalKey || null,
+            masterCanonicalKey: row.ingredient?.catalogState?.masterCanonicalKey || null,
+            isSystem: row.ingredient?.isSystem,
+            taxonomy: resolveIngredientTaxonomy(row.ingredient),
             allergens: Array.isArray(row.ingredient?.allergens)
               ? row.ingredient.allergens
               : [],
@@ -195,6 +203,9 @@ export default function ingredientCategoryUsesRoutes(prisma) {
               id: true,
               name: true,
               category: true,
+              canonicalKey: true,
+              catalogState: { select: { masterCanonicalKey: true } },
+              isSystem: true,
               allergens: true,
               costPrice: true,
               status: true,
@@ -224,6 +235,10 @@ export default function ingredientCategoryUsesRoutes(prisma) {
           ingredientId: row.ingredientId,
           name: ingredient?.name || `Ingrediente ${row.ingredientId}`,
           category: ingredient?.category || "OTROS",
+          canonicalKey: ingredient?.canonicalKey || null,
+          masterCanonicalKey: ingredient?.catalogState?.masterCanonicalKey || null,
+          isSystem: ingredient?.isSystem,
+          taxonomy: resolveIngredientTaxonomy(ingredient),
           allergens: Array.isArray(ingredient?.allergens)
             ? ingredient.allergens
             : [],

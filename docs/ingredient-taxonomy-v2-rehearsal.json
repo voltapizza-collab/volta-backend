@@ -1,0 +1,98 @@
+{
+  "generatedAt": "2026-09-17T22:36:26.476Z",
+  "version": "restaurant-v2-proposal-2026-09-18",
+  "sourceMasterSha256": "88e52ef480c5e7f6868ad86ba313cd23e7c5ba6da4e74f723b7fcf68e781769b",
+  "sourceSnapshotSha256": "a0388357b8615ad91bb5ae1f70b205f48212163d499cdaaad3e19ab23fbe3a63",
+  "sourceSnapshotCapturedAt": "2026-09-17T22:33:23.861Z",
+  "scope": "Isolated MySQL copy; classification changes only; not an application rollout",
+  "readyForProduction": false,
+  "master": {
+    "total": 3014,
+    "proposed": 3006,
+    "reviewRequired": 8
+  },
+  "database": {
+    "totalIngredients": 135,
+    "systemIngredients": 131,
+    "reclassified": 119,
+    "legacyClassificationsReviewed": 84,
+    "localIngredientsPreserved": 4,
+    "operationalPlaceholdersPreserved": 3,
+    "heldForReview": 9,
+    "recipes": 172,
+    "storeStocks": 209,
+    "extras": 17,
+    "categoryUses": 104,
+    "partnerProfiles": 9,
+    "sales": 582,
+    "tablesCompared": 43
+  },
+  "checks": {
+    "forwardClassificationOnly": true,
+    "failureIsAtomic": true,
+    "rollbackRowsIdentical": true
+  },
+  "held": [
+    {
+      "id": 25,
+      "name": "Pavo",
+      "canonicalKey": "turkey",
+      "reason": "legacy_composition_requires_review"
+    },
+    {
+      "id": 47,
+      "name": "Maíz",
+      "canonicalKey": null,
+      "reason": "identity_not_in_master"
+    },
+    {
+      "id": 54,
+      "name": "Relleno de Mozzarela",
+      "canonicalKey": null,
+      "reason": "identity_not_in_master"
+    },
+    {
+      "id": 57,
+      "name": "Avellana blanca",
+      "canonicalKey": "white_hazelnut_cream",
+      "reason": "legacy_composition_requires_review"
+    },
+    {
+      "id": 58,
+      "name": "Avellana tradicional",
+      "canonicalKey": "hazelnut_cream",
+      "reason": "legacy_composition_requires_review"
+    },
+    {
+      "id": 61,
+      "name": "Pistacho",
+      "canonicalKey": "pistachio_cream",
+      "reason": "legacy_composition_requires_review"
+    },
+    {
+      "id": 62,
+      "name": "Crema de coco",
+      "canonicalKey": "coconut_cream",
+      "reason": "legacy_composition_requires_review"
+    },
+    {
+      "id": 75,
+      "name": "Extracto de paprika",
+      "canonicalKey": null,
+      "reason": "identity_not_in_master"
+    },
+    {
+      "id": 126,
+      "name": "1kg Relleno de Mozzarela",
+      "canonicalKey": null,
+      "reason": "identity_not_in_master"
+    }
+  ],
+  "limitations": [
+    "Incomplete classification decisions remain blocked.",
+    "Database-held identities require explicit review; no name-based matching was applied.",
+    "Frontend/backend category dictionaries, translations, onboarding and cost suggestions have not been migrated.",
+    "This verifies stored data, not checkout or POS end-to-end behavior.",
+    "Rollback restores all rows; MySQL auto-increment counters can advance after rolled-back inserts."
+  ]
+}

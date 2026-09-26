@@ -1,16 +1,58 @@
 // Add a user-facing note in the same change that delivers a feature.
 // Keep IDs stable; increase revision only when users need to read the note again.
+// Draft: add to backofficeAnnouncements and set publication dates only after the
+// matching storefront is available. This export alone does not enter the feed.
+export const ingredientDiscoveryAnnouncementDraft = {
+  id: "ingredient-discovery-options-2026-09", revision: 1,
+  category: "improvement", severity: "info",
+  title: "Más ayuda al buscar ingredientes",
+  message: "En Global Manager, buscar entrecot o aceitunas verdes muestra una opción documentada de la lista maestra y explica su alcance: entrecot de lomo alto o aceituna Gordal. Revisa la explicación antes de elegir la ficha.",
+  translations: {
+    en: { title: "More help when searching for ingredients", message: "In Global Manager, searching for entrecot or aceitunas verdes shows a documented option from the master list and explains its scope: ribeye or Gordal olives. Read the explanation before choosing the record." },
+    it: { title: "Più aiuto nella ricerca degli ingredienti", message: "In Global Manager, cercando entrecot o aceitunas verdes viene mostrata un’opzione documentata della lista principale con il suo ambito: ribeye oppure olive Gordal. Leggi la spiegazione prima di scegliere la scheda." },
+    fr: { title: "Plus d’aide pour rechercher des ingrédients", message: "Dans Global Manager, une recherche de entrecot ou aceitunas verdes affiche une option documentée de la liste principale et précise sa portée : ribeye ou olives Gordal. Lisez l’explication avant de choisir la fiche." },
+    pt: { title: "Mais ajuda na pesquisa de ingredientes", message: "No Global Manager, pesquisar entrecot ou aceitunas verdes apresenta uma opção documentada da lista principal e explica o seu âmbito: ribeye ou azeitonas Gordal. Leia a explicação antes de escolher a ficha." },
+  },
+};
+
+export const inventoryLoadRecoveryAnnouncementDraft = {
+  id: "inventory-load-recovery-2026-09", revision: 1,
+  category: "improvement", severity: "info",
+  title: "Estado de conexión del inventario",
+  message: "El inventario avisa mientras carga y muestra un botón Reintentar si falla la conexión, para que puedas recuperar la lista desde la misma pantalla.",
+  translations: {
+    en: { title: "Inventory connection status", message: "Inventory shows when it is loading and offers a Retry button if the connection fails, so you can recover the list from the same screen." },
+    it: { title: "Stato della connessione dell’inventario", message: "L’inventario indica il caricamento e mostra il pulsante Riprova se la connessione non riesce, per recuperare l’elenco dalla stessa schermata." },
+    fr: { title: "État de connexion de l’inventaire", message: "L’inventaire indique le chargement et affiche un bouton Réessayer si la connexion échoue, pour retrouver la liste depuis le même écran." },
+    pt: { title: "Estado da ligação do inventário", message: "O inventário indica quando está a carregar e mostra o botão Tentar novamente se a ligação falhar, para recuperar a lista no mesmo ecrã." },
+  },
+};
+
+export const ingredientRestaurantTaxonomyAnnouncementDraft = {
+  id: "ingredient-restaurant-families-2026-09", revision: 1,
+  category: "improvement", severity: "info",
+  title: "Ingredientes organizados para toda tu cocina",
+  message: "El catálogo y el inventario se organizan en 14 familias. Ahora puedes encontrar panes, masas, pastas, cereales, lácteos y proteínas vegetales en sus propios grupos, además de los ingredientes habituales de tus pizzas.",
+  detail: "Usa las categorías o busca por nombre para encontrar un ingrediente. Tus recetas, existencias y precios se conservan.",
+  translations: {
+    en: { title: "Ingredients organized for your whole kitchen", message: "The catalogue and inventory are organized into 14 families. Find bread, dough, pasta, grains, dairy and plant proteins in their own groups, alongside your usual pizza ingredients.", detail: "Use the categories or search by name to find an ingredient. Your recipes, stock and prices are preserved." },
+    it: { title: "Ingredienti organizzati per tutta la tua cucina", message: "Il catalogo e l’inventario sono organizzati in 14 famiglie. Pane, impasti, pasta, cereali, latticini e proteine vegetali hanno ora i propri gruppi, accanto ai consueti ingredienti delle tue pizze.", detail: "Usa le categorie o cerca per nome per trovare un ingrediente. Ricette, scorte e prezzi restano invariati." },
+    fr: { title: "Des ingrédients organisés pour toute votre cuisine", message: "Le catalogue et l’inventaire sont organisés en 14 familles. Retrouvez pains, pâtes à pain, pâtes alimentaires, céréales, produits laitiers et protéines végétales dans leurs propres groupes, aux côtés de vos ingrédients de pizza habituels.", detail: "Utilisez les catégories ou recherchez par nom pour trouver un ingrédient. Vos recettes, stocks et prix sont conservés." },
+    pt: { title: "Ingredientes organizados para toda a sua cozinha", message: "O catálogo e o inventário estão organizados em 14 famílias. Pães, massas de pão, massas alimentícias, cereais, laticínios e proteínas vegetais têm agora os seus próprios grupos, além dos ingredientes habituais das suas pizzas.", detail: "Use as categorias ou pesquise pelo nome para encontrar um ingrediente. As suas receitas, existências e preços são preservados." },
+  },
+};
+
 export const productSpecialNoticesAnnouncement = {
   id: "product-special-notices-2026-09", revision: 1, publishedAt: "2026-09-17T11:45:22.456Z", expiresAt: "2026-12-17T11:45:22.465Z",
   category: "improvement", severity: "info",
   title: "Más avisos especiales para tus platos",
   message: "En Avisos especiales de Pizza Creator puedes combinar Picante, Vegano, Vegetariano, Sin gluten, Kosher y Halal. En la carta comparten una etiqueta que alterna el texto verticalmente y cambia de color; la ficha del plato muestra todos juntos.",
-  detail: "Los avisos aparecen sobre la imagen también en escritorio. Los contadores de las ofertas quedan alineados a la derecha debajo de la foto.",
+  detail: "En móvil y escritorio, los avisos sobre la imagen se reservan para platos sin otra etiqueta: Top Deal, Trending y Próximo tienen prioridad. La ficha del plato conserva todos los avisos especiales. Los contadores de las ofertas quedan a la derecha debajo de la foto.",
   translations: {
-    en: { title: "More special notices for your dishes", message: "Under Special notices in Pizza Creator, you can combine Spicy, Vegan, Vegetarian, Gluten-free, Kosher and Halal. The menu uses one label that cycles vertically through the notices and changes colour; the product details show them all together.", detail: "Notices appear over the image on desktop too. Offer countdowns are aligned to the right below the photo." },
-    it: { title: "Più avvisi speciali per i tuoi piatti", message: "In Avvisi speciali di Pizza Creator puoi combinare Piccante, Vegano, Vegetariano, Senza glutine, Kosher e Halal. Nel menu condividono un’etichetta che alterna il testo verticalmente e cambia colore; la scheda del piatto li mostra tutti insieme.", detail: "Gli avvisi appaiono sopra l’immagine anche su desktop. I conti alla rovescia delle offerte sono allineati a destra sotto la foto." },
-    fr: { title: "Plus de mentions spéciales pour vos plats", message: "Dans Mentions spéciales de Pizza Creator, vous pouvez combiner Épicé, Végan, Végétarien, Sans gluten, Casher et Halal. Le menu utilise une seule étiquette qui fait défiler les mentions verticalement et change de couleur ; la fiche du plat les présente toutes ensemble.", detail: "Les mentions apparaissent sur l’image également sur ordinateur. Les comptes à rebours des offres sont alignés à droite sous la photo." },
-    pt: { title: "Mais avisos especiais para os seus pratos", message: "Em Avisos especiais do Pizza Creator pode combinar Picante, Vegano, Vegetariano, Sem glúten, Kosher e Halal. Na ementa partilham uma etiqueta que alterna o texto verticalmente e muda de cor; a ficha do prato apresenta todos juntos.", detail: "Os avisos aparecem sobre a imagem também no computador. As contagens decrescentes das ofertas ficam alinhadas à direita por baixo da fotografia." },
+    en: { title: "More special notices for your dishes", message: "Under Special notices in Pizza Creator, you can combine Spicy, Vegan, Vegetarian, Gluten-free, Kosher and Halal. The menu uses one label that cycles vertically through the notices and changes colour; the product details show them all together.", detail: "On mobile and desktop, notices over the image are reserved for dishes without another label: Top Deal, Trending and Upcoming take priority. The product details keep all special notices. Offer countdowns stay on the right below the photo." },
+    it: { title: "Più avvisi speciali per i tuoi piatti", message: "In Avvisi speciali di Pizza Creator puoi combinare Piccante, Vegano, Vegetariano, Senza glutine, Kosher e Halal. Nel menu condividono un’etichetta che alterna il testo verticalmente e cambia colore; la scheda del piatto li mostra tutti insieme.", detail: "Su mobile e desktop, gli avvisi sull’immagine sono riservati ai piatti senza altre etichette: Top Deal, Trending e Prossimamente hanno la precedenza. La scheda del piatto conserva tutti gli avvisi speciali. I conti alla rovescia delle offerte restano a destra sotto la foto." },
+    fr: { title: "Plus de mentions spéciales pour vos plats", message: "Dans Mentions spéciales de Pizza Creator, vous pouvez combiner Épicé, Végan, Végétarien, Sans gluten, Casher et Halal. Le menu utilise une seule étiquette qui fait défiler les mentions verticalement et change de couleur ; la fiche du plat les présente toutes ensemble.", detail: "Sur mobile et ordinateur, les mentions sur l’image sont réservées aux plats sans autre étiquette : Top Deal, Trending et À venir sont prioritaires. La fiche du plat conserve toutes les mentions spéciales. Les comptes à rebours des offres restent à droite sous la photo." },
+    pt: { title: "Mais avisos especiais para os seus pratos", message: "Em Avisos especiais do Pizza Creator pode combinar Picante, Vegano, Vegetariano, Sem glúten, Kosher e Halal. Na ementa partilham uma etiqueta que alterna o texto verticalmente e muda de cor; a ficha do prato apresenta todos juntos.", detail: "No telemóvel e no computador, os avisos sobre a imagem ficam reservados aos pratos sem outra etiqueta: Top Deal, Trending e Em breve têm prioridade. A ficha do prato conserva todos os avisos especiais. As contagens decrescentes das ofertas ficam à direita por baixo da fotografia." },
   },
 };
 
@@ -30,14 +72,14 @@ export const ingredientAvailableBadgeAnnouncement = {
 export const notificationInboxAnnouncement = {
   id: "backoffice-notification-inbox-2026-09", revision: 1, publishedAt: "2026-09-17T11:45:22.456Z", expiresAt: "2026-12-17T11:45:22.465Z",
   category: "improvement", severity: "info",
-  title: "Tus avisos, con pendientes e historial",
-  message: "Al marcar una novedad como leída, pasa al Historial y deja de aparecer entre los pendientes. Abre Avisos para consultar ambas listas y volver a leerla cuando quieras.",
-  detail: "El historial se guarda en este navegador para tu negocio. Las alertas de saldo SMS siguen pendientes mientras necesiten atención.",
+  title: "Tus avisos, uno a uno",
+  message: "Cada aviso aparece solo. Al marcarlo como leído, pasas al siguiente; al terminar todas las novedades aparece el botón Historial para volver a consultarlas. Si cierras antes, abre Avisos para continuar con lo que falta por leer.",
+  detail: "El historial conserva los 10 avisos leídos más recientes en este navegador para tu negocio. Los anteriores siguen marcados como leídos. Las alertas de saldo SMS siguen pendientes mientras necesiten atención.",
   translations: {
-    en: { title: "An inbox and history for your notifications", message: "Marking an update as read moves it to History and removes it from your inbox. Open Notifications to browse both lists and read it again whenever you like.", detail: "History is saved in this browser for your business. SMS balance alerts stay pending while they need attention." },
-    it: { title: "Notifiche da leggere e cronologia", message: "Contrassegnare una novità come letta la sposta nella Cronologia e la rimuove dalle notifiche da leggere. Apri Notifiche per consultare entrambe le liste e rileggerla quando vuoi.", detail: "La cronologia viene salvata in questo browser per la tua attività. Gli avvisi sul saldo SMS restano in sospeso finché richiedono attenzione." },
-    fr: { title: "Vos notifications, à lire ou dans l’historique", message: "Marquer une nouveauté comme lue la déplace dans l’Historique et la retire des notifications à lire. Ouvrez Notifications pour consulter les deux listes et la relire quand vous voulez.", detail: "L’historique est enregistré dans ce navigateur pour votre établissement. Les alertes de solde SMS restent en attente tant qu’elles nécessitent une intervention." },
-    pt: { title: "Notificações com pendentes e histórico", message: "Marcar uma novidade como lida move-a para o Histórico e retira-a dos pendentes. Abra Notificações para consultar ambas as listas e voltar a lê-la quando quiser.", detail: "O histórico é guardado neste navegador para o seu negócio. Os alertas de saldo SMS continuam pendentes enquanto precisarem de atenção." },
+    en: { title: "Your notifications, one at a time", message: "Each notification appears on its own. Marking it as read takes you to the next one; once you have read all updates, the History button appears so you can revisit them. If you close early, open Notifications to continue with unread updates.", detail: "History keeps the 10 most recent read notifications in this browser for your business. Older notifications remain marked as read. SMS balance alerts stay pending while they need attention." },
+    it: { title: "Le tue notifiche, una alla volta", message: "Ogni notifica appare da sola. Segnandola come letta passi alla successiva; dopo aver letto tutte le novità appare il pulsante Cronologia per rileggerle. Se chiudi prima, apri Notifiche per continuare con quelle ancora da leggere.", detail: "La cronologia conserva le 10 notifiche lette più recenti in questo browser per la tua attività. Quelle precedenti restano contrassegnate come lette. Gli avvisi sul saldo SMS restano in sospeso finché richiedono attenzione." },
+    fr: { title: "Vos notifications, une à la fois", message: "Chaque notification apparaît seule. La marquer comme lue vous fait passer à la suivante ; une fois toutes les nouveautés lues, le bouton Historique apparaît pour les consulter à nouveau. Si vous fermez avant la fin, ouvrez Notifications pour reprendre la lecture.", detail: "L’historique conserve les 10 notifications lues les plus récentes dans ce navigateur pour votre établissement. Les anciennes restent marquées comme lues. Les alertes de solde SMS restent en attente tant qu’elles nécessitent une intervention." },
+    pt: { title: "As suas notificações, uma de cada vez", message: "Cada notificação aparece sozinha. Ao marcá-la como lida passa à seguinte; depois de ler todas as novidades aparece o botão Histórico para voltar a consultá-las. Se fechar antes, abra Notificações para continuar com as que faltam ler.", detail: "O histórico conserva as 10 notificações lidas mais recentes neste navegador para o seu negócio. As anteriores continuam marcadas como lidas. Os alertas de saldo SMS continuam pendentes enquanto precisarem de atenção." },
   },
 };
 
@@ -181,3 +223,56 @@ export const backofficeAnnouncements = [
     },
   },
 ];
+// Publish only after the coordinated backend and storefront release.
+export const checkoutAvailabilityAnnouncementDraft = {
+  id: "checkout-ingredient-availability-2026-09", revision: 1,
+  category: "maintenance", severity: "info",
+  title: "Disponibilidad comprobada antes de confirmar pedidos",
+  message: "Al desactivar un ingrediente en el inventario o en el POS, se comprueba su disponibilidad antes de crear nuevos pedidos. La carta abierta se actualiza automáticamente y el cliente conserva su carrito si debe revisarlo.",
+  translations: {
+    en: { title: "Availability checked before confirming orders", message: "When an ingredient is disabled in inventory or the POS, its availability is checked before new orders are created. Open menus refresh automatically, and customers keep their cart if it needs reviewing." },
+    it: { title: "Disponibilità verificata prima di confermare gli ordini", message: "Quando un ingrediente viene disattivato nell’inventario o nel POS, la sua disponibilità viene verificata prima di creare nuovi ordini. Il menu aperto si aggiorna automaticamente e il cliente conserva il carrello se deve rivederlo." },
+    fr: { title: "Disponibilité vérifiée avant de confirmer les commandes", message: "Lorsqu’un ingrédient est désactivé dans l’inventaire ou le POS, sa disponibilité est vérifiée avant la création de nouvelles commandes. Le menu ouvert se met à jour automatiquement et le client conserve son panier s’il doit le vérifier." },
+    pt: { title: "Disponibilidade verificada antes de confirmar pedidos", message: "Quando um ingrediente é desativado no inventário ou no POS, a sua disponibilidade é verificada antes de criar novos pedidos. A ementa aberta atualiza-se automaticamente e o cliente mantém o carrinho caso tenha de o rever." },
+  },
+};
+
+// Publish only with the coordinated backend/storefront release, after Sunmi QA.
+export const checkoutPricingAnnouncementDraft = {
+  id: "checkout-pricing-validation-2026-09", revision: 1,
+  category: "improvement", severity: "info",
+  title: "Precios y ofertas comprobados al confirmar el pedido",
+  message: "El pedido comprueba los precios de productos y extras y las condiciones de promociones y regalos. Si algo cambia, el cliente conserva su carrito y ve qué artículo debe revisar. Los extras desactivados dejan de ofrecerse en esa tienda.",
+  translations: {
+    en: { title: "Prices and offers checked when confirming an order", message: "Orders check product and extra prices and the conditions of promotions and rewards. If something changes, customers keep their cart and see which item needs reviewing. Disabled extras are no longer offered at that store." },
+    it: { title: "Prezzi e offerte verificati alla conferma dell’ordine", message: "L’ordine verifica i prezzi dei prodotti e degli extra e le condizioni di promozioni e omaggi. Se qualcosa cambia, il cliente conserva il carrello e vede quale articolo deve controllare. Gli extra disattivati non vengono più offerti in quel negozio." },
+    fr: { title: "Prix et offres vérifiés à la confirmation de la commande", message: "La commande vérifie les prix des produits et des suppléments ainsi que les conditions des promotions et des cadeaux. En cas de changement, le client conserve son panier et voit quel article vérifier. Les suppléments désactivés ne sont plus proposés dans ce magasin." },
+    pt: { title: "Preços e ofertas verificados ao confirmar o pedido", message: "O pedido verifica os preços dos produtos e extras e as condições das promoções e ofertas. Se algo mudar, o cliente mantém o carrinho e vê que artigo deve rever. Os extras desativados deixam de ser disponibilizados nessa loja." },
+  },
+};
+
+// Draft only: publish together with checkout, storefront and the updated POS.
+export const checkoutDeliveryAnnouncementDraft = {
+  id:"checkout-delivery-validation-2026-09",revision:1,category:"improvement",severity:"info",
+  title:"Reparto revisado antes de confirmar el pedido",
+  message:"La tarifa variable se comprueba con la dirección y la ruta en el servidor. Si cambia el coste, el cliente revisa el total antes de confirmar. Cuando se aplica la tarifa base por falta de ruta, el POS y los tickets indican que hay que confirmar el reparto con el cliente.",
+  translations:{
+    en:{title:"Delivery checked before confirming an order",message:"Variable delivery fees are checked using the address and route on the server. If the cost changes, customers review the total before confirming. When the base fee applies because no route is available, the POS and receipts indicate that delivery must be confirmed with the customer."},
+    it:{title:"Consegna verificata prima di confermare l’ordine",message:"La tariffa variabile viene verificata tramite indirizzo e percorso sul server. Se il costo cambia, il cliente controlla il totale prima di confermare. Quando si applica la tariffa base perché il percorso non è disponibile, POS e scontrini indicano di confermare la consegna con il cliente."},
+    fr:{title:"Livraison vérifiée avant la confirmation de la commande",message:"Le tarif variable est vérifié à partir de l’adresse et de l’itinéraire sur le serveur. Si le coût change, le client vérifie le total avant de confirmer. Lorsque le tarif de base s’applique faute d’itinéraire, le POS et les tickets indiquent de confirmer la livraison avec le client."},
+    pt:{title:"Entrega verificada antes de confirmar o pedido",message:"A tarifa variável é verificada com o endereço e a rota no servidor. Se o custo mudar, o cliente revê o total antes de confirmar. Quando se aplica a tarifa base por falta de rota, o POS e os talões indicam que é necessário confirmar a entrega com o cliente."},
+  },
+};
+
+// Draft: activate only with the corresponding POS/web rollout; one USB terminal is not a general release.
+export const posCategoryAlignmentAnnouncementDraft = {
+  id: 'pos-category-alignment-2026-09', revision: 1, category: 'improvement', severity: 'info',
+  title: 'Categorías más legibles en el POS',
+  message: 'Los nombres largos del inventario se muestran alineados a la izquierda en varias líneas, con los contadores separados a la derecha. Disponible en SUNMI desde la app 0.3.11.',
+  translations: {
+    en: { title: 'Clearer POS categories', message: 'Long inventory category names wrap onto left-aligned lines, with counts kept separately on the right. Available on SUNMI from app version 0.3.11.' },
+    it: { title: 'Categorie più leggibili nel POS', message: 'I nomi lunghi delle categorie sono allineati a sinistra su più righe, con i conteggi separati a destra. Disponibile su SUNMI dalla versione 0.3.11.' },
+    fr: { title: 'Catégories plus lisibles dans le POS', message: 'Les noms longs des catégories passent sur plusieurs lignes alignées à gauche, avec les compteurs séparés à droite. Disponible sur SUNMI à partir de la version 0.3.11.' },
+    pt: { title: 'Categorias mais legíveis no POS', message: 'Os nomes longos das categorias aparecem em várias linhas alinhadas à esquerda, com os contadores separados à direita. Disponível no SUNMI a partir da versão 0.3.11.' },
+  },
+};

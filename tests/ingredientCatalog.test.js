@@ -100,6 +100,17 @@ test('an upload failure cannot modify the saved ingredient', async () => {
   assert.equal(db.writes(), 0);
 });
 
+test('the restaurant editor retains stored category, semantic family and prices when saving names', async () => {
+  const original = { ...fixture(), category: 'PROTEIN', semanticCategoryId: 91, costPrice: 3.75 };
+  const db = database(original);
+  const result = await saveCatalogIngredient({ prisma: db.prisma, id: 42,
+    body: { ...payload(original), category: 'CARNES', preserveClassification: true } });
+  assert.equal(result.category, 'PROTEIN');
+  assert.equal(result.semanticCategoryId, 91);
+  assert.equal(result.costPrice, 3.75);
+  assert.equal(result.canonicalKey, original.canonicalKey);
+});
+
 test('a failed database save cleans only the new upload and keeps the original image and names', async () => {
   const db = database(); const removed = [];
   db.prisma.ingredientSemanticCategory.findUnique = async () => null;

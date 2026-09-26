@@ -1,6 +1,7 @@
 import { normalizeCanonicalKey, normalizeAliasInput } from "./ingredientSemanticAdmin.js";
 import { normalizeSearchText } from "./ingredientSemantics.js";
 import { ingredientMasterIdentityRules } from "../data/ingredientMasterIdentityRules.js";
+import { getLegacyIngredientCategory } from './ingredientTaxonomy.js';
 
 export const ONBOARDING_LOCALES = ["es", "en", "it", "fr", "pt", "ar", "zh"];
 const categoryKeys = {
@@ -23,10 +24,11 @@ const text = (value, max = 160) => {
 export function normalizeIngredientOnboarding(body = {}) {
   const name = text(body.name, 120);
   const category = text(body.category, 80).toUpperCase();
+  const semanticCategoryKey = categoryKeys[category] || categoryKeys[getLegacyIngredientCategory(category)];
   const inputKey = normalizeCanonicalKey(body.canonicalKey);
   const canonicalKey = Object.hasOwn(ingredientMasterIdentityRules.redirects, inputKey)
     ? ingredientMasterIdentityRules.redirects[inputKey] : inputKey;
-  if (!name || !categoryKeys[category] || !canonicalKey) fail("Selecciona un ingrediente válido de la lista maestra.");
+  if (!name || !semanticCategoryKey || !canonicalKey) fail("Selecciona un ingrediente válido de la lista maestra.");
   if (ingredientMasterIdentityRules.pendingKeys.includes(canonicalKey)) {
     fail("Este ingrediente necesita aclarar su identidad antes de añadirlo al catálogo.", 409);
   }
@@ -57,7 +59,7 @@ export function normalizeIngredientOnboarding(body = {}) {
       searchable: true, displayable: true, isReviewed: true, source: "MASTER_SOURCE" }));
   const aliases = [...new Map(normalizedAliases.map((alias) => [alias.normalizedAlias, alias])).values()];
   return { name, category, canonicalKey, legacyCanonicalKeys, translations, aliases,
-    semanticCategoryKey: categoryKeys[category],
+    semanticCategoryKey,
     allergens: [...new Set((Array.isArray(body.allergens) ? body.allergens : []).map((item) => text(item, 80)).filter(Boolean))].slice(0, 30),
   };
 }

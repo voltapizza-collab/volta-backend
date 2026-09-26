@@ -1,5 +1,23 @@
 # Avisos del backoffice
 
+## Opciones documentadas al buscar ingredientes — borrador local
+
+`ingredientDiscoveryAnnouncementDraft` incluye ES/EN/IT/FR/PT y permanece fuera del feed. Describe las sugerencias acotadas de entrecot y aceitunas verdes del lote 33 en Global Manager. Activarlo con fechas reales solo cuando esté disponible el storefront correspondiente y se haya revisado el destinatario de la nota; no anuncia cambios en la búsqueda del inventario de los negocios. No cambia identificadores ni revisiones de avisos publicados.
+
+## Disponibilidad al crear pedidos — borrador local
+
+`checkoutAvailabilityAnnouncementDraft` incorpora ES/EN/IT/FR/PT y permanece fuera del feed. Activarlo con fechas reales únicamente después de publicar juntos la validación de checkout del backend y el refresco de carta del storefront. La interfaz mantiene el carrito y señala el artículo rechazado. La nota no anuncia cancelación retroactiva de pedidos ya creados. Evidencias en `ingredient-taxonomy-v2-audit-2026-09-18.md`.
+
+## Familias de ingredientes para restaurantes — borrador local
+
+`ingredientRestaurantTaxonomyAnnouncementDraft`, en `data/backofficeAnnouncements.js`, incluye ES/EN/IT/FR/PT y permanece fuera de `backofficeAnnouncements`. Al publicar la organización nueva del catálogo y el inventario, fijar fechas reales de publicación y caducidad y añadirla al feed después de comprobar backend y storefront. No requiere aumentar la revisión de otros avisos. Véase `ingredient-taxonomy-v2-implementation.md`.
+
+## Lectura de avisos uno a uno — ajuste local pendiente de publicación
+
+Los avisos se muestran sin las pestañas Pendientes e Historial. Abrir Avisos con lecturas pendientes presenta directamente la primera ficha; marcarla como leída avanza a la siguiente. Al terminar las novedades, el diálogo muestra «Estás al día» y el botón Historial. Este acceso también aparece al abrir Avisos cuando ya no quedan novedades por leer. El historial permite abrir una ficha y volver a su lista, sin repetir los avisos leídos. La lista y el contenido guardado se limitan a los 10 avisos leídos más recientes por fecha de publicación, de más nuevo a más antiguo. Los historiales anteriores se recortan automáticamente, conservando todos los comprobantes de lectura para que los avisos retirados no vuelvan a notificarse. El contador también queda limitado a 10.
+
+Las alertas SMS siguen el saldo real. Posponerlas no las marca como leídas ni las archiva; si queda una alerta operativa después de leer las novedades, el cierre del recorrido indica que la recarga sigue pendiente, sin afirmar que todo está al día. Se conservan las claves de lectura y las traducciones. La nota existente se adapta sin cambiar su identificador ni revisión. Publicar este ajuste del storefront antes o junto con el catálogo del backend.
+
 ## Pendientes e historial — 17 de septiembre de 2026
 
 La apertura manual de Avisos ahora muestra una bandeja de **Pendientes** y un **Historial**. Antes, abrir Avisos volvía a encolar todas las novedades, incluidas las que ya estaban marcadas como leídas; esto podía mostrar el cartel con «Leído» y «Continuar», como en la captura reportada.
@@ -72,3 +90,6 @@ Validación local completada: 30 pruebas de backend (avisos, créditos/Telnyx y 
 La captura del usuario mostraba el resultado de una ruta inexistente. Se verificó HTTP 404 en `/api/backoffice-notifications/1` y HTTP 200 con 0 créditos en `/api/sms-credits/1`. El proceso local de Node todavía no había cargado la nueva ruta. Tras reiniciarlo, la ruta de avisos responde HTTP 200, saldo agotado y las novedades con EN/IT/FR/PT. El storefront local sirve la nueva compilación `main.854f884d.js`.
 
 Pasaron las 6 pruebas del backend y las 15 del centro de avisos, incluida la lectura alternativa, sus errores, todos los idiomas y conservación de recibos. Compilación correcta. En una vista local aislada que permite únicamente lecturas se comprobó el saldo real de MyCrushPizza: 0 SMS. El navegador mostró la alerta en inglés, la cambió a español con el selector y mantuvo la alerta en inglés simulando HTTP 404 en la ruta de novedades. No se enviaron SMS ni se abrieron pagos. Esta comprobación no despliega los cambios en producción.
+## Reparto y revisión manual — borrador local del 18 de septiembre
+
+`checkoutDeliveryAnnouncementDraft` contiene ES/EN/IT/FR/PT y permanece fuera del feed. Publicar con backend, storefront y POS actualizados, tras la comprobación del Sunmi. Explica la revisión de tarifa antes de confirmar y la señal de reparto pendiente de comprobación humana. No anuncia que toda dirección aceptada tenga cobertura verificada. Véase `checkout-delivery-repair-2026-09-18.md`.

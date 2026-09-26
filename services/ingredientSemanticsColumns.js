@@ -15,7 +15,7 @@ const REQUIRED_PARTNER_COLUMNS = ["backofficeLocale"];
 
 let cachedResult = null;
 
-const normalizeName = (value) => String(value || "").trim();
+const normalizeName = (value) => String(value || "").trim().toLowerCase();
 
 export async function ensureIngredientSemanticsAvailable(prisma) {
   if (cachedResult != null) return cachedResult;
@@ -38,9 +38,9 @@ export async function ensureIngredientSemanticsAvailable(prisma) {
     );
 
     cachedResult =
-      REQUIRED_TABLES.every((tableName) => tableNames.has(tableName)) &&
-      REQUIRED_INGREDIENT_COLUMNS.every((columnName) => columnNames.has(columnName)) &&
-      REQUIRED_PARTNER_COLUMNS.every((columnName) => partnerColumnNames.has(columnName));
+      REQUIRED_TABLES.every((tableName) => tableNames.has(normalizeName(tableName))) &&
+      REQUIRED_INGREDIENT_COLUMNS.every((columnName) => columnNames.has(normalizeName(columnName))) &&
+      REQUIRED_PARTNER_COLUMNS.every((columnName) => partnerColumnNames.has(normalizeName(columnName)));
   } catch (error) {
     console.warn(
       "[ingredient-semantics] schema introspection failed:",

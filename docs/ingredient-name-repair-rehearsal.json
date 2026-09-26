@@ -1,0 +1,25 @@
+{
+  "verifiedAt": "2026-09-18T11:40:33.310Z",
+  "environment": "isolated_loopback_copy",
+  "repairs": [
+    {
+      "id": 135,
+      "canonicalKey": "r_cula",
+      "from": "R�cula",
+      "to": "Rúcula",
+      "category": "VERDURAS",
+      "evidence": {
+        "en": "Arugula",
+        "it": "Rucola",
+        "fr": "Roquette",
+        "pt": "Rúcula"
+      }
+    }
+  ],
+  "onlyNameChanged": true,
+  "idsKeysRecipesStocksPricesPreserved": true,
+  "idempotent": true,
+  "transactionRolledBack": true,
+  "tablesRestored": 43,
+  "productionApplied": false
+}

@@ -1,0 +1,1586 @@
+{
+  "version": "restaurant-v2-proposal-2026-09-18",
+  "snapshotSha256": "a0388357b8615ad91bb5ae1f70b205f48212163d499cdaaad3e19ab23fbe3a63",
+  "readyForProduction": false,
+  "changes": [
+    {
+      "id": 3,
+      "canonicalKey": "mozzarella",
+      "from": {
+        "category": "QUESOS",
+        "semanticCategoryId": 1
+      },
+      "to": {
+        "category": "QUESOS",
+        "semanticKey": "restaurant_v2_cheeses"
+      }
+    },
+    {
+      "id": 4,
+      "canonicalKey": "cooked_ham",
+      "rule": "legacy_database_classification_only",
+      "from": {
+        "category": "EMBUTIDOS",
+        "semanticCategoryId": 4
+      },
+      "to": {
+        "category": "EMBUTIDOS_CHARCUTERIA",
+        "semanticKey": "restaurant_v2_cured_meats"
+      }
+    },
+    {
+      "id": 5,
+      "canonicalKey": "button_mushrooms",
+      "rule": "legacy_database_classification_only",
+      "from": {
+        "category": "SETAS",
+        "semanticCategoryId": 7
+      },
+      "to": {
+        "category": "VERDURAS_SETAS_ALGAS",
+        "semanticKey": "restaurant_v2_vegetables_mushrooms_algae"
+      }
+    },
+    {
+      "id": 6,
+      "canonicalKey": "parmesan",
+      "rule": "legacy_database_classification_only",
+      "from": {
+        "category": "QUESOS",
+        "semanticCategoryId": 1
+      },
+      "to": {
+        "category": "QUESOS",
+        "semanticKey": "restaurant_v2_cheeses"
+      }
+    },
+    {
+      "id": 7,
+      "canonicalKey": "blue_cheese",
+      "rule": "legacy_database_classification_only",
+      "from": {
+        "category": "QUESOS",
+        "semanticCategoryId": 1
+      },
+      "to": {
+        "category": "QUESOS",
+        "semanticKey": "restaurant_v2_cheeses"
+      }
+    },
+    {
+      "id": 9,
+      "canonicalKey": "truffle",
+      "rule": "legacy_database_classification_only",
+      "from": {
+        "category": "SETAS",
+        "semanticCategoryId": 7
+      },
+      "to": {
+        "category": "VERDURAS_SETAS_ALGAS",
+        "semanticKey": "restaurant_v2_vegetables_mushrooms_algae"
+      }
+    },
+    {
+      "id": 10,
+      "canonicalKey": "octopus",
+      "rule": "legacy_database_classification_only",
+      "from": {
+        "category": "PESCADOS_Y_MARISCOS",
+        "semanticCategoryId": 5
+      },
+      "to": {
+        "category": "PESCADOS_Y_MARISCOS",
+        "semanticKey": "restaurant_v2_seafood"
+      }
+    },
+    {
+      "id": 11,
+      "canonicalKey": "goat_cheese",
+      "rule": "legacy_database_classification_only",
+      "from": {
+        "category": "QUESOS",
+        "semanticCategoryId": 1
+      },
+      "to": {
+        "category": "QUESOS",
+        "semanticKey": "restaurant_v2_cheeses"
+      }
+    },
+    {
+      "id": 12,
+      "canonicalKey": "gorgonzola",
+      "from": {
+        "category": "QUESOS",
+        "semanticCategoryId": 1
+      },
+      "to": {
+        "category": "QUESOS",
+        "semanticKey": "restaurant_v2_cheeses"
+      }
+    },
+    {
+      "id": 14,
+      "canonicalKey": "figs",
+      "rule": "legacy_database_classification_only",
+      "from": {
+        "category": "FRUTAS",
+        "semanticCategoryId": 8
+      },
+      "to": {
+        "category": "FRUTAS",
+        "semanticKey": "restaurant_v2_fruits"
+      }
+    },
+    {
+      "id": 15,
+      "canonicalKey": "apple",
+      "rule": "legacy_database_classification_only",
+      "from": {
+        "category": "FRUTAS",
+        "semanticCategoryId": 8
+      },
+      "to": {
+        "category": "FRUTAS",
+        "semanticKey": "restaurant_v2_fruits"
+      }
+    },
+    {
+      "id": 16,
+      "canonicalKey": "pear",
+      "rule": "legacy_database_classification_only",
+      "from": {
+        "category": "FRUTAS",
+        "semanticCategoryId": 8
+      },
+      "to": {
+        "category": "FRUTAS",
+        "semanticKey": "restaurant_v2_fruits"
+      }
+    },
+    {
+      "id": 17,
+      "canonicalKey": "pineapple",
+      "rule": "legacy_database_classification_only",
+      "from": {
+        "category": "FRUTAS",
+        "semanticCategoryId": 8
+      },
+      "to": {
+        "category": "FRUTAS",
+        "semanticKey": "restaurant_v2_fruits"
+      }
+    },
+    {
+      "id": 20,
+      "canonicalKey": "garlic_sauce",
+      "rule": "legacy_database_classification_only",
+      "from": {
+        "category": "SALSAS",
+        "semanticCategoryId": 2
+      },
+      "to": {
+        "category": "SALSAS_CONDIMENTOS_BASES",
+        "semanticKey": "restaurant_v2_sauces_seasonings_bases"
+      }
+    },
+    {
+      "id": 21,
+      "canonicalKey": "honey_mustard_sauce",
+      "rule": "legacy_database_classification_only",
+      "from": {
+        "category": "SALSAS",
+        "semanticCategoryId": 2
+      },
+      "to": {
+        "category": "SALSAS_CONDIMENTOS_BASES",
+        "semanticKey": "restaurant_v2_sauces_seasonings_bases"
+      }
+    },
+    {
+      "id": 22,
+      "canonicalKey": "hot_sauce",
+      "rule": "legacy_database_classification_only",
+      "from": {
+        "category": "SALSAS",
+        "semanticCategoryId": 2
+      },
+      "to": {
+        "category": "SALSAS_CONDIMENTOS_BASES",
+        "semanticKey": "restaurant_v2_sauces_seasonings_bases"
+      }
+    },
+    {
+      "id": 23,
+      "canonicalKey": "serrano_ham",
+      "rule": "legacy_database_classification_only",
+      "from": {
+        "category": "EMBUTIDOS",
+        "semanticCategoryId": 4
+      },
+      "to": {
+        "category": "EMBUTIDOS_CHARCUTERIA",
+        "semanticKey": "restaurant_v2_cured_meats"
+      }
+    },
+    {
+      "id": 24,
+      "canonicalKey": "mortadella",
+      "rule": "legacy_database_classification_only",
+      "from": {
+        "category": "EMBUTIDOS",
+        "semanticCategoryId": 4
+      },
+      "to": {
+        "category": "EMBUTIDOS_CHARCUTERIA",
+        "semanticKey": "restaurant_v2_cured_meats"
+      }
+    },
+    {
+      "id": 26,
+      "canonicalKey": "prosciutto",
+      "from": {
+        "category": "EMBUTIDOS",
+        "semanticCategoryId": 4
+      },
+      "to": {
+        "category": "EMBUTIDOS_CHARCUTERIA",
+        "semanticKey": "restaurant_v2_cured_meats"
+      }
+    },
+    {
+      "id": 27,
+      "canonicalKey": "salami",
+      "rule": "legacy_database_classification_only",
+      "from": {
+        "category": "EMBUTIDOS",
+        "semanticCategoryId": 4
+      },
+      "to": {
+        "category": "EMBUTIDOS_CHARCUTERIA",
+        "semanticKey": "restaurant_v2_cured_meats"
+      }
+    },
+    {
+      "id": 28,
+      "canonicalKey": "bacon",
+      "from": {
+        "category": "CARNES",
+        "semanticCategoryId": 3
+      },
+      "to": {
+        "category": "EMBUTIDOS_CHARCUTERIA",
+        "semanticKey": "restaurant_v2_cured_meats"
+      }
+    },
+    {
+      "id": 30,
+      "canonicalKey": "chorizo",
+      "from": {
+        "category": "CARNES",
+        "semanticCategoryId": 3
+      },
+      "to": {
+        "category": "EMBUTIDOS_CHARCUTERIA",
+        "semanticKey": "restaurant_v2_cured_meats"
+      }
+    },
+    {
+      "id": 31,
+      "canonicalKey": "pepperoni",
+      "from": {
+        "category": "CARNES",
+        "semanticCategoryId": 3
+      },
+      "to": {
+        "category": "EMBUTIDOS_CHARCUTERIA",
+        "semanticKey": "restaurant_v2_cured_meats"
+      }
+    },
+    {
+      "id": 32,
+      "canonicalKey": "chicken",
+      "rule": "legacy_database_classification_only",
+      "from": {
+        "category": "CARNES",
+        "semanticCategoryId": 3
+      },
+      "to": {
+        "category": "CARNES_AVES",
+        "semanticKey": "restaurant_v2_meats_poultry"
+      }
+    },
+    {
+      "id": 33,
+      "canonicalKey": "italian_sausage",
+      "rule": "legacy_database_classification_only",
+      "from": {
+        "category": "CARNES",
+        "semanticCategoryId": 3
+      },
+      "to": {
+        "category": "EMBUTIDOS_CHARCUTERIA",
+        "semanticKey": "restaurant_v2_cured_meats"
+      }
+    },
+    {
+      "id": 34,
+      "canonicalKey": "cheddar",
+      "from": {
+        "category": "QUESOS",
+        "semanticCategoryId": 1
+      },
+      "to": {
+        "category": "QUESOS",
+        "semanticKey": "restaurant_v2_cheeses"
+      }
+    },
+    {
+      "id": 36,
+      "canonicalKey": "burrata",
+      "from": {
+        "category": "QUESOS",
+        "semanticCategoryId": 1
+      },
+      "to": {
+        "category": "QUESOS",
+        "semanticKey": "restaurant_v2_cheeses"
+      }
+    },
+    {
+      "id": 37,
+      "canonicalKey": "emmental",
+      "from": {
+        "category": "QUESOS",
+        "semanticCategoryId": 1
+      },
+      "to": {
+        "category": "QUESOS",
+        "semanticKey": "restaurant_v2_cheeses"
+      }
+    },
+    {
+      "id": 38,
+      "canonicalKey": "provolone",
+      "from": {
+        "category": "QUESOS",
+        "semanticCategoryId": 1
+      },
+      "to": {
+        "category": "QUESOS",
+        "semanticKey": "restaurant_v2_cheeses"
+      }
+    },
+    {
+      "id": 39,
+      "canonicalKey": "ricotta",
+      "from": {
+        "category": "QUESOS",
+        "semanticCategoryId": 1
+      },
+      "to": {
+        "category": "QUESOS",
+        "semanticKey": "restaurant_v2_cheeses"
+      }
+    },
+    {
+      "id": 40,
+      "canonicalKey": "olive_oil",
+      "rule": "legacy_database_classification_only",
+      "from": {
+        "category": "ACEITES_GRASAS_VINAGRES",
+        "semanticCategoryId": 10
+      },
+      "to": {
+        "category": "ACEITES_GRASAS_VINAGRES",
+        "semanticKey": "restaurant_v2_oils_fats_vinegars"
+      }
+    },
+    {
+      "id": 41,
+      "canonicalKey": "chili_oil",
+      "rule": "legacy_database_classification_only",
+      "from": {
+        "category": "ACEITES_GRASAS_VINAGRES",
+        "semanticCategoryId": 10
+      },
+      "to": {
+        "category": "ACEITES_GRASAS_VINAGRES",
+        "semanticKey": "restaurant_v2_oils_fats_vinegars"
+      }
+    },
+    {
+      "id": 42,
+      "canonicalKey": "black_olives",
+      "rule": "legacy_database_classification_only",
+      "from": {
+        "category": "VERDURAS",
+        "semanticCategoryId": 6
+      },
+      "to": {
+        "category": "VERDURAS_SETAS_ALGAS",
+        "semanticKey": "restaurant_v2_vegetables_mushrooms_algae"
+      }
+    },
+    {
+      "id": 43,
+      "canonicalKey": "green_olives",
+      "rule": "legacy_database_classification_only",
+      "from": {
+        "category": "VERDURAS",
+        "semanticCategoryId": 6
+      },
+      "to": {
+        "category": "VERDURAS_SETAS_ALGAS",
+        "semanticKey": "restaurant_v2_vegetables_mushrooms_algae"
+      }
+    },
+    {
+      "id": 44,
+      "canonicalKey": "artichoke",
+      "rule": "legacy_database_classification_only",
+      "from": {
+        "category": "VERDURAS",
+        "semanticCategoryId": 6
+      },
+      "to": {
+        "category": "VERDURAS_SETAS_ALGAS",
+        "semanticKey": "restaurant_v2_vegetables_mushrooms_algae"
+      }
+    },
+    {
+      "id": 45,
+      "canonicalKey": "zucchini",
+      "rule": "legacy_database_classification_only",
+      "from": {
+        "category": "VERDURAS",
+        "semanticCategoryId": 6
+      },
+      "to": {
+        "category": "VERDURAS_SETAS_ALGAS",
+        "semanticKey": "restaurant_v2_vegetables_mushrooms_algae"
+      }
+    },
+    {
+      "id": 46,
+      "canonicalKey": "onion",
+      "rule": "legacy_database_classification_only",
+      "from": {
+        "category": "VERDURAS",
+        "semanticCategoryId": 6
+      },
+      "to": {
+        "category": "VERDURAS_SETAS_ALGAS",
+        "semanticKey": "restaurant_v2_vegetables_mushrooms_algae"
+      }
+    },
+    {
+      "id": 48,
+      "canonicalKey": "red_bell_pepper",
+      "rule": "legacy_database_classification_only",
+      "from": {
+        "category": "VERDURAS",
+        "semanticCategoryId": 6
+      },
+      "to": {
+        "category": "VERDURAS_SETAS_ALGAS",
+        "semanticKey": "restaurant_v2_vegetables_mushrooms_algae"
+      }
+    },
+    {
+      "id": 49,
+      "canonicalKey": "green_bell_pepper",
+      "rule": "legacy_database_classification_only",
+      "from": {
+        "category": "VERDURAS",
+        "semanticCategoryId": 6
+      },
+      "to": {
+        "category": "VERDURAS_SETAS_ALGAS",
+        "semanticKey": "restaurant_v2_vegetables_mushrooms_algae"
+      }
+    },
+    {
+      "id": 50,
+      "canonicalKey": "bbq_sauce",
+      "rule": "legacy_database_classification_only",
+      "from": {
+        "category": "SALSAS",
+        "semanticCategoryId": 2
+      },
+      "to": {
+        "category": "SALSAS_CONDIMENTOS_BASES",
+        "semanticKey": "restaurant_v2_sauces_seasonings_bases"
+      }
+    },
+    {
+      "id": 51,
+      "canonicalKey": "asparagus_sauce",
+      "rule": "legacy_database_classification_only",
+      "from": {
+        "category": "SALSAS",
+        "semanticCategoryId": 2
+      },
+      "to": {
+        "category": "SALSAS_CONDIMENTOS_BASES",
+        "semanticKey": "restaurant_v2_sauces_seasonings_bases"
+      }
+    },
+    {
+      "id": 52,
+      "canonicalKey": "pesto_sauce",
+      "rule": "legacy_database_classification_only",
+      "from": {
+        "category": "SALSAS",
+        "semanticCategoryId": 2
+      },
+      "to": {
+        "category": "SALSAS_CONDIMENTOS_BASES",
+        "semanticKey": "restaurant_v2_sauces_seasonings_bases"
+      }
+    },
+    {
+      "id": 53,
+      "canonicalKey": "tomato_sauce",
+      "rule": "legacy_database_classification_only",
+      "from": {
+        "category": "SALSAS",
+        "semanticCategoryId": 2
+      },
+      "to": {
+        "category": "SALSAS_CONDIMENTOS_BASES",
+        "semanticKey": "restaurant_v2_sauces_seasonings_bases"
+      }
+    },
+    {
+      "id": 55,
+      "canonicalKey": "honey",
+      "rule": "legacy_database_classification_only",
+      "from": {
+        "category": "ENDULZANTES",
+        "semanticCategoryId": 12
+      },
+      "to": {
+        "category": "REPOSTERIA_AUXILIARES",
+        "semanticKey": "restaurant_v2_baking_culinary_aids"
+      }
+    },
+    {
+      "id": 56,
+      "canonicalKey": "blueberry_sauce",
+      "rule": "legacy_database_classification_only",
+      "from": {
+        "category": "SALSAS",
+        "semanticCategoryId": 2
+      },
+      "to": {
+        "category": "SALSAS_CONDIMENTOS_BASES",
+        "semanticKey": "restaurant_v2_sauces_seasonings_bases"
+      }
+    },
+    {
+      "id": 59,
+      "canonicalKey": "milk_chocolate",
+      "rule": "legacy_database_classification_only",
+      "from": {
+        "category": "CREMAS_DULCES",
+        "semanticCategoryId": 11
+      },
+      "to": {
+        "category": "REPOSTERIA_AUXILIARES",
+        "semanticKey": "restaurant_v2_baking_culinary_aids"
+      }
+    },
+    {
+      "id": 60,
+      "canonicalKey": "biscoff_spread",
+      "rule": "legacy_database_classification_only",
+      "from": {
+        "category": "CREMAS_DULCES",
+        "semanticCategoryId": 11
+      },
+      "to": {
+        "category": "REPOSTERIA_AUXILIARES",
+        "semanticKey": "restaurant_v2_baking_culinary_aids"
+      }
+    },
+    {
+      "id": 63,
+      "canonicalKey": "brie",
+      "from": {
+        "category": "QUESOS",
+        "semanticCategoryId": 1
+      },
+      "to": {
+        "category": "QUESOS",
+        "semanticKey": "restaurant_v2_cheeses"
+      }
+    },
+    {
+      "id": 64,
+      "canonicalKey": "bocconcini",
+      "from": {
+        "category": "QUESOS",
+        "semanticCategoryId": 1
+      },
+      "to": {
+        "category": "QUESOS",
+        "semanticKey": "restaurant_v2_cheeses"
+      }
+    },
+    {
+      "id": 65,
+      "canonicalKey": "melted_cheddar",
+      "rule": "legacy_database_classification_only",
+      "from": {
+        "category": "QUESOS",
+        "semanticCategoryId": 1
+      },
+      "to": {
+        "category": "QUESOS",
+        "semanticKey": "restaurant_v2_cheeses"
+      }
+    },
+    {
+      "id": 66,
+      "canonicalKey": "edam",
+      "from": {
+        "category": "QUESOS",
+        "semanticCategoryId": 1
+      },
+      "to": {
+        "category": "QUESOS",
+        "semanticKey": "restaurant_v2_cheeses"
+      }
+    },
+    {
+      "id": 67,
+      "canonicalKey": "aged_goat_cheese",
+      "rule": "legacy_database_classification_only",
+      "from": {
+        "category": "QUESOS",
+        "semanticCategoryId": 1
+      },
+      "to": {
+        "category": "QUESOS",
+        "semanticKey": "restaurant_v2_cheeses"
+      }
+    },
+    {
+      "id": 68,
+      "canonicalKey": "smoked_provolone",
+      "rule": "legacy_database_classification_only",
+      "from": {
+        "category": "QUESOS",
+        "semanticCategoryId": 1
+      },
+      "to": {
+        "category": "QUESOS",
+        "semanticKey": "restaurant_v2_cheeses"
+      }
+    },
+    {
+      "id": 69,
+      "canonicalKey": "roquefort",
+      "from": {
+        "category": "QUESOS",
+        "semanticCategoryId": 1
+      },
+      "to": {
+        "category": "QUESOS",
+        "semanticKey": "restaurant_v2_cheeses"
+      }
+    },
+    {
+      "id": 70,
+      "canonicalKey": "garlic_oil",
+      "rule": "legacy_database_classification_only",
+      "from": {
+        "category": "ACEITES_GRASAS_VINAGRES",
+        "semanticCategoryId": 10
+      },
+      "to": {
+        "category": "ACEITES_GRASAS_VINAGRES",
+        "semanticKey": "restaurant_v2_oils_fats_vinegars"
+      }
+    },
+    {
+      "id": 71,
+      "canonicalKey": "aceite_de_chile",
+      "from": {
+        "category": "ACEITES_GRASAS_VINAGRES",
+        "semanticCategoryId": 10
+      },
+      "to": {
+        "category": "ACEITES_GRASAS_VINAGRES",
+        "semanticKey": "restaurant_v2_oils_fats_vinegars"
+      }
+    },
+    {
+      "id": 72,
+      "canonicalKey": "corn_oil",
+      "rule": "legacy_database_classification_only",
+      "from": {
+        "category": "ACEITES_GRASAS_VINAGRES",
+        "semanticCategoryId": 10
+      },
+      "to": {
+        "category": "ACEITES_GRASAS_VINAGRES",
+        "semanticKey": "restaurant_v2_oils_fats_vinegars"
+      }
+    },
+    {
+      "id": 73,
+      "canonicalKey": "balsamic_vinegar",
+      "rule": "legacy_database_classification_only",
+      "from": {
+        "category": "ACEITES_GRASAS_VINAGRES",
+        "semanticCategoryId": 10
+      },
+      "to": {
+        "category": "ACEITES_GRASAS_VINAGRES",
+        "semanticKey": "restaurant_v2_oils_fats_vinegars"
+      }
+    },
+    {
+      "id": 74,
+      "canonicalKey": "sherry_vinegar",
+      "rule": "legacy_database_classification_only",
+      "from": {
+        "category": "ACEITES_GRASAS_VINAGRES",
+        "semanticCategoryId": 10
+      },
+      "to": {
+        "category": "ACEITES_GRASAS_VINAGRES",
+        "semanticKey": "restaurant_v2_oils_fats_vinegars"
+      }
+    },
+    {
+      "id": 76,
+      "canonicalKey": "oregano_extract",
+      "rule": "legacy_database_classification_only",
+      "from": {
+        "category": "AROMAS_Y_EXTRACTOS",
+        "semanticCategoryId": 9
+      },
+      "to": {
+        "category": "SALSAS_CONDIMENTOS_BASES",
+        "semanticKey": "restaurant_v2_sauces_seasonings_bases"
+      }
+    },
+    {
+      "id": 77,
+      "canonicalKey": "pimenton_extract",
+      "rule": "legacy_database_classification_only",
+      "from": {
+        "category": "AROMAS_Y_EXTRACTOS",
+        "semanticCategoryId": 9
+      },
+      "to": {
+        "category": "SALSAS_CONDIMENTOS_BASES",
+        "semanticKey": "restaurant_v2_sauces_seasonings_bases"
+      }
+    },
+    {
+      "id": 78,
+      "canonicalKey": "white_pepper_extract",
+      "rule": "legacy_database_classification_only",
+      "from": {
+        "category": "AROMAS_Y_EXTRACTOS",
+        "semanticCategoryId": 9
+      },
+      "to": {
+        "category": "SALSAS_CONDIMENTOS_BASES",
+        "semanticKey": "restaurant_v2_sauces_seasonings_bases"
+      }
+    },
+    {
+      "id": 79,
+      "canonicalKey": "chicken_wings",
+      "rule": "legacy_database_classification_only",
+      "from": {
+        "category": "CARNES",
+        "semanticCategoryId": 3
+      },
+      "to": {
+        "category": "CARNES_AVES",
+        "semanticKey": "restaurant_v2_meats_poultry"
+      }
+    },
+    {
+      "id": 80,
+      "canonicalKey": "ground_pork",
+      "rule": "legacy_database_classification_only",
+      "from": {
+        "category": "CARNES",
+        "semanticCategoryId": 3
+      },
+      "to": {
+        "category": "CARNES_AVES",
+        "semanticKey": "restaurant_v2_meats_poultry"
+      }
+    },
+    {
+      "id": 81,
+      "canonicalKey": "chicken_strips",
+      "rule": "legacy_database_classification_only",
+      "from": {
+        "category": "CARNES",
+        "semanticCategoryId": 3
+      },
+      "to": {
+        "category": "CARNES_AVES",
+        "semanticKey": "restaurant_v2_meats_poultry"
+      }
+    },
+    {
+      "id": 82,
+      "canonicalKey": "beef",
+      "rule": "legacy_database_classification_only",
+      "from": {
+        "category": "CARNES",
+        "semanticCategoryId": 3
+      },
+      "to": {
+        "category": "CARNES_AVES",
+        "semanticKey": "restaurant_v2_meats_poultry"
+      }
+    },
+    {
+      "id": 83,
+      "canonicalKey": "smoked_beef",
+      "rule": "legacy_database_classification_only",
+      "from": {
+        "category": "CARNES",
+        "semanticCategoryId": 3
+      },
+      "to": {
+        "category": "CARNES_AVES",
+        "semanticKey": "restaurant_v2_meats_poultry"
+      }
+    },
+    {
+      "id": 84,
+      "canonicalKey": "smoked_bacon",
+      "rule": "legacy_database_classification_only",
+      "from": {
+        "category": "EMBUTIDOS",
+        "semanticCategoryId": 4
+      },
+      "to": {
+        "category": "EMBUTIDOS_CHARCUTERIA",
+        "semanticKey": "restaurant_v2_cured_meats"
+      }
+    },
+    {
+      "id": 85,
+      "canonicalKey": "smoked_chorizo",
+      "rule": "legacy_database_classification_only",
+      "from": {
+        "category": "EMBUTIDOS",
+        "semanticCategoryId": 4
+      },
+      "to": {
+        "category": "EMBUTIDOS_CHARCUTERIA",
+        "semanticKey": "restaurant_v2_cured_meats"
+      }
+    },
+    {
+      "id": 86,
+      "canonicalKey": "spanish_chorizo",
+      "rule": "legacy_database_classification_only",
+      "from": {
+        "category": "EMBUTIDOS",
+        "semanticCategoryId": 4
+      },
+      "to": {
+        "category": "EMBUTIDOS_CHARCUTERIA",
+        "semanticKey": "restaurant_v2_cured_meats"
+      }
+    },
+    {
+      "id": 87,
+      "canonicalKey": "spicy_chorizo",
+      "rule": "legacy_database_classification_only",
+      "from": {
+        "category": "EMBUTIDOS",
+        "semanticCategoryId": 4
+      },
+      "to": {
+        "category": "EMBUTIDOS_CHARCUTERIA",
+        "semanticKey": "restaurant_v2_cured_meats"
+      }
+    },
+    {
+      "id": 88,
+      "canonicalKey": "guanciale",
+      "from": {
+        "category": "EMBUTIDOS",
+        "semanticCategoryId": 4
+      },
+      "to": {
+        "category": "EMBUTIDOS_CHARCUTERIA",
+        "semanticKey": "restaurant_v2_cured_meats"
+      }
+    },
+    {
+      "id": 89,
+      "canonicalKey": "arzua_cheese",
+      "rule": "legacy_database_classification_only",
+      "from": {
+        "category": "QUESOS",
+        "semanticCategoryId": 1
+      },
+      "to": {
+        "category": "QUESOS",
+        "semanticKey": "restaurant_v2_cheeses"
+      }
+    },
+    {
+      "id": 90,
+      "canonicalKey": "black_truffle",
+      "rule": "legacy_database_classification_only",
+      "from": {
+        "category": "SETAS",
+        "semanticCategoryId": 7
+      },
+      "to": {
+        "category": "VERDURAS_SETAS_ALGAS",
+        "semanticKey": "restaurant_v2_vegetables_mushrooms_algae"
+      }
+    },
+    {
+      "id": 91,
+      "canonicalKey": "white_button_mushrooms",
+      "rule": "legacy_database_classification_only",
+      "from": {
+        "category": "SETAS",
+        "semanticCategoryId": 7
+      },
+      "to": {
+        "category": "VERDURAS_SETAS_ALGAS",
+        "semanticKey": "restaurant_v2_vegetables_mushrooms_algae"
+      }
+    },
+    {
+      "id": 92,
+      "canonicalKey": "anchovies",
+      "rule": "legacy_database_classification_only",
+      "from": {
+        "category": "PESCADOS_Y_MARISCOS",
+        "semanticCategoryId": 5
+      },
+      "to": {
+        "category": "PESCADOS_Y_MARISCOS",
+        "semanticKey": "restaurant_v2_seafood"
+      }
+    },
+    {
+      "id": 93,
+      "canonicalKey": "tuna",
+      "rule": "legacy_database_classification_only",
+      "from": {
+        "category": "PESCADOS_Y_MARISCOS",
+        "semanticCategoryId": 5
+      },
+      "to": {
+        "category": "PESCADOS_Y_MARISCOS",
+        "semanticKey": "restaurant_v2_seafood"
+      }
+    },
+    {
+      "id": 94,
+      "canonicalKey": "shrimp",
+      "rule": "legacy_database_classification_only",
+      "from": {
+        "category": "PESCADOS_Y_MARISCOS",
+        "semanticCategoryId": 5
+      },
+      "to": {
+        "category": "PESCADOS_Y_MARISCOS",
+        "semanticKey": "restaurant_v2_seafood"
+      }
+    },
+    {
+      "id": 95,
+      "canonicalKey": "crab",
+      "rule": "legacy_database_classification_only",
+      "from": {
+        "category": "PESCADOS_Y_MARISCOS",
+        "semanticCategoryId": 5
+      },
+      "to": {
+        "category": "PESCADOS_Y_MARISCOS",
+        "semanticKey": "restaurant_v2_seafood"
+      }
+    },
+    {
+      "id": 96,
+      "canonicalKey": "salmon",
+      "rule": "legacy_database_classification_only",
+      "from": {
+        "category": "PESCADOS_Y_MARISCOS",
+        "semanticCategoryId": 5
+      },
+      "to": {
+        "category": "PESCADOS_Y_MARISCOS",
+        "semanticKey": "restaurant_v2_seafood"
+      }
+    },
+    {
+      "id": 97,
+      "canonicalKey": "pastry_cream",
+      "rule": "legacy_database_classification_only",
+      "from": {
+        "category": "CREMAS_DULCES",
+        "semanticCategoryId": 11
+      },
+      "to": {
+        "category": "REPOSTERIA_AUXILIARES",
+        "semanticKey": "restaurant_v2_baking_culinary_aids"
+      }
+    },
+    {
+      "id": 98,
+      "canonicalKey": "condensed_milk",
+      "rule": "legacy_database_classification_only",
+      "from": {
+        "category": "CREMAS_DULCES",
+        "semanticCategoryId": 11
+      },
+      "to": {
+        "category": "LACTEOS_HUEVOS",
+        "semanticKey": "restaurant_v2_dairy_eggs"
+      }
+    },
+    {
+      "id": 99,
+      "canonicalKey": "dulce_de_leche",
+      "from": {
+        "category": "CREMAS_DULCES",
+        "semanticCategoryId": 11
+      },
+      "to": {
+        "category": "REPOSTERIA_AUXILIARES",
+        "semanticKey": "restaurant_v2_baking_culinary_aids"
+      }
+    },
+    {
+      "id": 100,
+      "canonicalKey": "caramelized_sugar",
+      "rule": "legacy_database_classification_only",
+      "from": {
+        "category": "ENDULZANTES",
+        "semanticCategoryId": 12
+      },
+      "to": {
+        "category": "REPOSTERIA_AUXILIARES",
+        "semanticKey": "restaurant_v2_baking_culinary_aids"
+      }
+    },
+    {
+      "id": 101,
+      "canonicalKey": "powdered_sugar",
+      "rule": "legacy_database_classification_only",
+      "from": {
+        "category": "ENDULZANTES",
+        "semanticCategoryId": 12
+      },
+      "to": {
+        "category": "REPOSTERIA_AUXILIARES",
+        "semanticKey": "restaurant_v2_baking_culinary_aids"
+      }
+    },
+    {
+      "id": 102,
+      "canonicalKey": "caramelized_onion",
+      "rule": "legacy_database_classification_only",
+      "from": {
+        "category": "VERDURAS",
+        "semanticCategoryId": 6
+      },
+      "to": {
+        "category": "VERDURAS_SETAS_ALGAS",
+        "semanticKey": "restaurant_v2_vegetables_mushrooms_algae"
+      }
+    },
+    {
+      "id": 103,
+      "canonicalKey": "roasted_pumpkin",
+      "rule": "legacy_database_classification_only",
+      "from": {
+        "category": "VERDURAS",
+        "semanticCategoryId": 6
+      },
+      "to": {
+        "category": "VERDURAS_SETAS_ALGAS",
+        "semanticKey": "restaurant_v2_vegetables_mushrooms_algae"
+      }
+    },
+    {
+      "id": 104,
+      "canonicalKey": "eggplant",
+      "rule": "legacy_database_classification_only",
+      "from": {
+        "category": "VERDURAS",
+        "semanticCategoryId": 6
+      },
+      "to": {
+        "category": "VERDURAS_SETAS_ALGAS",
+        "semanticKey": "restaurant_v2_vegetables_mushrooms_algae"
+      }
+    },
+    {
+      "id": 105,
+      "canonicalKey": "red_onion",
+      "rule": "legacy_database_classification_only",
+      "from": {
+        "category": "VERDURAS",
+        "semanticCategoryId": 6
+      },
+      "to": {
+        "category": "VERDURAS_SETAS_ALGAS",
+        "semanticKey": "restaurant_v2_vegetables_mushrooms_algae"
+      }
+    },
+    {
+      "id": 106,
+      "canonicalKey": "cherry_tomatoes",
+      "rule": "legacy_database_classification_only",
+      "from": {
+        "category": "VERDURAS",
+        "semanticCategoryId": 6
+      },
+      "to": {
+        "category": "VERDURAS_SETAS_ALGAS",
+        "semanticKey": "restaurant_v2_vegetables_mushrooms_algae"
+      }
+    },
+    {
+      "id": 107,
+      "canonicalKey": "fresh_tomato",
+      "rule": "legacy_database_classification_only",
+      "from": {
+        "category": "VERDURAS",
+        "semanticCategoryId": 6
+      },
+      "to": {
+        "category": "VERDURAS_SETAS_ALGAS",
+        "semanticKey": "restaurant_v2_vegetables_mushrooms_algae"
+      }
+    },
+    {
+      "id": 108,
+      "canonicalKey": "blueberries",
+      "rule": "legacy_database_classification_only",
+      "from": {
+        "category": "FRUTAS",
+        "semanticCategoryId": 8
+      },
+      "to": {
+        "category": "FRUTAS",
+        "semanticKey": "restaurant_v2_fruits"
+      }
+    },
+    {
+      "id": 109,
+      "canonicalKey": "caramelized_pineapple",
+      "rule": "legacy_database_classification_only",
+      "from": {
+        "category": "FRUTAS",
+        "semanticCategoryId": 8
+      },
+      "to": {
+        "category": "FRUTAS",
+        "semanticKey": "restaurant_v2_fruits"
+      }
+    },
+    {
+      "id": 110,
+      "canonicalKey": "garlic_powder",
+      "rule": "legacy_database_classification_only",
+      "from": {
+        "category": "HIERBAS_ESPECIAS",
+        "semanticCategoryId": 9
+      },
+      "to": {
+        "category": "SALSAS_CONDIMENTOS_BASES",
+        "semanticKey": "restaurant_v2_sauces_seasonings_bases"
+      }
+    },
+    {
+      "id": 111,
+      "canonicalKey": "white_pepper",
+      "rule": "legacy_database_classification_only",
+      "from": {
+        "category": "HIERBAS_ESPECIAS",
+        "semanticCategoryId": 9
+      },
+      "to": {
+        "category": "SALSAS_CONDIMENTOS_BASES",
+        "semanticKey": "restaurant_v2_sauces_seasonings_bases"
+      }
+    },
+    {
+      "id": 112,
+      "canonicalKey": "minced_beef",
+      "rule": "legacy_database_classification_only",
+      "from": {
+        "category": "CARNES",
+        "semanticCategoryId": 3
+      },
+      "to": {
+        "category": "CARNES_AVES",
+        "semanticKey": "restaurant_v2_meats_poultry"
+      }
+    },
+    {
+      "id": 113,
+      "canonicalKey": "nachos",
+      "rule": "legacy_database_classification_only",
+      "from": {
+        "category": "OTROS",
+        "semanticCategoryId": 16
+      },
+      "to": {
+        "category": "PANES_MASAS_HARINAS",
+        "semanticKey": "restaurant_v2_bread_dough_flour"
+      }
+    },
+    {
+      "id": 122,
+      "canonicalKey": "marshmallow",
+      "from": {
+        "category": "TOPPINGS_DULCES",
+        "semanticCategoryId": 15
+      },
+      "to": {
+        "category": "REPOSTERIA_AUXILIARES",
+        "semanticKey": "restaurant_v2_baking_culinary_aids"
+      }
+    },
+    {
+      "id": 123,
+      "canonicalKey": "cream_cheese",
+      "rule": "legacy_database_classification_only",
+      "from": {
+        "category": "QUESOS",
+        "semanticCategoryId": 1
+      },
+      "to": {
+        "category": "QUESOS",
+        "semanticKey": "restaurant_v2_cheeses"
+      }
+    },
+    {
+      "id": 124,
+      "canonicalKey": "sweet_corn",
+      "rule": "legacy_database_classification_only",
+      "from": {
+        "category": "VERDURAS",
+        "semanticCategoryId": 6
+      },
+      "to": {
+        "category": "VERDURAS_SETAS_ALGAS",
+        "semanticKey": "restaurant_v2_vegetables_mushrooms_algae"
+      }
+    },
+    {
+      "id": 125,
+      "canonicalKey": "jalapeno",
+      "rule": "legacy_database_classification_only",
+      "from": {
+        "category": "VERDURAS",
+        "semanticCategoryId": 6
+      },
+      "to": {
+        "category": "VERDURAS_SETAS_ALGAS",
+        "semanticKey": "restaurant_v2_vegetables_mushrooms_algae"
+      }
+    },
+    {
+      "id": 127,
+      "canonicalKey": "cod",
+      "rule": "legacy_database_classification_only",
+      "from": {
+        "category": "PESCADOS_Y_MARISCOS",
+        "semanticCategoryId": 5
+      },
+      "to": {
+        "category": "PESCADOS_Y_MARISCOS",
+        "semanticKey": "restaurant_v2_seafood"
+      }
+    },
+    {
+      "id": 128,
+      "canonicalKey": "shredded_beef",
+      "rule": "legacy_database_classification_only",
+      "from": {
+        "category": "CARNES",
+        "semanticCategoryId": 3
+      },
+      "to": {
+        "category": "CARNES_AVES",
+        "semanticKey": "restaurant_v2_meats_poultry"
+      }
+    },
+    {
+      "id": 130,
+      "canonicalKey": "aaaruul",
+      "from": {
+        "category": "QUESOS",
+        "semanticCategoryId": 1
+      },
+      "to": {
+        "category": "QUESOS",
+        "semanticKey": "restaurant_v2_cheeses"
+      }
+    },
+    {
+      "id": 131,
+      "canonicalKey": "chorizo_gubbeen",
+      "from": {
+        "category": "EMBUTIDOS",
+        "semanticCategoryId": 4
+      },
+      "to": {
+        "category": "EMBUTIDOS_CHARCUTERIA",
+        "semanticKey": "restaurant_v2_cured_meats"
+      }
+    },
+    {
+      "id": 133,
+      "canonicalKey": "mozzarella_rallada",
+      "from": {
+        "category": "QUESOS",
+        "semanticCategoryId": 1
+      },
+      "to": {
+        "category": "QUESOS",
+        "semanticKey": "restaurant_v2_cheeses"
+      }
+    },
+    {
+      "id": 134,
+      "canonicalKey": "patatas",
+      "from": {
+        "category": "VERDURAS",
+        "semanticCategoryId": 6
+      },
+      "to": {
+        "category": "VERDURAS_SETAS_ALGAS",
+        "semanticKey": "restaurant_v2_vegetables_mushrooms_algae"
+      }
+    },
+    {
+      "id": 135,
+      "canonicalKey": "r_cula",
+      "from": {
+        "category": "VERDURAS",
+        "semanticCategoryId": 6
+      },
+      "to": {
+        "category": "VERDURAS_SETAS_ALGAS",
+        "semanticKey": "restaurant_v2_vegetables_mushrooms_algae"
+      }
+    },
+    {
+      "id": 136,
+      "canonicalKey": "ranch",
+      "from": {
+        "category": "SALSAS",
+        "semanticCategoryId": 2
+      },
+      "to": {
+        "category": "SALSAS_CONDIMENTOS_BASES",
+        "semanticKey": "restaurant_v2_sauces_seasonings_bases"
+      }
+    },
+    {
+      "id": 140,
+      "canonicalKey": "huevo",
+      "from": {
+        "category": "OTROS",
+        "semanticCategoryId": 16
+      },
+      "to": {
+        "category": "LACTEOS_HUEVOS",
+        "semanticKey": "restaurant_v2_dairy_eggs"
+      }
+    },
+    {
+      "id": 141,
+      "canonicalKey": "algas_nori",
+      "from": {
+        "category": "OTROS",
+        "semanticCategoryId": 16
+      },
+      "to": {
+        "category": "VERDURAS_SETAS_ALGAS",
+        "semanticKey": "restaurant_v2_vegetables_mushrooms_algae"
+      }
+    },
+    {
+      "id": 142,
+      "canonicalKey": "pechuga_de_pollo",
+      "from": {
+        "category": "CARNES",
+        "semanticCategoryId": 3
+      },
+      "to": {
+        "category": "CARNES_AVES",
+        "semanticKey": "restaurant_v2_meats_poultry"
+      }
+    },
+    {
+      "id": 143,
+      "canonicalKey": "pollo_a_la_brasa",
+      "from": {
+        "category": "CARNES",
+        "semanticCategoryId": 3
+      },
+      "to": {
+        "category": "CARNES_AVES",
+        "semanticKey": "restaurant_v2_meats_poultry"
+      }
+    },
+    {
+      "id": 144,
+      "canonicalKey": "melocot_n",
+      "from": {
+        "category": "FRUTAS",
+        "semanticCategoryId": 8
+      },
+      "to": {
+        "category": "FRUTAS",
+        "semanticKey": "restaurant_v2_fruits"
+      }
+    },
+    {
+      "id": 145,
+      "canonicalKey": "zumo_de_lim_n_concentrado",
+      "from": {
+        "category": "HIERBAS_ESPECIAS",
+        "semanticCategoryId": 9
+      },
+      "to": {
+        "category": "SALSAS_CONDIMENTOS_BASES",
+        "semanticKey": "restaurant_v2_sauces_seasonings_bases"
+      }
+    },
+    {
+      "id": 146,
+      "canonicalKey": "mejillones",
+      "from": {
+        "category": "PESCADOS_Y_MARISCOS",
+        "semanticCategoryId": 5
+      },
+      "to": {
+        "category": "PESCADOS_Y_MARISCOS",
+        "semanticKey": "restaurant_v2_seafood"
+      }
+    },
+    {
+      "id": 147,
+      "canonicalKey": "aceite_de_oliva_virgen",
+      "from": {
+        "category": "ACEITES_GRASAS_VINAGRES",
+        "semanticCategoryId": 10
+      },
+      "to": {
+        "category": "ACEITES_GRASAS_VINAGRES",
+        "semanticKey": "restaurant_v2_oils_fats_vinegars"
+      }
+    },
+    {
+      "id": 148,
+      "canonicalKey": "cecina",
+      "from": {
+        "category": "CARNES",
+        "semanticCategoryId": 3
+      },
+      "to": {
+        "category": "EMBUTIDOS_CHARCUTERIA",
+        "semanticKey": "restaurant_v2_cured_meats"
+      }
+    },
+    {
+      "id": 149,
+      "canonicalKey": "pepinillos",
+      "from": {
+        "category": "VERDURAS",
+        "semanticCategoryId": 6
+      },
+      "to": {
+        "category": "VERDURAS_SETAS_ALGAS",
+        "semanticKey": "restaurant_v2_vegetables_mushrooms_algae"
+      }
+    }
+  ],
+  "held": [
+    {
+      "id": 25,
+      "name": "Pavo",
+      "canonicalKey": "turkey",
+      "reason": "legacy_composition_requires_review"
+    },
+    {
+      "id": 47,
+      "name": "Maíz",
+      "canonicalKey": null,
+      "reason": "identity_not_in_master"
+    },
+    {
+      "id": 54,
+      "name": "Relleno de Mozzarela",
+      "canonicalKey": null,
+      "reason": "identity_not_in_master"
+    },
+    {
+      "id": 57,
+      "name": "Avellana blanca",
+      "canonicalKey": "white_hazelnut_cream",
+      "reason": "legacy_composition_requires_review"
+    },
+    {
+      "id": 58,
+      "name": "Avellana tradicional",
+      "canonicalKey": "hazelnut_cream",
+      "reason": "legacy_composition_requires_review"
+    },
+    {
+      "id": 61,
+      "name": "Pistacho",
+      "canonicalKey": "pistachio_cream",
+      "reason": "legacy_composition_requires_review"
+    },
+    {
+      "id": 62,
+      "name": "Crema de coco",
+      "canonicalKey": "coconut_cream",
+      "reason": "legacy_composition_requires_review"
+    },
+    {
+      "id": 75,
+      "name": "Extracto de paprika",
+      "canonicalKey": null,
+      "reason": "identity_not_in_master"
+    },
+    {
+      "id": 126,
+      "name": "1kg Relleno de Mozzarela",
+      "canonicalKey": null,
+      "reason": "identity_not_in_master"
+    }
+  ],
+  "localIdsPreserved": [
+    118,
+    119,
+    120,
+    121
+  ],
+  "operationalIdsPreserved": [
+    137,
+    138,
+    139
+  ]
+}

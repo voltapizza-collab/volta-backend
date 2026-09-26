@@ -1,0 +1,388 @@
+{
+  "verifiedAt": "2026-09-18T12:00:48.669Z",
+  "database": "isolated_loopback_copy",
+  "tablesRestored": 43,
+  "saleTransactionsRolledBack": true,
+  "paymentsOrMessagesSent": false,
+  "checks": [
+    {
+      "kind": "recipe",
+      "paymentMode": "cash",
+      "shouldAccept": true,
+      "ingredientActive": true,
+      "recipeDishVisible": true,
+      "responseStatus": 418,
+      "error": "AUDIT_ROLLBACK_AFTER_SALE",
+      "wouldCreateSale": {
+        "status": "PAID",
+        "productIds": [
+          1
+        ],
+        "total": 9.99
+      }
+    },
+    {
+      "kind": "recipe",
+      "paymentMode": "card",
+      "shouldAccept": true,
+      "ingredientActive": true,
+      "recipeDishVisible": true,
+      "responseStatus": 418,
+      "error": "AUDIT_ROLLBACK_AFTER_SALE",
+      "wouldCreateSale": {
+        "status": "AWAITING_PAYMENT",
+        "productIds": [
+          1
+        ],
+        "total": 9.99
+      }
+    },
+    {
+      "kind": "extra",
+      "paymentMode": "cash",
+      "shouldAccept": true,
+      "ingredientActive": true,
+      "recipeDishVisible": true,
+      "responseStatus": 418,
+      "error": "AUDIT_ROLLBACK_AFTER_SALE",
+      "wouldCreateSale": {
+        "status": "PAID",
+        "productIds": [
+          2
+        ],
+        "total": 15.99
+      }
+    },
+    {
+      "kind": "extra",
+      "paymentMode": "card",
+      "shouldAccept": true,
+      "ingredientActive": true,
+      "recipeDishVisible": true,
+      "responseStatus": 418,
+      "error": "AUDIT_ROLLBACK_AFTER_SALE",
+      "wouldCreateSale": {
+        "status": "AWAITING_PAYMENT",
+        "productIds": [
+          2
+        ],
+        "total": 15.99
+      }
+    },
+    {
+      "kind": "custom",
+      "paymentMode": "cash",
+      "shouldAccept": true,
+      "ingredientActive": true,
+      "recipeDishVisible": true,
+      "responseStatus": 418,
+      "error": "AUDIT_ROLLBACK_AFTER_SALE",
+      "wouldCreateSale": {
+        "status": "PAID",
+        "productIds": [
+          1
+        ],
+        "total": 5.3
+      }
+    },
+    {
+      "kind": "custom",
+      "paymentMode": "card",
+      "shouldAccept": true,
+      "ingredientActive": true,
+      "recipeDishVisible": true,
+      "responseStatus": 418,
+      "error": "AUDIT_ROLLBACK_AFTER_SALE",
+      "wouldCreateSale": {
+        "status": "AWAITING_PAYMENT",
+        "productIds": [
+          1
+        ],
+        "total": 5.3
+      }
+    },
+    {
+      "kind": "half",
+      "paymentMode": "cash",
+      "shouldAccept": true,
+      "ingredientActive": true,
+      "recipeDishVisible": true,
+      "responseStatus": 418,
+      "error": "AUDIT_ROLLBACK_AFTER_SALE",
+      "wouldCreateSale": {
+        "status": "PAID",
+        "productIds": [
+          1
+        ],
+        "total": 14.99
+      }
+    },
+    {
+      "kind": "half",
+      "paymentMode": "card",
+      "shouldAccept": true,
+      "ingredientActive": true,
+      "recipeDishVisible": true,
+      "responseStatus": 418,
+      "error": "AUDIT_ROLLBACK_AFTER_SALE",
+      "wouldCreateSale": {
+        "status": "AWAITING_PAYMENT",
+        "productIds": [
+          1
+        ],
+        "total": 14.99
+      }
+    },
+    {
+      "kind": "promo",
+      "paymentMode": "cash",
+      "shouldAccept": true,
+      "ingredientActive": true,
+      "recipeDishVisible": true,
+      "responseStatus": 418,
+      "error": "AUDIT_ROLLBACK_AFTER_SALE",
+      "wouldCreateSale": {
+        "status": "PAID",
+        "productIds": [
+          null
+        ],
+        "total": 8
+      }
+    },
+    {
+      "kind": "promo",
+      "paymentMode": "card",
+      "shouldAccept": true,
+      "ingredientActive": true,
+      "recipeDishVisible": true,
+      "responseStatus": 418,
+      "error": "AUDIT_ROLLBACK_AFTER_SALE",
+      "wouldCreateSale": {
+        "status": "AWAITING_PAYMENT",
+        "productIds": [
+          null
+        ],
+        "total": 8
+      }
+    },
+    {
+      "kind": "reward",
+      "paymentMode": "cash",
+      "shouldAccept": true,
+      "ingredientActive": true,
+      "recipeDishVisible": true,
+      "responseStatus": 418,
+      "error": "AUDIT_ROLLBACK_AFTER_SALE",
+      "wouldCreateSale": {
+        "status": "PAID",
+        "productIds": [
+          2,
+          1
+        ],
+        "total": 14.99
+      }
+    },
+    {
+      "kind": "reward",
+      "paymentMode": "card",
+      "shouldAccept": true,
+      "ingredientActive": true,
+      "recipeDishVisible": true,
+      "responseStatus": 418,
+      "error": "AUDIT_ROLLBACK_AFTER_SALE",
+      "wouldCreateSale": {
+        "status": "AWAITING_PAYMENT",
+        "productIds": [
+          2,
+          1
+        ],
+        "total": 14.99
+      }
+    },
+    {
+      "kind": "custom_independent",
+      "paymentMode": "cash",
+      "shouldAccept": true,
+      "ingredientActive": true,
+      "recipeDishVisible": true,
+      "responseStatus": 418,
+      "error": "AUDIT_ROLLBACK_AFTER_SALE",
+      "wouldCreateSale": {
+        "status": "PAID",
+        "productIds": [
+          1
+        ],
+        "total": 5.3
+      }
+    },
+    {
+      "kind": "custom_independent",
+      "paymentMode": "card",
+      "shouldAccept": true,
+      "ingredientActive": true,
+      "recipeDishVisible": true,
+      "responseStatus": 418,
+      "error": "AUDIT_ROLLBACK_AFTER_SALE",
+      "wouldCreateSale": {
+        "status": "AWAITING_PAYMENT",
+        "productIds": [
+          1
+        ],
+        "total": 5.3
+      }
+    },
+    {
+      "kind": "recipe",
+      "paymentMode": "cash",
+      "shouldAccept": false,
+      "ingredientActive": false,
+      "recipeDishVisible": false,
+      "responseStatus": 409,
+      "error": "cart_item_unavailable",
+      "wouldCreateSale": null
+    },
+    {
+      "kind": "recipe",
+      "paymentMode": "card",
+      "shouldAccept": false,
+      "ingredientActive": false,
+      "recipeDishVisible": false,
+      "responseStatus": 409,
+      "error": "cart_item_unavailable",
+      "wouldCreateSale": null
+    },
+    {
+      "kind": "extra",
+      "paymentMode": "cash",
+      "shouldAccept": false,
+      "ingredientActive": false,
+      "recipeDishVisible": false,
+      "responseStatus": 409,
+      "error": "cart_item_unavailable",
+      "wouldCreateSale": null
+    },
+    {
+      "kind": "extra",
+      "paymentMode": "card",
+      "shouldAccept": false,
+      "ingredientActive": false,
+      "recipeDishVisible": false,
+      "responseStatus": 409,
+      "error": "cart_item_unavailable",
+      "wouldCreateSale": null
+    },
+    {
+      "kind": "custom",
+      "paymentMode": "cash",
+      "shouldAccept": false,
+      "ingredientActive": false,
+      "recipeDishVisible": false,
+      "responseStatus": 409,
+      "error": "cart_item_unavailable",
+      "wouldCreateSale": null
+    },
+    {
+      "kind": "custom",
+      "paymentMode": "card",
+      "shouldAccept": false,
+      "ingredientActive": false,
+      "recipeDishVisible": false,
+      "responseStatus": 409,
+      "error": "cart_item_unavailable",
+      "wouldCreateSale": null
+    },
+    {
+      "kind": "half",
+      "paymentMode": "cash",
+      "shouldAccept": false,
+      "ingredientActive": false,
+      "recipeDishVisible": false,
+      "responseStatus": 409,
+      "error": "cart_item_unavailable",
+      "wouldCreateSale": null
+    },
+    {
+      "kind": "half",
+      "paymentMode": "card",
+      "shouldAccept": false,
+      "ingredientActive": false,
+      "recipeDishVisible": false,
+      "responseStatus": 409,
+      "error": "cart_item_unavailable",
+      "wouldCreateSale": null
+    },
+    {
+      "kind": "promo",
+      "paymentMode": "cash",
+      "shouldAccept": false,
+      "ingredientActive": false,
+      "recipeDishVisible": false,
+      "responseStatus": 409,
+      "error": "cart_item_unavailable",
+      "wouldCreateSale": null
+    },
+    {
+      "kind": "promo",
+      "paymentMode": "card",
+      "shouldAccept": false,
+      "ingredientActive": false,
+      "recipeDishVisible": false,
+      "responseStatus": 409,
+      "error": "cart_item_unavailable",
+      "wouldCreateSale": null
+    },
+    {
+      "kind": "reward",
+      "paymentMode": "cash",
+      "shouldAccept": false,
+      "ingredientActive": false,
+      "recipeDishVisible": false,
+      "responseStatus": 409,
+      "error": "cart_item_unavailable",
+      "wouldCreateSale": null
+    },
+    {
+      "kind": "reward",
+      "paymentMode": "card",
+      "shouldAccept": false,
+      "ingredientActive": false,
+      "recipeDishVisible": false,
+      "responseStatus": 409,
+      "error": "cart_item_unavailable",
+      "wouldCreateSale": null
+    },
+    {
+      "kind": "custom_independent",
+      "paymentMode": "cash",
+      "shouldAccept": true,
+      "ingredientActive": false,
+      "recipeDishVisible": false,
+      "responseStatus": 418,
+      "error": "AUDIT_ROLLBACK_AFTER_SALE",
+      "wouldCreateSale": {
+        "status": "PAID",
+        "productIds": [
+          1
+        ],
+        "total": 5.3
+      }
+    },
+    {
+      "kind": "custom_independent",
+      "paymentMode": "card",
+      "shouldAccept": true,
+      "ingredientActive": false,
+      "recipeDishVisible": false,
+      "responseStatus": 418,
+      "error": "AUDIT_ROLLBACK_AFTER_SALE",
+      "wouldCreateSale": {
+        "status": "AWAITING_PAYMENT",
+        "productIds": [
+          1
+        ],
+        "total": 5.3
+      }
+    }
+  ],
+  "findings": []
+}
