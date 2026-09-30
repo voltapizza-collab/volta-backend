@@ -881,6 +881,7 @@ model DirectDiscount {
   partnerId     Int
   partner       Partner                  @relation(fields: [partnerId], references: [id])
   title         String
+  isClearance   Boolean                  @default(false)
   discountType  DirectDiscountType
   value         Decimal                  @db.Decimal(10, 2)
   targetType    DirectDiscountTargetType

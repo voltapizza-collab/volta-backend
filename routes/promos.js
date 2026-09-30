@@ -1,4 +1,5 @@
 import express from "express";
+import { withProductReferences, promoProductIds } from "../services/productLinks.js";
 import multer from "multer";
 import { v2 as cloudinary } from "cloudinary";
 import { assertCloudinaryConfigured } from "../services/cloudinaryConfig.js";
@@ -253,7 +254,7 @@ export default function promosRoutes(prisma) {
       }
 
       const { image, imagePublicId } = await uploadPromoImage(req.file, partnerId);
-      const promo = await prisma.promo.create({
+      const promo = await withProductReferences(prisma, partnerId, promoProductIds(items), tx => tx.promo.create({
         data: {
           partnerId,
           title,
@@ -271,11 +272,12 @@ export default function promosRoutes(prisma) {
           imagePublicId,
           status: req.body.status ? String(req.body.status) : "ACTIVE",
         },
-      });
+      }));
 
       return res.json({ ok: true, promo: serializePromo(promo) });
     } catch (error) {
       console.error("[promos.post] error:", error);
+      if (error.status === 400) return res.status(400).json({ ok:false,error:error.message });
       return res.status(500).json({ ok: false, error: "server" });
     }
   });
@@ -320,7 +322,7 @@ export default function promosRoutes(prisma) {
         imagePublicId = uploadedImage.imagePublicId;
       }
 
-      const promo = await prisma.promo.update({
+      const promo = await withProductReferences(prisma, partnerId, promoProductIds(items), tx => tx.promo.update({
         where: { id },
         data: {
           title,
@@ -338,11 +340,12 @@ export default function promosRoutes(prisma) {
           imagePublicId,
           status: req.body.status ? String(req.body.status) : existing.status,
         },
-      });
+      }));
 
       return res.json({ ok: true, promo: serializePromo(promo) });
     } catch (error) {
       console.error("[promos.put] error:", error);
+      if (error.status === 400) return res.status(400).json({ ok:false,error:error.message });
       return res.status(500).json({ ok: false, error: "server" });
     }
   });

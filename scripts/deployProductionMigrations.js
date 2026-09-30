@@ -15,6 +15,7 @@ const DIRECT_DISCOUNT_DAILY_OVERRIDES_MIGRATION =
   "20260903170000_add_direct_discount_daily_overrides";
 
 const RECOVERABLE_FAILED_MIGRATIONS = [
+  { name: "20260930140000_add_direct_discount_clearance", tableName: "DirectDiscount", columnName: "isClearance" },
   {
     name: PRICE_ADJUSTMENT_RULES_MIGRATION,
     tableName: "Partner",

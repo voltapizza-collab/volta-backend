@@ -171,6 +171,7 @@ const getLineQty = (line) => {
 
 let usageLimitColumnReady = false;
 let dailyOverridesColumnReady = false;
+let clearanceColumnReady = false;
 
 const ensureDirectDiscountColumn = async (prisma, columnName, definition) => {
   let hasColumn = false;
@@ -204,6 +205,10 @@ const ensureDirectDiscountColumn = async (prisma, columnName, definition) => {
 };
 
 export const ensureDirectDiscountUsageLimitColumn = async (prisma) => {
+  if (!clearanceColumnReady) {
+    await ensureDirectDiscountColumn(prisma, "isClearance", "BOOLEAN NOT NULL DEFAULT false");
+    clearanceColumnReady = true;
+  }
   if (!usageLimitColumnReady) {
     await ensureDirectDiscountColumn(prisma, "usageLimit", "INT NULL");
     usageLimitColumnReady = true;

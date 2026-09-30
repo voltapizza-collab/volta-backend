@@ -1,4 +1,5 @@
 import express from "express";
+import { withProductReferences } from "../services/productLinks.js";
 import {
   attachDirectDiscountUsage,
   ensureDirectDiscountUsageLimitColumn,
@@ -144,6 +145,7 @@ const serializeDirectDiscount = (discount, reference = nowInTZ()) => {
     id: discount.id,
     partnerId: discount.partnerId,
     title: discount.title,
+    isClearance: discount.isClearance === true,
     discountType: discount.discountType,
     value: Number(discount.value || 0),
     baseValue: Number(discount.value || 0),
@@ -181,6 +183,7 @@ const buildPayload = (body) => {
   return {
     partnerId: parsePositiveInt(body.partnerId),
     title: String(body.title || "").trim(),
+    isClearance: body.isClearance === true,
     discountType,
     value: Number(body.value),
     targetType,
@@ -294,13 +297,14 @@ export default function directDiscountsRoutes(prisma) {
         return res.status(400).json({ ok: false, error: ownershipError });
       }
 
-      const discount = await prisma.directDiscount.create({
+      const discount = await withProductReferences(prisma, payload.partnerId, payload.productIds, tx => tx.directDiscount.create({
         data: payload,
-      });
+      }));
 
       return res.json({ ok: true, discount: serializeDirectDiscount(discount) });
     } catch (error) {
       console.error("[direct-discounts.post] error:", error);
+      if (error.status === 400) return res.status(400).json({ ok:false,error:error.message });
       return res.status(500).json({ ok: false, error: "server" });
     }
   });
@@ -325,19 +329,37 @@ export default function directDiscountsRoutes(prisma) {
         return res.status(404).json({ ok: false, error: "discount_not_found" });
       }
 
+      // Older offers can retain IDs of deleted dishes. Only remove missing IDs
+      // already saved on this offer; new invalid IDs and other partners' dishes
+      // must still fail the ownership check below.
+      const previousProductIds = new Set(normalizeIds(existing.productIds));
+      const currentProducts = payload.productIds.length
+        ? await prisma.menuPizza.findMany({ where: { id: { in: payload.productIds } }, select: { id: true } })
+        : [];
+      const currentProductIds = new Set(currentProducts.map(product => product.id));
+      const removedProductIds = payload.productIds.filter(productId =>
+        previousProductIds.has(productId) && !currentProductIds.has(productId));
+      payload.productIds = payload.productIds.filter(productId => !removedProductIds.includes(productId));
+      const cleanedValidationError = validatePayload(payload);
+      if (cleanedValidationError) {
+        return res.status(400).json({ ok: false, error: cleanedValidationError,
+          message: "Los productos de este Top Deal ya no existen. Selecciona al menos un producto disponible y vuelve a guardar." });
+      }
+
       const ownershipError = await verifyOwnership(prisma, payload);
       if (ownershipError) {
         return res.status(400).json({ ok: false, error: ownershipError });
       }
 
-      const discount = await prisma.directDiscount.update({
+      const discount = await withProductReferences(prisma, payload.partnerId, payload.productIds, tx => tx.directDiscount.update({
         where: { id },
         data: payload,
-      });
+      }));
 
-      return res.json({ ok: true, discount: serializeDirectDiscount(discount) });
+      return res.json({ ok: true, discount: serializeDirectDiscount(discount), removedProductIds });
     } catch (error) {
       console.error("[direct-discounts.put] error:", error);
+      if (error.status === 400) return res.status(400).json({ ok:false,error:error.message });
       return res.status(500).json({ ok: false, error: "server" });
     }
   });

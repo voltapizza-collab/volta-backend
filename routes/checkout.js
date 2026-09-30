@@ -1,10 +1,11 @@
 import express from "express";
+import { getOrderMinimum, getShippingBenefitFee, getDeliveryBlocks } from "../services/fulfillmentPolicy.js";
 import { validateCheckoutAvailability } from "../services/checkoutAvailability.js";
 import { validateCheckoutPricing } from "../services/checkoutPricing.js";
 import { validateCheckoutDelivery, deliveryPolicyFingerprint, calculateDeliveryFee } from "../services/checkoutDelivery.js";
 import { validateIngredientRemovals } from "../services/ingredientRemovals.js";
 import { lockCheckoutCoupon, reserveCouponForSale, releaseCouponReservation, reconcileCouponReservations } from "../services/couponReservations.js";
-import { evaluateCoupon, calculateCouponDiscount } from "../services/couponEvaluation.js";
+import { evaluateCoupon, calculateCouponDiscount, isDeliveryFreeCoupon } from "../services/couponEvaluation.js";
 export { calculateCouponDiscount } from "../services/couponEvaluation.js";
 import { buildOrderAvailability, validateOrderSchedule } from "../services/orderAvailability.js";
 import {
@@ -55,6 +56,7 @@ const isPrismaConnectivityError = (error) => {
 const ensurePartnerCheckoutPolicyColumns = async (prisma) => {
   const columns = [
     ["minimumPaymentAmount", "DOUBLE NULL DEFAULT 0"],
+    ["deliveryFeeBlockSize", "INT NULL DEFAULT 5"],
     ["paymentPolicySettings", "JSON NULL"],
   ];
 
@@ -795,7 +797,7 @@ export default function checkoutRoutes(prisma) {
       const [partner, store] = await Promise.all([
         prisma.$queryRawUnsafe(
           `SELECT id, name, slug, country, currency, minimumPaymentAmount, deliveryRadiusKm,
-                  deliveryPricingMode, deliveryFeeFixed, deliveryFeeBase,
+                  deliveryPricingMode, deliveryFeeBlockSize, deliveryFeeFixed, deliveryFeeBase,
                   deliveryBaseKm, deliveryExtraPerKm, paymentPolicySettings, priceAdjustmentRules
              FROM Partner
             WHERE id = ?
@@ -888,9 +890,12 @@ export default function checkoutRoutes(prisma) {
       const deliveryQuote = await validateCheckoutDelivery(partner, store, {
         ...sanitizedDelivery,
         deliveryFee: delivery.deliveryFee,
+        lines,
         manualReviewAccepted: delivery.manualReviewAccepted === true,
       });
       const deliveryFee = deliveryQuote.deliveryFee;
+      const shippingBenefitFee = getShippingBenefitFee(lines, partner, deliveryFee);
+      let shippingDiscount = 0;
       const quotedDeliveryPolicy = deliveryPolicyFingerprint(partner,store);
       sanitizedDelivery.deliveryFee = deliveryFee;
       sanitizedDelivery.distanceKm = deliveryQuote.distanceKm;
@@ -933,7 +938,7 @@ export default function checkoutRoutes(prisma) {
 
         const couponCheckoutError = validateCouponForCheckout(coupon, {
           eligibleSubtotal,
-          deliveryFee,
+          deliveryFee: shippingBenefitFee,
           store,
           reference: new Date(),
         });
@@ -941,7 +946,8 @@ export default function checkoutRoutes(prisma) {
           return res.status(409).json({ ok: false, error: couponCheckoutError });
         }
 
-        const expectedDiscount = calculateCouponDiscount(coupon, eligibleSubtotal, { deliveryFee });
+        const expectedDiscount = calculateCouponDiscount(coupon, eligibleSubtotal, { deliveryFee: shippingBenefitFee });
+        shippingDiscount = isDeliveryFreeCoupon(coupon) ? expectedDiscount : 0;
         if (expectedDiscount <= 0) {
           return res.status(409).json({ ok: false, error: "coupon_not_applicable" });
         }
@@ -952,6 +958,7 @@ export default function checkoutRoutes(prisma) {
                 ...line,
                 couponId: coupon.id,
                 couponCode: coupon.code,
+                coupon,
                 name: `Cupon ${coupon.code}`,
                 subtotal: -expectedDiscount,
                 price: -expectedDiscount,
@@ -976,11 +983,13 @@ export default function checkoutRoutes(prisma) {
       const amountCents = toCents(total);
       const minimumPaymentAmount = Math.max(0, Number(partner.minimumPaymentAmount || 0));
 
-      if (minimumPaymentAmount > 0 && total < minimumPaymentAmount) {
+      const orderMinimum = getOrderMinimum(lines, sanitizedDelivery.method, minimumPaymentAmount, shippingDiscount);
+      if (!orderMinimum.met) {
         return res.status(400).json({
           ok: false,
           error: "minimum_payment_not_met",
-          minimumPaymentAmount,
+          ...orderMinimum,
+          canSwitchToPickup: sanitizedDelivery.method === "COURIER" && store.pickupEnabled !== false,
           total,
         });
       }
@@ -994,7 +1003,7 @@ export default function checkoutRoutes(prisma) {
       const sale = await prisma.$transaction(async (tx) => {
         await validateCheckoutAvailability(tx, lines, partnerId, storeId);
         const lockedCoupon = couponLine?.couponCode ? await lockCheckoutCoupon(tx, {
-          partnerId, code: couponLine.couponCode, eligibleSubtotal, deliveryFee, store,
+          partnerId, code: couponLine.couponCode, eligibleSubtotal, deliveryFee: shippingBenefitFee, store,
         }) : null;
         if (lockedCoupon && Math.abs(lockedCoupon.evaluation.discount - discounts) > 0.004)
           throwCheckoutError("coupon_changed", 409);
@@ -1034,7 +1043,7 @@ export default function checkoutRoutes(prisma) {
         }
         const currentPartner = (await tx.$queryRawUnsafe(
           `SELECT id, priceAdjustmentRules, country, deliveryPricingMode, deliveryRadiusKm,
-            deliveryFeeFixed, deliveryFeeBase, deliveryBaseKm, deliveryExtraPerKm FROM Partner WHERE id = ?`, partnerId))[0];
+            minimumPaymentAmount, deliveryFeeBlockSize, deliveryFeeFixed, deliveryFeeBase, deliveryBaseKm, deliveryExtraPerKm FROM Partner WHERE id = ?`, partnerId))[0];
         if(!canStoreFulfillDeliveryMethod(currentStore,sanitizedDelivery.method)) throwCheckoutError("delivery_method_not_allowed",409);
         if(sanitizedDelivery.method === "COURIER" && deliveryPolicyFingerprint(currentPartner,currentStore)!==quotedDeliveryPolicy)
           throwCheckoutError("delivery_policy_changed",409);
@@ -1045,6 +1054,14 @@ export default function checkoutRoutes(prisma) {
         });
         if(couponLine && Math.abs(getEligibleCouponSubtotal(lines, {activeTopDeals:finalTopDeals.filter(discount=>!isDirectDiscountSoldOut(discount)),storeId}) - eligibleSubtotal)>0.004)
           throwCheckoutError("coupon_changed",409);
+
+        const finalMinimum = getOrderMinimum(lines, sanitizedDelivery.method, currentPartner.minimumPaymentAmount, shippingDiscount);
+        if (!finalMinimum.met) throwCheckoutError("minimum_payment_not_met", 400, finalMinimum);
+        if (Math.abs(getShippingBenefitFee(lines, currentPartner, deliveryFee) - shippingBenefitFee) > 0.004)
+          throwCheckoutError("delivery_policy_changed", 409);
+        if (sanitizedDelivery.method === "COURIER" && currentPartner.deliveryPricingMode !== "VARIABLE" &&
+            getDeliveryBlocks(lines, currentPartner.deliveryFeeBlockSize).totalBlocks !== deliveryQuote.deliveryBlocks)
+          throwCheckoutError("delivery_policy_changed", 409);
 
         const customer = await resolveCheckoutCustomer(tx, {
           partnerId,

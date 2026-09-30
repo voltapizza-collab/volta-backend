@@ -1,5 +1,7 @@
 import { loadStorefrontPricing } from '../routes/stores.js';
 import { normalizeBoostSettings } from './boostSettings.js';
+import { isPizzaCategory } from './fulfillmentPolicy.js';
+import { isDeliveryFreeCoupon } from './couponEvaluation.js';
 
 const array = value => Array.isArray(value) ? value : [];
 const money = value => Math.round(Number(value) * 100) / 100;
@@ -39,6 +41,7 @@ export function validatePromoComposition(line, offer, byId) {
     const count = Number(item.quantity ?? item.qty ?? 1);
     if (!Number.isInteger(count) || count < 1 || count > 100 || units.length + count > 100) fail(line, 'cart_offer_unavailable');
     const product = byId.get(Number(item.pizzaId)); productPrice(product, item.size, line);
+    // The configured pack price governs this sale; standalone offers do not stack.
     for (let i=0;i<count;i++) units.push({ ...item, product });
   }
   for (const item of array(offer.items)) {
@@ -71,6 +74,8 @@ export function priceCheckoutLines(lines, context) {
   const byId = new Map(menu.map(p => [p.id,p]));
   let rewards = 0, boosts = 0;
   const priced = lines.map(line => {
+    // Never trust a customer's shipping capacity or standalone clearance flag.
+    line = { ...line, deliveryUnits: 0, isClearance: undefined };
     if (!Number.isSafeInteger(Number(line.qty)) || line.qty <= 0 || line.qty > 100) fail(line, 'cart_line_invalid');
     const flags = [coupon(line),reward(line),boost(line),custom(line),half(line),promo(line)];
     if (flags.filter(Boolean).length > 1) fail(line, 'cart_line_invalid');
@@ -94,7 +99,8 @@ export function priceCheckoutLines(lines, context) {
       const value = productPrice(product,line.size,line);
       const rewardSize = product.selectSize.includes('M') ? 'M' : product.selectSize[0];
       if (line.size !== rewardSize) fail(line,'cart_offer_unavailable');
-      return { ...line, type:'INCENTIVE_REWARD', source:'incentive_reward', price:-value, subtotal:0, directDiscount:null, trendingPricing:null };
+      if (product.directDiscount?.isClearance) fail(line, 'cart_offer_unavailable');
+      return { ...line, type:'INCENTIVE_REWARD', source:'incentive_reward', price:-value, subtotal:0, deliveryUnits: isPizzaCategory(product.category) ? 1 : 0, directDiscount:null, trendingPricing:null };
     }
     if (promo(line)) {
       if (line.pizzaId || array(line.extras).length || array(line.ingredients).length || array(line.customDetails?.ingredients).length) fail(line,'cart_line_invalid');
@@ -102,7 +108,8 @@ export function priceCheckoutLines(lines, context) {
       if (!offer || !offerInWindow(offer,now)) fail(line,'cart_offer_unavailable');
       validatePromoComposition(line,offer,byId);
       if (!equalMoney(line.price,offer.totalPrice) || !equalMoney(line.subtotal,Number(offer.totalPrice)*line.qty)) fail(line);
-      return { ...line, type:'PROMO', source:'promo', name:offer.title, directDiscount:null, trendingPricing:null };
+      const deliveryUnits = array(line.promoItems).reduce((sum, item) => sum + (isPizzaCategory(byId.get(Number(item.pizzaId))?.category) ? Number(item.quantity ?? item.qty ?? 1) : 0), 0);
+      return { ...line, type:'PROMO', source:'promo', name:offer.title, deliveryUnits, directDiscount:null, trendingPricing:null };
     }
     const product = custom(line) ? references.find(p=>p.id===Number(line.pizzaId)) : byId.get(Number(line.pizzaId));
     if (!product) fail(line,'cart_item_unavailable');
@@ -141,6 +148,7 @@ export function priceCheckoutLines(lines, context) {
       }
     } else if (half(line)) {
       const left=byId.get(Number(line.leftPizzaId)), right=byId.get(Number(line.rightPizzaId));
+      if (left?.directDiscount?.isClearance || right?.directDiscount?.isClearance) fail(line, 'cart_offer_unavailable');
       if (!left?.categoryRef?.halfAndHalf || !right?.categoryRef?.halfAndHalf || ![left.id,right.id].includes(product.id)) fail(line,'cart_item_unavailable');
       base=Math.max(productPrice(left,line.size,line),productPrice(right,line.size,line));
     } else {
@@ -148,6 +156,7 @@ export function priceCheckoutLines(lines, context) {
       if (product.trending && Number(line.price)>=Math.max(0,base-0.5) && Number(line.price)<=base+0.5) base=Number(line.price);
       directDiscount=product.directDiscount || null;
       if (line.directDiscount && Number(line.directDiscount.id)!==directDiscount?.id) fail(line,'cart_offer_unavailable');
+      if (line.directDiscount && Boolean(line.directDiscount.isClearance) !== Boolean(directDiscount?.isClearance)) fail(line,'cart_offer_unavailable');
       if (line.trendingPricing && !product.trending) fail(line);
     }
     const seenExtras = new Set();
@@ -169,13 +178,13 @@ export function priceCheckoutLines(lines, context) {
       adjustment:money(base-Number(product.priceBySize[line.size])),adjustmentTotal:money((base-Number(product.priceBySize[line.size]))*line.qty),
       floorPrice:money(Math.max(0,Number(product.priceBySize[line.size])-0.5)),ceilingPrice:money(Number(product.priceBySize[line.size])+0.5),
     } : null;
-    return {...line, categoryId:product.categoryId, category:product.category, directDiscount, trendingPricing, subtotal:total,
+    return {...line, categoryId:product.categoryId, category:product.category, deliveryUnits:isPizzaCategory(product.category) || half(line) ? 1 : 0, directDiscount, trendingPricing, subtotal:total,
       ...(custom(line) ? { customDetails:{...line.customDetails, ingredients:selected} } : {})};
   });
   for(const line of checkRewardThreshold ? priced.filter(reward) : []) {
     const offer=incentives.find(i=>i.id===Number(line.incentiveId));
     const target=offer.triggerMode==='FIXED'?Number(offer.fixedAmount):money(Number(averageTicket)*(1+Number(offer.percentOverAvg||0)/100));
-    const eligible=priced.filter(l=>!reward(l)&&!boost(l)&&!promo(l)&&!l.directDiscount).reduce((sum,l)=>sum+Number(l.subtotal||0),0);
+    const eligible=priced.filter(l=>!reward(l)&&!boost(l)&&!promo(l)&&!l.directDiscount && !(coupon(l) && isDeliveryFreeCoupon(l.coupon))).reduce((sum,l)=>sum+Number(l.subtotal||0),0);
     if(!(target>0)||eligible+0.005<target) fail(line,'cart_offer_unavailable');
   }
   return priced;

@@ -264,6 +264,20 @@ export const checkoutDeliveryAnnouncementDraft = {
   },
 };
 
+// Draft: add release dates and include in the feed only once the storefront is deployed.
+export const deliveryMethodSelectorAnnouncementDraft = {
+  id: 'storefront-delivery-method-selector-2026-09', revision: 1,
+  category: 'improvement', severity: 'info',
+  title: 'Método de entrega más visible en la tienda online',
+  message: 'La cabecera destaca en naranja si el pedido es para recoger o enviar a domicilio y alterna ese mensaje con el destino. Toca el destino o el pequeño lápiz para revisar el método de entrega desde el móvil o el ordenador.',
+  translations: {
+    en: { title: 'A clearer delivery method in your online store', message: 'The header highlights collection or home delivery in orange, alternating that message with the destination. Customers can tap the destination or small pencil to review their delivery method on mobile or desktop.' },
+    it: { title: 'Modalità di consegna più visibile nel negozio online', message: 'L’intestazione evidenzia in arancione il ritiro o la consegna a domicilio, alternando il messaggio con la destinazione. Tocca la destinazione o la piccola matita per rivedere la modalità di consegna da telefono o computer.' },
+    fr: { title: 'Un mode de livraison plus visible dans la boutique en ligne', message: 'L’en-tête met en évidence en orange le retrait ou la livraison à domicile, en alternant ce message avec la destination. Touchez la destination ou le petit crayon pour revoir le mode de livraison sur mobile ou ordinateur.' },
+    pt: { title: 'Método de entrega mais visível na loja online', message: 'O cabeçalho destaca a laranja se o pedido é para recolha ou entrega ao domicílio, alternando a mensagem com o destino. Toque no destino ou no pequeno lápis para rever o método de entrega no telemóvel ou computador.' },
+  },
+};
+
 // Draft: activate only with the corresponding POS/web rollout; one USB terminal is not a general release.
 export const posCategoryAlignmentAnnouncementDraft = {
   id: 'pos-category-alignment-2026-09', revision: 1, category: 'improvement', severity: 'info',
@@ -274,5 +288,83 @@ export const posCategoryAlignmentAnnouncementDraft = {
     it: { title: 'Categorie più leggibili nel POS', message: 'I nomi lunghi delle categorie sono allineati a sinistra su più righe, con i conteggi separati a destra. Disponibile su SUNMI dalla versione 0.3.11.' },
     fr: { title: 'Catégories plus lisibles dans le POS', message: 'Les noms longs des catégories passent sur plusieurs lignes alignées à gauche, avec les compteurs séparés à droite. Disponible sur SUNMI à partir de la version 0.3.11.' },
     pt: { title: 'Categorias mais legíveis no POS', message: 'Os nomes longos das categorias aparecem em várias linhas alinhadas à esquerda, com os contadores separados à direita. Disponível no SUNMI a partir da versão 0.3.11.' },
+  },
+};
+// Publish only with the coordinated storefront/backend rollout.
+export const topDealDeletedProductRecoveryDraft = {
+  id: "top-deal-deleted-product-recovery-2026-09", revision: 1,
+  category: "improvement", severity: "info",
+  title: "Editar Top Deals con productos eliminados",
+  message: "Al guardar un Top Deal antiguo, se retiran las referencias a productos eliminados y se conservan los productos válidos. Si ya no queda ninguno, el backoffice te pide elegir otro antes de guardar.",
+  translations: {
+    en: { title: "Edit Top Deals with deleted products", message: "Saving an older Top Deal removes references to deleted products and keeps valid products. If none remain, the backoffice asks you to select another product before saving." },
+    it: { title: "Modificare Top Deal con prodotti eliminati", message: "Salvando un vecchio Top Deal vengono rimossi i riferimenti ai prodotti eliminati e mantenuti quelli validi. Se non ne rimane nessuno, il backoffice chiede di selezionare un altro prodotto prima di salvare." },
+    fr: { title: "Modifier les Top Deals avec des produits supprimés", message: "Enregistrer un ancien Top Deal retire les références aux produits supprimés et conserve les produits valides. S’il n’en reste aucun, le backoffice demande de choisir un autre produit avant d’enregistrer." },
+    pt: { title: "Editar Top Deals com produtos eliminados", message: "Ao guardar um Top Deal antigo, são retiradas as referências a produtos eliminados e mantidos os produtos válidos. Se não restar nenhum, o backoffice pede para selecionar outro produto antes de guardar." },
+  },
+};
+
+// Activate together with the updated backoffice after deployment.
+export const linkedProductDeletionGuardDraft = {
+  id: "linked-product-deletion-guard-2026-09", revision:1,category:"improvement",severity:"info",
+  title:"Productos vinculados protegidos",
+  message:"Al intentar eliminar un producto, un cartel amarillo de Volta con letras púrpuras muestra sus Top Deals, promos, incentivos y reglas de precio vinculados, con cantidades y nombres. Retira esas vinculaciones antes de eliminarlo; desactivar una oferta no elimina su vínculo.",
+  translations:{
+    en:{title:"Linked products protected",message:"When you try to delete a product, a yellow Volta notice with purple text lists its linked Top Deals, promos, incentives and price rules, with counts and names. Remove these links before deleting it; deactivating an offer does not remove its link."},
+    it:{title:"Prodotti collegati protetti",message:"Quando provi a eliminare un prodotto, un avviso giallo Volta con testo viola elenca Top Deal, promo, incentivi e regole di prezzo collegati, con quantità e nomi. Rimuovi questi collegamenti prima di eliminarlo; disattivare un’offerta non elimina il collegamento."},
+    fr:{title:"Protection des produits liés",message:"Lorsque vous essayez de supprimer un produit, un avis Volta jaune au texte violet affiche ses Top Deals, promos, récompenses et règles de prix liés, avec leurs nombres et noms. Retirez ces liens avant de le supprimer ; désactiver une offre ne retire pas son lien."},
+    pt:{title:"Produtos associados protegidos",message:"Ao tentar eliminar um produto, um aviso amarelo da Volta com texto roxo apresenta os Top Deals, promos, incentivos e regras de preço associados, com quantidades e nomes. Remova essas associações antes de o eliminar; desativar uma oferta não elimina a associação."},
+  },
+};
+
+// Activate with the matching storefront release.
+export const catalogSurfaceAnnouncementDraft = {
+  id:'catalog-continuous-surface-2026-09', revision:1, category:'improvement', severity:'info',
+  title:'Más espacio al final de la carta',
+  message:'El fondo de la carta se extiende hasta la zona de pago aunque una categoría tenga pocos productos. Las tarjetas dejan margen a ambos lados dentro del panel blanco. La última tarjeta conserva espacio para leerse completa al terminar de desplazarte, también en la vitrina ampliada.',
+  translations:{
+    en:{title:'More room at the end of the menu',message:'The menu background extends to the payment area even when a category has few products. Cards leave room on both sides inside the white panel. The last card has room to remain fully readable at the end of scrolling, including in the expanded catalog.'},
+    it:{title:'Più spazio alla fine del menu',message:'Lo sfondo del menu si estende fino all’area di pagamento anche nelle categorie con pochi prodotti. Le schede lasciano spazio su entrambi i lati del pannello bianco. L’ultima scheda resta interamente leggibile alla fine dello scorrimento, anche nella vetrina ampliata.'},
+    fr:{title:'Plus d’espace en bas de la carte',message:'Le fond de la carte s’étend jusqu’à la zone de paiement, même dans les catégories avec peu de produits. Les fiches gardent une marge de chaque côté dans le panneau blanc. La dernière fiche reste entièrement lisible en fin de défilement, y compris dans la vitrine agrandie.'},
+    pt:{title:'Mais espaço no fim da ementa',message:'O fundo da ementa estende-se até à zona de pagamento mesmo nas categorias com poucos produtos. Os cartões deixam espaço dos dois lados dentro do painel branco. O último cartão mantém espaço para ser lido por completo no fim da deslocação, incluindo na montra ampliada.'},
+  },
+};
+
+export const multiSizePricesAnnouncementDraft = {
+  id:'multi-size-card-prices-2026-09', revision:1, category:'improvement', severity:'info',
+  title:'Cada tamaño con su precio',
+  message:'Los productos con varios tamaños alternan su precio y tamaño entre paréntesis cada dos segundos, con el ritmo de Trending. Los productos de un solo tamaño mantienen su presentación habitual.',
+  translations:{
+    en:{title:'A price for every size',message:'Products with multiple sizes rotate their price and size in parentheses every two seconds, matching the Trending cadence. Single-size products keep their usual presentation.'},
+    it:{title:'Un prezzo per ogni formato',message:'I prodotti con più formati alternano prezzo e formato tra parentesi ogni due secondi, con il ritmo di Trending. I prodotti con un solo formato mantengono la presentazione abituale.'},
+    fr:{title:'Un prix pour chaque taille',message:'Les produits proposés en plusieurs tailles alternent leur prix et leur taille entre parenthèses toutes les deux secondes, au rythme de Trending. Ceux à taille unique conservent leur présentation habituelle.'},
+    pt:{title:'Um preço para cada tamanho',message:'Os produtos com vários tamanhos alternam o preço e o tamanho entre parênteses a cada dois segundos, ao ritmo de Trending. Os produtos de tamanho único mantêm a apresentação habitual.'},
+  },
+};
+
+// Activate with the updated backoffice release.
+export const compactTopDealsTableAnnouncementDraft = {
+  id: 'compact-top-deals-table-2026-09', revision: 1, category: 'improvement', severity: 'info',
+  title: 'Top Deals publicados más fáciles de leer',
+  message: 'La tabla del backoffice muestra cantidad disponible y unidades usadas como 5 / 0, y solo el número de productos y tiendas seleccionados. Configurar hoy ocupa una sola línea. El símbolo ∞ indica cantidad ilimitada.',
+  translations: {
+    en: { title: 'Published Top Deals are easier to read', message: 'The backoffice table shows available quantity and used units as 5 / 0, and only the count of selected products and stores. Configure today stays on one line. The ∞ symbol means unlimited quantity.' },
+    it: { title: 'Top Deal pubblicati più facili da leggere', message: 'La tabella del backoffice mostra quantità disponibile e unità utilizzate come 5 / 0, e solo il numero di prodotti e negozi selezionati. Configura oggi resta su una sola riga. Il simbolo ∞ indica quantità illimitata.' },
+    fr: { title: 'Des Top Deals publiés plus lisibles', message: 'Le tableau du backoffice affiche la quantité disponible et les unités utilisées sous la forme 5 / 0, avec uniquement le nombre de produits et de boutiques sélectionnés. Configurer aujourd’hui tient sur une ligne. Le symbole ∞ indique une quantité illimitée.' },
+    pt: { title: 'Top Deals publicados mais fáceis de ler', message: 'A tabela do backoffice mostra a quantidade disponível e as unidades utilizadas como 5 / 0, e apenas o número de produtos e lojas selecionados. Configurar hoje fica numa só linha. O símbolo ∞ indica quantidade ilimitada.' },
+  },
+};
+
+export const clearanceTopDealAnnouncementDraft = {
+  id: "clearance-top-deal-2026-09", revision: 1,
+  category: "improvement", severity: "info",
+  title: "Liquidación dentro de Top Deal",
+  message: "Marca Producto en liquidación al crear o editar un Top Deal. Se identifica con una banda roja horizontal con el texto centrado que se desvanece y reaparece suavemente en la carta y permite recoger sin pedido mínimo, también en carritos mixtos. Conserva las cantidades y la duración del Top Deal.",
+  detail: "El delivery exige el mínimo de productos después de descuentos, sin contar portes. La liquidación no recibe descuentos adicionales ni desbloquea regalos o envío gratis. Las promos conservan su precio global, aunque incluyan productos vendidos también en liquidación; los descuentos individuales no se acumulan. Conserva los beneficios de los demás productos y cobra los bloques adicionales de reparto que genere.",
+  translations: {
+    en: { title: "Clearance within Top Deal", message: "Select Clearance product when creating or editing a Top Deal. A horizontal red ribbon with centered text that gently fades out and back in identifies it on the menu and allows pickup without a minimum order, including mixed carts. Top Deal quantities and duration still apply.", detail: "Delivery requires the minimum product spend after discounts, excluding shipping. Clearance gets no extra discounts and does not unlock gifts or free shipping. Packs keep their configured total price even when a component is also sold on clearance; individual discounts do not stack. Other products keep their benefits; any additional delivery blocks caused by clearance are charged." },
+    it: { title: "Liquidazione all’interno di Top Deal", message: "Seleziona Prodotto in liquidazione quando crei o modifichi un Top Deal. Una fascia rossa orizzontale con testo centrato che sfuma e riappare dolcemente identifica il prodotto nel menu e consente il ritiro senza ordine minimo, anche nei carrelli misti. Restano valide quantità e durata del Top Deal.", detail: "La consegna richiede l’importo minimo dei prodotti dopo gli sconti, escluse le spese di consegna. La liquidazione non riceve altri sconti né sblocca omaggi o consegna gratuita. Le promo mantengono il prezzo globale anche se includono prodotti venduti anche in liquidazione; gli sconti individuali non si sommano. Gli altri prodotti mantengono i benefici; i blocchi di consegna aggiuntivi generati dalla liquidazione sono a pagamento." },
+    fr: { title: "Liquidation dans Top Deal", message: "Sélectionnez Produit en liquidation lors de la création ou de la modification d’un Top Deal. Un bandeau rouge horizontal au texte centré qui disparaît et réapparaît en douceur le signale sur la carte et permet le retrait sans minimum de commande, même avec d’autres produits. Les quantités et la durée du Top Deal restent applicables.", detail: "La livraison exige le minimum de produits après réductions, hors frais de livraison. La liquidation ne reçoit aucune réduction supplémentaire et ne débloque ni cadeaux ni livraison gratuite. Les packs conservent leur prix global même si un produit est aussi vendu en liquidation ; les réductions individuelles ne se cumulent pas. Les autres produits conservent leurs avantages ; les blocs de livraison supplémentaires dus à la liquidation sont facturés." },
+    pt: { title: "Liquidação dentro do Top Deal", message: "Selecione Produto em liquidação ao criar ou editar um Top Deal. Uma faixa vermelha horizontal com texto centrado que desaparece e reaparece suavemente identifica o produto na ementa e permite recolha sem pedido mínimo, incluindo carrinhos mistos. Mantêm-se as quantidades e a duração do Top Deal.", detail: "A entrega exige o mínimo em produtos após descontos, sem contar portes. A liquidação não recebe descontos adicionais nem desbloqueia ofertas ou portes grátis. Os packs mantêm o preço global mesmo quando incluem produtos também vendidos em liquidação; os descontos individuais não se acumulam. Os restantes produtos mantêm os benefícios; os blocos de entrega adicionais gerados pela liquidação são cobrados." },
   },
 };

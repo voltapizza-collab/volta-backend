@@ -1,4 +1,5 @@
 import express from "express";
+import { deleteUnlinkedProduct, getProductLinks } from "../services/productLinks.js";
 import multer from "multer";
 import { v2 as cloudinary } from "cloudinary";
 import { assertCloudinaryConfigured } from "../services/cloudinaryConfig.js";
@@ -864,24 +865,35 @@ export default function pizzasRoutes(prisma) {
     }
   });
 
+  router.get("/:id/links", async (req, res) => {
+    try {
+      const id = Number(req.params.id);
+      if (!Number.isSafeInteger(id) || id <= 0) return res.status(400).json({ error:"bad_id" });
+      const product = await prisma.menuPizza.findUnique({where:{id}});
+      if (!product) return res.status(404).json({ error:"product_not_found" });
+      return res.json({ productName:product.name, links:await getProductLinks(prisma,product) });
+    } catch (error) { sendError(res,error); }
+  });
+
   router.delete("/:id", async (req, res) => {
     try {
       const id = Number(req.params.id);
-      const existing = await prisma.menuPizza.findUnique({
-        where: { id },
-        select: { imagePublicId: true },
-      });
+      if (!Number.isSafeInteger(id) || id <= 0) return res.status(400).json({ error: "bad_id" });
+      const existing = await deleteUnlinkedProduct(prisma, id);
 
       if (existing?.imagePublicId) {
-        assertCloudinaryConfigured();
-        await cloudinary.uploader.destroy(existing.imagePublicId);
+        // Media cleanup follows the committed deletion, never a blocked attempt.
+        try {
+          assertCloudinaryConfigured();
+          await cloudinary.uploader.destroy(existing.imagePublicId);
+        } catch (error) { console.error("Deleted product image cleanup failed:", error); }
       }
 
-      await prisma.menuPizza.delete({ where: { id } });
       res.json({ ok: true });
     } catch (err) {
+      if (err.message === "product_linked") return res.status(409).json({ error: "product_linked", productName:err.productName, links:err.links });
       console.error("DELETE /pizzas error:", err);
-      res.status(400).json({ error: err.message });
+      res.status(err.status || 400).json({ error: err.message });
     }
   });
 

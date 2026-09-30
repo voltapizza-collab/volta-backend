@@ -2,6 +2,7 @@ import {
   getGoogleGeocodingKey, geocodeCustomerAddress, computeDrivingDistances,
   isPreciseCustomerGeocode, validCoordinates,
 } from './deliveryGeography.js';
+import { getDeliveryBlocks } from './fulfillmentPolicy.js';
 
 const money = value => Math.round(Number(value) * 100) / 100;
 const nonNegative = value => Number.isFinite(Number(value)) && Number(value) >= 0;
@@ -66,6 +67,10 @@ export async function validateCheckoutDelivery(partner, store, delivery, depende
     quote={resolved:true,deliveryFee:calculateDeliveryFee(partner,0),distanceKm:null,coords:null,
       source:'MANUAL_FALLBACK',manualReviewRequired:true,reason:quote.reason};
   }
+  const baseFee = quote.deliveryFee;
+  const blocks = partner.deliveryPricingMode === 'VARIABLE' || delivery.method !== 'COURIER'
+    ? 1 : getDeliveryBlocks(delivery.lines || [{}], partner.deliveryFeeBlockSize).totalBlocks;
+  quote = { ...quote, baseFee, deliveryBlocks: blocks, deliveryFeeBlockSize: Math.max(1, Math.trunc(Number(partner.deliveryFeeBlockSize) || 5)), deliveryFee: money(baseFee * blocks) };
   if(delivery.method==='COURIER' &&
     (delivery.deliveryFee == null || !nonNegative(delivery.deliveryFee) || Math.abs(money(delivery.deliveryFee)-quote.deliveryFee)>0.004 ||
     (quote.manualReviewRequired && delivery.manualReviewAccepted!==true)))
@@ -77,6 +82,7 @@ export function deliveryPolicyFingerprint(partner,store) {
   return JSON.stringify([
     partner.country || 'ES',partner.deliveryPricingMode || 'FIXED',
     Number(partner.deliveryFeeFixed || 0),Number(partner.deliveryFeeBase || 0),
+    Number(partner.deliveryFeeBlockSize || 5),
     Number(partner.deliveryBaseKm || 0),Number(partner.deliveryExtraPerKm || 0),
     partner.deliveryRadiusKm == null ? null : Number(partner.deliveryRadiusKm),
     store.latitude == null ? null : Number(store.latitude),store.longitude == null ? null : Number(store.longitude),

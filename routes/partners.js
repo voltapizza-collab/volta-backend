@@ -1,6 +1,7 @@
 import { COVERAGE_ROUTE_ESTIMATE_FACTOR, getGoogleGeocodingKey, geocodeAddress, geocodeCustomerAddress, computeDrivingDistances, haversineKm, isPreciseCustomerGeocode } from "../services/deliveryGeography.js";
 export { isPreciseCustomerGeocode } from "../services/deliveryGeography.js";
 import express from "express";
+import { withProductReferences } from "../services/productLinks.js";
 import crypto from "crypto";
 import multer from "multer";
 import { v2 as cloudinary } from "cloudinary";
@@ -1538,18 +1539,16 @@ router.put("/by-id/:partnerId/price-adjustments", async (req, res) => {
 
     const rules = normalizePriceAdjustmentRules(req.body?.rules);
 
-    await prisma.$executeRawUnsafe(
-      `UPDATE Partner
-          SET priceAdjustmentRules = CAST(? AS JSON)
-        WHERE id = ?`,
-      JSON.stringify(rules),
-      partnerId
-    );
+    await withProductReferences(prisma, partnerId, rules.flatMap(rule => rule.productIds || []), tx =>
+      tx.$executeRawUnsafe(
+        `UPDATE Partner SET priceAdjustmentRules = CAST(? AS JSON) WHERE id = ?`,
+        JSON.stringify(rules), partnerId
+      ));
 
     return res.json({ ok: true, rules });
   } catch (e) {
     console.error("UPDATE PARTNER PRICE ADJUSTMENTS ERROR:", e);
-    res.status(500).json({ error: e.message });
+    res.status(e.status || 500).json({ error: e.message });
   }
 });
 

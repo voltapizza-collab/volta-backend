@@ -597,7 +597,7 @@ const chooseBestDiscountForPizza = (pizza, discounts, storeId) => {
 
   return candidates
     .slice()
-    .sort((left, right) => getDiscountSaving(referencePrice, right) - getDiscountSaving(referencePrice, left))[0];
+    .sort((left, right) => Number(right.isClearance === true) - Number(left.isClearance === true) || getDiscountSaving(referencePrice, right) - getDiscountSaving(referencePrice, left))[0];
 };
 
 const applyDirectDiscountToPizza = (pizza, discount) => {
@@ -618,6 +618,7 @@ const applyDirectDiscountToPizza = (pizza, discount) => {
     directDiscount: {
       id: discount.id,
       title: discount.title,
+      isClearance: discount.isClearance === true,
       discountType: discount.discountType,
       value: Number(discount.effectiveValue ?? discount.value ?? 0),
       baseValue: Number(discount.value || 0),
@@ -652,8 +653,8 @@ export async function loadStorefrontPricing(prisma, { partner, store, activeTopD
   const trendIds = new Set(trending.map(p => p.pizzaId));
   const rules = normalizePriceAdjustmentRules(partner.priceAdjustmentRules).filter(rule => isPriceAdjustmentWithinWindow(rule, nowInTZ()));
   const price = p => {
-    if (trendIds.has(p.id)) return { ...p, trending: true, directDiscount: null };
     const discount = chooseBestDiscountForPizza(p, activeTopDeals.filter(d => !isDirectDiscountSoldOut(d)), store.id);
+    if (trendIds.has(p.id) && !discount?.isClearance) return { ...p, trending: true, directDiscount: null };
     return applyDirectDiscountToPizza(discount ? p : applyPriceAdjustmentRulesToPizza(p, rules, store.id), discount);
   };
   return { menu:available.map(price), references:references.map(price), products };
@@ -840,6 +841,7 @@ const attachStorePublicMenu = (router, prisma) => {
         .filter((pizza) => (!pizza.launchAt || pizza.launchAt <= now) && (!pizza.availableUntil || pizza.availableUntil > now))
         .map((pizza) => mapPublicPizza(pizza, true));
       const trendingSourceMenu = availablePizzas
+        .filter(pizza => !chooseBestDiscountForPizza(pizza, activeDirectDiscounts, store.id)?.isClearance)
         .filter((pizza) => (!pizza.launchAt || pizza.launchAt <= now) && (!pizza.availableUntil || pizza.availableUntil > now))
         .map((pizza) =>
           mapPublicPizza(pizza, true, {
