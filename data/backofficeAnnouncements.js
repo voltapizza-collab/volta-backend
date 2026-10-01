@@ -129,7 +129,22 @@ export const ingredientRemovalAnnouncement = {
   },
 };
 
+// Published after verifying the matching storefront release.
+export const singleLineCardPricesAnnouncement = {
+  id: 'single-line-card-prices-2026-10', revision: 1, category: 'improvement', severity: 'info',
+  publishedAt: '2026-10-01T11:31:42.000Z', expiresAt: '2027-01-01T11:31:42.000Z',
+  title: 'Precios más claros en el móvil',
+  message: 'La moneda y el importe permanecen juntos en una línea en las tarjetas de la carta. Si falta espacio en un Top Deal, la disponibilidad pasa debajo. Revisa tu carta desde el móvil; no necesitas cambiar los precios.',
+  translations: {
+    en: { title: 'Clearer prices on mobile', message: 'The currency and amount stay together on one line in menu cards. If a Top Deal runs out of space, availability moves below. Check your menu on mobile; no price changes are needed.' },
+    it: { title: 'Prezzi più chiari sul cellulare', message: 'Valuta e importo restano insieme su una riga nelle schede del menu. Se manca spazio in un Top Deal, la disponibilità passa sotto. Controlla il menu dal cellulare; non occorre modificare i prezzi.' },
+    fr: { title: 'Des prix plus lisibles sur mobile', message: 'La devise et le montant restent ensemble sur une ligne dans les fiches de la carte. Si un Top Deal manque de place, la disponibilité passe en dessous. Consultez votre carte sur mobile ; aucun changement de prix n’est nécessaire.' },
+    pt: { title: 'Preços mais claros no telemóvel', message: 'A moeda e o valor ficam juntos numa linha nos cartões da ementa. Se faltar espaço num Top Deal, a disponibilidade passa para baixo. Consulte a ementa no telemóvel; não precisa de alterar os preços.' },
+  },
+};
+
 export const backofficeAnnouncements = [
+  singleLineCardPricesAnnouncement,
   productSpecialNoticesAnnouncement,
   ingredientAvailableBadgeAnnouncement,
   notificationInboxAnnouncement,
