@@ -1,7 +1,104 @@
 // Add a user-facing note in the same change that delivers a feature.
+// Draft: keep outside the feed until the update channel is available to recipients.
+export const posUpdatesAnnouncementDraft = {
+  id: "pos-updates-2026-10", revision: 1, category: "improvement", severity: "info",
+  title: "Actualizaciones del terminal Volta POS",
+  message: "El menú del terminal permite consultar su versión y autorizar las actualizaciones en Android. Las versiones asignadas se descargan por internet y esperan una ventana de mantenimiento, batería suficiente y el fin de las operaciones antes de instalarse.",
+  translations: {
+    en: { title: "Volta POS terminal updates", message: "The terminal menu lets you check its version and authorize updates in Android. Assigned versions download over the internet and wait for a maintenance window, sufficient battery and completed operations before installation." },
+    it: { title: "Aggiornamenti del terminale Volta POS", message: "Il menu del terminale consente di consultare la versione e autorizzare gli aggiornamenti in Android. Le versioni assegnate vengono scaricate tramite internet e attendono una finestra di manutenzione, una carica sufficiente e la fine delle operazioni prima dell’installazione." },
+    fr: { title: "Mises à jour du terminal Volta POS", message: "Le menu du terminal permet de consulter sa version et d’autoriser les mises à jour dans Android. Les versions attribuées sont téléchargées par internet et attendent une période de maintenance, une batterie suffisante et la fin des opérations avant l’installation." },
+    pt: { title: "Atualizações do terminal Volta POS", message: "O menu do terminal permite consultar a versão e autorizar atualizações no Android. As versões atribuídas são descarregadas pela internet e aguardam uma janela de manutenção, bateria suficiente e o fim das operações antes da instalação." },
+  },
+};
+// Draft: publish only when APK 0.3.12 or later is distributed to the recipients.
+export const posInitialEnrollmentAnnouncementDraft = {
+  id: "pos-initial-enrollment-2026-10", revision: 1,
+  category: "improvement", severity: "info",
+  title: "Registro inicial de nuevos terminales POS",
+  message: "Al abrir Volta en un terminal nuevo, introduce el código de alta proporcionado por Volta. Una vez autorizado el equipo, accede a tu tienda con su usuario y PIN POS.",
+  translations: {
+    en: { title: "Initial registration of new POS terminals", message: "When opening Volta on a new terminal, enter the enrollment code provided by Volta. Once the device is authorized, sign in to your store using its username and POS PIN." },
+    it: { title: "Registrazione iniziale dei nuovi terminali POS", message: "Quando apri Volta su un nuovo terminale, inserisci il codice di registrazione fornito da Volta. Dopo l’autorizzazione del dispositivo, accedi al tuo negozio con il suo nome utente e PIN POS." },
+    fr: { title: "Enregistrement initial des nouveaux terminaux POS", message: "À l’ouverture de Volta sur un nouveau terminal, saisissez le code d’enregistrement fourni par Volta. Une fois l’appareil autorisé, connectez-vous à votre boutique avec son identifiant et son code PIN POS." },
+    pt: { title: "Registo inicial de novos terminais POS", message: "Ao abrir a Volta num novo terminal, introduza o código de registo fornecido pela Volta. Após a autorização do equipamento, aceda à sua loja com o respetivo utilizador e PIN POS." },
+  },
+};
 // Keep IDs stable; increase revision only when users need to read the note again.
 // Draft: add to backofficeAnnouncements and set publication dates only after the
 // matching storefront is available. This export alone does not enter the feed.
+export const conciseClearanceBannerAnnouncementDraft = {
+  id: "concise-clearance-banner-2026-10", revision: 1,
+  category: "improvement", severity: "info",
+  title: "Liquidación más clara en la ficha",
+  message: "El aviso de liquidación se resume en recogida sin pedido mínimo, tiempo restante y unidades disponibles para añadir. Tus clientes pueden consultar lo esencial de un vistazo; las condiciones de compra se mantienen.",
+  translations: {
+    en: { title: "Clearer clearance product details", message: "The clearance notice now summarises pickup with no minimum order, time remaining and units available to add. Customers can see the essentials at a glance; purchase conditions remain unchanged." },
+    it: { title: "Liquidazione più chiara nella scheda", message: "L’avviso di liquidazione riassume ritiro senza ordine minimo, tempo rimanente e unità disponibili da aggiungere. I clienti possono vedere subito le informazioni essenziali; le condizioni di acquisto restano invariate." },
+    fr: { title: "Une fiche de déstockage plus claire", message: "L’avis de déstockage résume le retrait sans minimum de commande, le temps restant et les unités disponibles à ajouter. Les clients voient l’essentiel en un coup d’œil ; les conditions d’achat restent inchangées." },
+    pt: { title: "Liquidação mais clara na ficha", message: "O aviso de liquidação resume a recolha sem pedido mínimo, o tempo restante e as unidades disponíveis para adicionar. Os clientes consultam o essencial num instante; as condições de compra mantêm-se." },
+  },
+};
+
+export const logoPreparationAnnouncementDraft = {
+  "id": "logo-preparation-2026-10",
+  "revision": 1,
+  "category": "improvement",
+  "severity": "info",
+  "title": "Sube tu logo y listo",
+  "message": "Selecciona tu logo en los ajustes del backoffice: se prepara y guarda automáticamente, sin pasos de confirmación. Quitamos el fondo exterior cuando se puede separar y ajustamos los márgenes.",
+  "detail": "El original se conserva internamente. Si no podemos separar el fondo con seguridad, guardamos la imagen con su fondo y mostramos un aviso breve. Para actualizar un logo anterior, vuelve a subir su archivo.",
+  "translations": {
+    "en": {
+      "title": "Upload your logo and you’re done",
+      "message": "Select your logo in backoffice settings: it is prepared and saved automatically, with no confirmation steps. We remove the outer background when it can be separated and adjust the margins.",
+      "detail": "The original is retained internally. If the background cannot be safely separated, we save the image with its background and show a short notice. To update an older logo, upload its file again."
+    },
+    "it": {
+      "title": "Carica il tuo logo e basta",
+      "message": "Seleziona il logo nelle impostazioni del backoffice: viene preparato e salvato automaticamente, senza conferme. Rimuoviamo lo sfondo esterno quando è separabile e adattiamo i margini.",
+      "detail": "L’originale viene conservato internamente. Se lo sfondo non può essere separato con sicurezza, salviamo l’immagine con lo sfondo e mostriamo un breve avviso. Per aggiornare un logo precedente, carica nuovamente il file."
+    },
+    "fr": {
+      "title": "Chargez votre logo, et c’est tout",
+      "message": "Sélectionnez votre logo dans les paramètres du backoffice : il est préparé et enregistré automatiquement, sans confirmation. Nous supprimons le fond extérieur lorsqu’il peut être séparé et ajustons les marges.",
+      "detail": "L’original est conservé en interne. Si le fond ne peut pas être séparé avec certitude, nous enregistrons l’image avec son fond et affichons un bref message. Pour actualiser un ancien logo, chargez à nouveau son fichier."
+    },
+    "pt": {
+      "title": "Carregue o seu logótipo e pronto",
+      "message": "Selecione o logótipo nas definições do backoffice: é preparado e guardado automaticamente, sem confirmações. Removemos o fundo exterior quando é possível separá-lo e ajustamos as margens.",
+      "detail": "O original fica guardado internamente. Se não conseguirmos separar o fundo com segurança, guardamos a imagem com o fundo e mostramos um aviso breve. Para atualizar um logótipo anterior, carregue novamente o ficheiro."
+    }
+  }
+};
+
+export const unifiedStoreGateAnnouncementDraft = {
+  id: "unified-store-gate-2026-10", revision: 1,
+  category: "improvement", severity: "info",
+  title: "Una entrada común para todas las pizzerías",
+  message: "La entrada muestra el logo de tu negocio sobre el mismo fondo animado y el botón Pedir en línea. Espera los datos del negocio antes de mostrar el logo definitivo, sin cambiar de imagen al terminar la carga. Si no tienes logo, aparece el nombre de tu pizzería.",
+  translations: {
+    en: { title: "A shared entrance for every pizzeria", message: "The entrance displays your business logo on the same animated background with the Pedir en línea button. It waits for business data before showing the final logo, without switching images when loading finishes. If you have no logo, your pizzeria name appears." },
+    it: { title: "Un ingresso comune per tutte le pizzerie", message: "L’ingresso mostra il logo della tua attività sullo stesso sfondo animato con il pulsante Pedir en línea. Attende i dati dell’attività prima di mostrare il logo definitivo, senza cambiare immagine al termine del caricamento. Se non hai un logo, appare il nome della pizzeria." },
+    fr: { title: "Une entrée commune à toutes les pizzerias", message: "L’entrée affiche le logo de votre établissement sur le même fond animé avec le bouton Pedir en línea. Elle attend les données de l’établissement avant d’afficher le logo définitif, sans changer d’image à la fin du chargement. Sans logo, le nom de votre pizzeria apparaît." },
+    pt: { title: "Uma entrada comum para todas as pizzarias", message: "A entrada apresenta o logótipo do seu negócio sobre o mesmo fundo animado e o botão Pedir en línea. Aguarda os dados do negócio antes de mostrar o logótipo definitivo, sem trocar a imagem quando termina o carregamento. Se não tiver logótipo, aparece o nome da pizzaria." },
+  },
+};
+
+export const partnerLogoAnnouncementDraft = {
+  id: "partner-logo-2026-10", revision: 1,
+  category: "improvement", severity: "info",
+  title: "Tu logo en la entrada y en cupones",
+  message: "El logo que subes en los ajustes del backoffice identifica tu negocio en la entrada, al iniciar el pedido y en la galería de cupones. Si falta o no carga, el nombre sigue visible. La carta ya no utiliza el logo como fondo gris.",
+  detail: "El logo se comparte entre las sucursales del negocio. Al reemplazarlo, el anterior se conserva hasta guardar correctamente el nuevo. Para mostrarlo sin recuadro, utiliza un PNG con fondo transparente y sin márgenes grandes.",
+  translations: {
+    en: { title: "Your logo at the entrance and in coupons", message: "The logo uploaded in backoffice settings identifies your business at the entrance, when starting an order and in the coupon gallery. If it is missing or fails to load, the name remains visible. The menu no longer uses the logo as a grey background.", detail: "The logo is shared across your business locations. When replacing it, the previous logo is kept until the new one is saved successfully. To display it without a rectangle, use a PNG with a transparent background and no large margins." },
+    it: { title: "Il tuo logo all’ingresso e nei coupon", message: "Il logo caricato nelle impostazioni del backoffice identifica la tua attività all’ingresso, all’inizio dell’ordine e nella galleria dei coupon. Se manca o non si carica, il nome resta visibile. Il menu non usa più il logo come sfondo grigio.", detail: "Il logo è condiviso tra le sedi dell’attività. Quando lo sostituisci, il precedente viene conservato finché il nuovo non è salvato correttamente. Per mostrarlo senza riquadro, usa un PNG con sfondo trasparente e senza margini ampi." },
+    fr: { title: "Votre logo à l’entrée et dans les coupons", message: "Le logo chargé dans les paramètres du backoffice identifie votre établissement à l’entrée, au début de la commande et dans la galerie de coupons. S’il manque ou ne se charge pas, le nom reste visible. La carte n’utilise plus le logo comme fond gris.", detail: "Le logo est partagé entre les points de vente de votre établissement. Lors de son remplacement, le précédent est conservé jusqu’à l’enregistrement réussi du nouveau. Pour l’afficher sans rectangle, utilisez un PNG à fond transparent et sans grandes marges." },
+    pt: { title: "O seu logótipo na entrada e nos cupões", message: "O logótipo carregado nas definições do backoffice identifica o seu negócio na entrada, ao iniciar o pedido e na galeria de cupões. Se faltar ou não carregar, o nome continua visível. A ementa já não utiliza o logótipo como fundo cinzento.", detail: "O logótipo é partilhado entre as lojas do negócio. Ao substituí-lo, o anterior é mantido até o novo ser guardado com sucesso. Para o mostrar sem retângulo, utilize um PNG com fundo transparente e sem margens grandes." },
+  },
+};
+
 export const ingredientDiscoveryAnnouncementDraft = {
   id: "ingredient-discovery-options-2026-09", revision: 1,
   category: "improvement", severity: "info",

@@ -157,6 +157,9 @@ model Partner {
     brandOfferButtonStyle String?
     brandLogoUrl        String? @db.Text
     brandLogoPublicId   String?
+    brandLogoOriginalUrl String? @db.Text
+    brandLogoOriginalPublicId String?
+    brandLogoProcessing String? @db.VarChar(32)
     minimumPaymentAmount Float?   @default(0)
     storefrontButtonConfig Json?
     storefrontMode       String?

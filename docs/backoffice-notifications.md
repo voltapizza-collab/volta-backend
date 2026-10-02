@@ -1,5 +1,21 @@
 # Avisos del backoffice
 
+## Preparación de logos — borrador local, octubre de 2026
+
+`logoPreparationAnnouncementDraft` incluye ES/EN/IT/FR/PT y permanece fuera del feed. Publicar tras desplegar backend y storefront y aplicar `20261002090000_add_partner_logo_original`. El backend prepara JPG/PNG/WebP estáticos de hasta 8 MB y 16 megapíxeles: detecta el fondo uniforme conectado al borde, conserva blancos interiores y transparencia existente, recorta márgenes y genera un PNG de hasta 1200 px. También reconoce esquinas blancas coincidentes cuando un dibujo redondeado toca los bordes. Los fondos ambiguos se conservan con estado `needs_review`.
+
+El backoffice muestra una sola imagen y «Subir logo». Seleccionar un archivo llama directamente a `POST /partners/by-id/:partnerId/logo`: prepara y guarda el original y la versión procesada sin comparativas ni confirmaciones. Durante la subida se conserva la imagen actual; al terminar se muestra el resultado y, si no se pudo separar el fondo, un aviso breve. El original se conserva internamente. Los endpoints de preview y process-current se mantienen por compatibilidad, pero no aparecen en la interfaz. Se retira solo la copia preparada anterior y se limpian archivos nuevos si falla el guardado.
+
+Para procesar un logo guardado anteriormente se vuelve a subir su archivo. Reiniciar el servidor no reprocesa las imágenes existentes. No hay migración automática de imágenes ni llamadas a servicios de IA. Quitar el fondo de un cartel no extrae el logotipo del cartel.
+
+## Entrada común de las pizzerías — borrador local, octubre de 2026
+
+`unifiedStoreGateAnnouncementDraft` incluye ES/EN/IT/FR/PT y queda fuera del feed hasta publicar el storefront correspondiente. Todas las rutas de negocio usan el mismo StoreGate con fondo animado y botón «Pedir en línea». El logo solo se muestra cuando se resuelve el negocio, sin una imagen provisional distinta; sin logo o con error de imagen se muestra el nombre. Activar con fechas reales tras verificar la versión publicada.
+
+## Logo del negocio — borrador local, octubre de 2026
+
+`partnerLogoAnnouncementDraft` incluye ES/EN/IT/FR/PT y permanece fuera del feed. Describe el logo cargado en la entrada, inicio del pedido y galería de cupones, la retirada del fondo gris de la carta y la conservación del logo anterior si falla su reemplazo. Añadir al feed con fechas reales solo después de publicar y verificar el storefront y el backend correspondientes.
+
 ## Opciones documentadas al buscar ingredientes — borrador local
 
 `ingredientDiscoveryAnnouncementDraft` incluye ES/EN/IT/FR/PT y permanece fuera del feed. Describe las sugerencias acotadas de entrecot y aceitunas verdes del lote 33 en Global Manager. Activarlo con fechas reales solo cuando esté disponible el storefront correspondiente y se haya revisado el destinatario de la nota; no anuncia cambios en la búsqueda del inventario de los negocios. No cambia identificadores ni revisiones de avisos publicados.

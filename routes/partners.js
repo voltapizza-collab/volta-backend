@@ -3,9 +3,9 @@ export { isPreciseCustomerGeocode } from "../services/deliveryGeography.js";
 import express from "express";
 import { withProductReferences } from "../services/productLinks.js";
 import crypto from "crypto";
-import multer from "multer";
 import { v2 as cloudinary } from "cloudinary";
-import { assertCloudinaryConfigured } from "../services/cloudinaryConfig.js";
+import { createPartnerLogoRouter } from "./partnerLogo.js";
+import { uploadLogoAsset, loadStoredLogo } from "../services/partnerLogoStorage.js";
 import { sendSmtpEmail } from "../services/email.js";
 import {
   ensureBackofficeDemoSession,
@@ -23,7 +23,6 @@ import {
 } from "../services/posCredentials.js";
 
 const router = express.Router();
-const upload = multer({ storage: multer.memoryStorage() });
 
 const STOREFRONT_BUTTON_IDS = [
   "selectProducts",
@@ -128,6 +127,9 @@ async function ensurePartnerSettingsColumns() {
     ["brandOfferButtonStyle", "VARCHAR(64) NULL"],
     ["brandLogoUrl", "TEXT NULL"],
     ["brandLogoPublicId", "VARCHAR(255) NULL"],
+    ["brandLogoOriginalUrl", "TEXT NULL"],
+    ["brandLogoOriginalPublicId", "VARCHAR(191) NULL"],
+    ["brandLogoProcessing", "VARCHAR(32) NULL"],
     ["minimumPaymentAmount", "DOUBLE NULL DEFAULT 0"],
     ["storefrontButtonConfig", "JSON NULL"],
     ["storefrontMode", "VARCHAR(64) NULL"],
@@ -181,7 +183,8 @@ async function getPartnerPolicyById(partnerId) {
             deliveryMaxPizzasPerOrder, deliveryFeeFixed, deliveryFeeBase,
             deliveryBaseKm, deliveryExtraPerKm, brandPrimary, brandSecondary,
             brandAccent, brandSurface, brandTextColor, brandFontFamily, brandOfferButtonStyle,
-            brandLogoUrl, brandLogoPublicId, minimumPaymentAmount, storefrontButtonConfig,
+            brandLogoUrl, brandLogoPublicId, brandLogoOriginalUrl, brandLogoOriginalPublicId,
+            brandLogoProcessing, minimumPaymentAmount, storefrontButtonConfig,
             storefrontMode, trackingNotificationSettings, priceAdjustmentRules, paymentPolicySettings
        FROM Partner
       WHERE id = ?`,
@@ -198,7 +201,8 @@ async function getPartnerPolicyBySlug(slug) {
             deliveryMaxPizzasPerOrder, deliveryFeeFixed, deliveryFeeBase,
             deliveryBaseKm, deliveryExtraPerKm, brandPrimary, brandSecondary,
             brandAccent, brandSurface, brandTextColor, brandFontFamily, brandOfferButtonStyle,
-            brandLogoUrl, brandLogoPublicId, minimumPaymentAmount, storefrontButtonConfig,
+            brandLogoUrl, brandLogoPublicId, brandLogoOriginalUrl, brandLogoOriginalPublicId,
+            brandLogoProcessing, minimumPaymentAmount, storefrontButtonConfig,
             storefrontMode, trackingNotificationSettings, priceAdjustmentRules, paymentPolicySettings
        FROM Partner
       WHERE slug = ?`,
@@ -539,26 +543,6 @@ const getPartnerDeletionCounts = async (partnerId) => {
 
 const getBlockingDeletionTotal = (counts) =>
   Object.values(counts).reduce((sum, value) => sum + Number(value || 0), 0);
-
-async function uploadPartnerLogo(file, partnerId) {
-  if (!file) {
-    const error = new Error("Logo file required");
-    error.status = 400;
-    throw error;
-  }
-
-  assertCloudinaryConfigured();
-
-  const result = await cloudinary.uploader.upload(
-    `data:${file.mimetype};base64,${file.buffer.toString("base64")}`,
-    { folder: `volta/partners/${partnerId}/branding` }
-  );
-
-  return {
-    url: result.secure_url,
-    publicId: result.public_id,
-  };
-}
 
 // crear partner
 router.post("/", async (req, res) => {
@@ -1717,49 +1701,24 @@ router.patch("/by-id/:partnerId/branding", async (req, res) => {
   }
 });
 
-router.post("/by-id/:partnerId/logo", upload.single("logo"), async (req, res) => {
-  try {
+router.use("/by-id/:partnerId/logo", createPartnerLogoRouter({
+  getPartner: async (id) => {
     await ensurePartnerSettingsColumns();
-
-    const partnerId = Number(req.params.partnerId);
-
-    if (!Number.isInteger(partnerId)) {
-      return res.status(400).json({ error: "Valid partnerId required" });
-    }
-
-    const partner = await getPartnerPolicyById(partnerId);
-
-    if (!partner) {
-      return res.status(404).json({ error: "Partner not found" });
-    }
-
-    if (partner.brandLogoPublicId) {
-      try {
-        assertCloudinaryConfigured();
-        await cloudinary.uploader.destroy(partner.brandLogoPublicId);
-      } catch (destroyError) {
-        console.error("PARTNER LOGO DESTROY ERROR:", destroyError?.message || destroyError);
-      }
-    }
-
-    const uploadedLogo = await uploadPartnerLogo(req.file, partnerId);
-
-    await prisma.$executeRawUnsafe(
-      `UPDATE Partner
-          SET brandLogoUrl = ?,
-              brandLogoPublicId = ?
-        WHERE id = ?`,
-      uploadedLogo.url,
-      uploadedLogo.publicId,
-      partnerId
+    return getPartnerPolicyById(id);
+  },
+  saveLogo: async (id, logo, previousId) => {
+    const changed = await prisma.$executeRawUnsafe(
+      `UPDATE Partner SET brandLogoUrl = ?, brandLogoPublicId = ?,
+        brandLogoOriginalUrl = ?, brandLogoOriginalPublicId = ?, brandLogoProcessing = ?
+        WHERE id = ? AND brandLogoPublicId <=> ?`,
+      logo.url, logo.publicId, logo.originalUrl, logo.originalPublicId, logo.status, id, previousId ?? null
     );
-
-    const updatedPartner = await getPartnerPolicyById(partnerId);
-    res.json(updatedPartner);
-  } catch (e) {
-    console.error("UPLOAD PARTNER LOGO ERROR:", e);
-    res.status(e.status || 500).json({ error: e.message });
-  }
-});
+    if (!changed) throw Object.assign(new Error("El logo cambió mientras lo preparabas. Abre de nuevo su vista previa."), { status: 409 });
+  },
+  uploadAsset: uploadLogoAsset,
+  removeAsset: (id) => cloudinary.uploader.destroy(id),
+  loadOriginal: loadStoredLogo,
+  onCleanupError: (error) => console.error("PARTNER LOGO CLEANUP ERROR:", error?.message || error),
+}));
 
 export default router;
