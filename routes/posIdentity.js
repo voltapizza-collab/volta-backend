@@ -1,5 +1,6 @@
 import express from 'express';
 import posUiRoutes from './posUi.js';
+import posUpdatesRoutes from './posUpdates.js';
 import { authenticateDevice, enrollDevice, loginStore, requireStoreSession, logoutStore, safeDevice } from '../services/posIdentity.js';
 
 export default function posIdentityRoutes(prisma) {
@@ -7,6 +8,9 @@ export default function posIdentityRoutes(prisma) {
   router.use((_req, res, next) => { res.set('Cache-Control', 'no-store'); next(); });
   router.post('/devices/enroll', async (req, res) => res.status(201).json({ device: await enrollDevice(prisma, req) }));
   router.use(async (req, _res, next) => { req.posDevice = await authenticateDevice(prisma, req); next(); });
+  // Updates are authenticated by the device and remain available when a store
+  // session expires. /prepare still rechecks the current store before install.
+  router.use('/updates', posUpdatesRoutes(prisma));
   router.get('/device', (req, res) => res.json({ device: safeDevice(req.posDevice), serverTime: new Date().toISOString() }));
   router.post('/session', async (req, res) => res.json(await loginStore(prisma, req.posDevice.id, req.body)));
   // A device can always close its own store session even if the PIN/session expired.

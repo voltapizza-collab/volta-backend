@@ -995,6 +995,47 @@ model PosDevice {
   session PosSession?
   nonces PosDeviceNonce[]
   audit PosDeviceAudit[]
+  updateAssignment PosUpdateAssignment?
+  softwareStatus PosSoftwareStatus?
+}
+
+// Immutable signed artifacts. Disabling a release withdraws it from every terminal.
+model PosSoftwareRelease {
+  sha256 String @id @db.VarChar(64)
+  packageName String @db.VarChar(100)
+  versionCode Int @unique
+  versionName String @db.VarChar(80)
+  size Int
+  certificateSha256 String @db.VarChar(64)
+  artifactKey String @unique @db.VarChar(200)
+  title String @db.VarChar(160)
+  releaseNotes String @db.Text
+  enabled Boolean @default(true)
+  publishedBy String @db.VarChar(120)
+  createdAt DateTime @default(now()) @db.DateTime(3)
+  assignments PosUpdateAssignment[]
+}
+
+model PosUpdateAssignment {
+  deviceId String @id @db.VarChar(36)
+  device PosDevice @relation(fields: [deviceId], references: [id], onDelete: Cascade)
+  releaseSha256 String @db.VarChar(64)
+  release PosSoftwareRelease @relation(fields: [releaseSha256], references: [sha256])
+  assignedBy String @db.VarChar(120)
+  assignedAt DateTime @default(now()) @db.DateTime(3)
+  @@index([releaseSha256])
+}
+
+model PosSoftwareStatus {
+  deviceId String @id @db.VarChar(36)
+  device PosDevice @relation(fields: [deviceId], references: [id], onDelete: Cascade)
+  versionCode Int?
+  targetVersionCode Int?
+  state String @default("unknown") @db.VarChar(32)
+  error String? @db.VarChar(100)
+  details Json?
+  lastCheckAt DateTime? @db.DateTime(3)
+  lastReportAt DateTime? @db.DateTime(3)
 }
 
 model PosEnrollment {

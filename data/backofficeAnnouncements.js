@@ -1,14 +1,75 @@
 // Add a user-facing note in the same change that delivers a feature.
+// Draft until 0.3.20 reaches the intended terminals.
+export const posDailyUpdatesAnnouncementDraft = {
+  id: "pos-daily-updates-2026-10", revision: 1, category: "improvement", severity: "info",
+  title: "Actualizaciones con menos interrupciones",
+  message: "Volta busca versiones al abrirse y una vez al día si permanece abierta. El recordatorio aparece como máximo una vez al día. Al actualizar, programar o dejar pendiente, el cartel se cierra al guardar tu elección; una programación vigente se conserva sin volver a pedir confirmación.",
+  translations: {
+    en: { title: "Updates with fewer interruptions", message: "Volta checks for versions when opened and once a day if it stays open. Reminders appear at most once a day. Updating, scheduling or leaving an update pending closes the dialog once your choice is saved; an active schedule is kept without asking for confirmation again." },
+    it: { title: "Aggiornamenti con meno interruzioni", message: "Volta cerca nuove versioni all’apertura e una volta al giorno se resta aperta. Il promemoria appare al massimo una volta al giorno. Aggiornare, programmare o lasciare in sospeso chiude il dialogo dopo il salvataggio della scelta; una programmazione valida viene conservata senza chiedere nuovamente conferma." },
+    fr: { title: "Des mises à jour avec moins d’interruptions", message: "Volta recherche de nouvelles versions à l’ouverture et une fois par jour si elle reste ouverte. Le rappel apparaît au maximum une fois par jour. Mettre à jour, programmer ou laisser en attente ferme le dialogue après enregistrement du choix ; une programmation valide est conservée sans redemander confirmation." },
+    pt: { title: "Atualizações com menos interrupções", message: "A Volta procura versões ao abrir e uma vez por dia se permanecer aberta. O lembrete aparece no máximo uma vez por dia. Atualizar, agendar ou deixar pendente fecha o diálogo após guardar a escolha; um agendamento válido é mantido sem pedir nova confirmação." },
+  },
+};
+// Draft until 0.3.19 is available to the intended terminals.
+export const posVersionNumberAnnouncementDraft = {
+  id: "pos-version-number-2026-10", revision: 1, category: "improvement", severity: "info",
+  title: "Una versión más fácil de identificar",
+  message: "El POS muestra solo el número de versión, sin el sufijo técnico de conexión. Las actualizaciones siguen llegando por internet con conexión segura. Si la instalación te devuelve al escritorio, abre Volta desde su icono.",
+  translations: {
+    en: { title: "An easier version to identify", message: "The POS shows only the version number, without the technical connection suffix. Updates still arrive over a secure internet connection. If installation returns you to the home screen, open Volta from its icon." },
+    it: { title: "Una versione più facile da identificare", message: "Il POS mostra solo il numero di versione, senza il suffisso tecnico della connessione. Gli aggiornamenti continuano ad arrivare tramite una connessione internet sicura. Se l’installazione ti riporta alla schermata iniziale, apri Volta dalla sua icona." },
+    fr: { title: "Une version plus facile à identifier", message: "Le POS affiche uniquement le numéro de version, sans le suffixe technique de connexion. Les mises à jour continuent d’arriver par une connexion internet sécurisée. Si l’installation vous ramène à l’écran d’accueil, ouvrez Volta depuis son icône." },
+    pt: { title: "Uma versão mais fácil de identificar", message: "O POS mostra apenas o número da versão, sem o sufixo técnico de ligação. As atualizações continuam a chegar por uma ligação segura à internet. Se a instalação voltar ao ecrã inicial, abra a Volta pelo seu ícone." },
+  },
+};
+// Draft until the updated APK is distributed to the intended terminals.
+export const posUpdateActionsAnnouncementDraft = {
+  id: "pos-update-actions-2026-10", revision: 1, category: "improvement", severity: "info",
+  title: "Un aviso de actualización más sencillo",
+  message: "El cartel del POS muestra las opciones Actualizar ahora y Ahora no. Desde Ahora no puedes programar la instalación o dejarla pendiente. El terminal sigue buscando nuevas versiones automáticamente.",
+  translations: {
+    en: { title: "A simpler update notice", message: "The POS update dialog shows Update now and Not now. From Not now, you can schedule the installation or leave it pending. The terminal continues checking for new versions automatically." },
+    it: { title: "Un avviso di aggiornamento più semplice", message: "Il dialogo del POS mostra Aggiorna ora e Non ora. Da Non ora puoi programmare l’installazione o lasciarla in sospeso. Il terminale continua a cercare nuove versioni automaticamente." },
+    fr: { title: "Un avis de mise à jour plus simple", message: "Le dialogue du POS affiche Mettre à jour maintenant et Pas maintenant. Depuis Pas maintenant, vous pouvez programmer l’installation ou la laisser en attente. Le terminal continue de rechercher automatiquement de nouvelles versions." },
+    pt: { title: "Um aviso de atualização mais simples", message: "O diálogo do POS mostra Atualizar agora e Agora não. Em Agora não, pode agendar a instalação ou deixá-la pendente. O terminal continua a procurar novas versões automaticamente." },
+  },
+};
+// Draft until the permanent service and a migrated terminal are verified together.
+export const posPermanentUpdatesAnnouncementDraft = {
+  id: "pos-permanent-updates-2026-10", revision: 1, category: "improvement", severity: "info",
+  title: "Actualizaciones del POS por internet",
+  message: "El terminal consulta el servicio permanente de Volta y avisa cuando tiene una nueva versión asignada. Revisa sus novedades y elige cuándo instalarla; las siguientes actualizaciones no necesitan cable USB.",
+  detail: "La comprobación se realiza con Volta abierto. Los terminales de prueba anteriores necesitan una primera migración al canal permanente. La aplicación se reinicia durante la instalación y conserva sus datos.",
+  translations: {
+    en: { title: "POS updates over the internet", message: "The terminal checks Volta’s permanent service and notifies you when a new version is assigned. Read its release notes and choose when to install; subsequent updates do not need a USB cable.", detail: "Checks run while Volta is open. Earlier test terminals need an initial migration to the permanent channel. The app restarts during installation and keeps its data." },
+    it: { title: "Aggiornamenti POS via internet", message: "Il terminale consulta il servizio permanente di Volta e segnala le nuove versioni assegnate. Leggi le novità e scegli quando installare; gli aggiornamenti successivi non richiedono un cavo USB.", detail: "I controlli avvengono con Volta aperto. I terminali di prova precedenti richiedono una migrazione iniziale al canale permanente. L’app si riavvia durante l’installazione e conserva i dati." },
+    fr: { title: "Mises à jour du POS par internet", message: "Le terminal consulte le service permanent de Volta et signale toute nouvelle version qui lui est attribuée. Consultez les nouveautés et choisissez quand l’installer ; les mises à jour suivantes ne nécessitent pas de câble USB.", detail: "Les vérifications ont lieu lorsque Volta est ouvert. Les anciens terminaux de test nécessitent une migration initiale vers le canal permanent. L’application redémarre pendant l’installation et conserve ses données." },
+    pt: { title: "Atualizações do POS pela internet", message: "O terminal consulta o serviço permanente da Volta e avisa quando lhe é atribuída uma nova versão. Leia as novidades e escolha quando instalar; as atualizações seguintes não precisam de cabo USB.", detail: "As verificações ocorrem com a Volta aberta. Os terminais de teste anteriores precisam de uma migração inicial para o canal permanente. A aplicação reinicia durante a instalação e conserva os dados." },
+  },
+};
+// Draft: publish with the APK that displays its installed version in the footer.
+export const posVersionFooterAnnouncementDraft = {
+  id: "pos-version-footer-2026-10", revision: 1, category: "improvement", severity: "info",
+  title: "La versión de tu POS, a la vista",
+  message: "El pie del terminal muestra la versión realmente instalada. Puedes comprobar de un vistazo qué versión tienes después de actualizar.",
+  translations: {
+    en: { title: "Your POS version at a glance", message: "The terminal footer shows the version actually installed. You can check your version at a glance after updating." },
+    it: { title: "La versione del tuo POS, sempre visibile", message: "Il piè di pagina del terminale mostra la versione effettivamente installata. Dopo un aggiornamento puoi controllarla a colpo d’occhio." },
+    fr: { title: "La version de votre POS en un coup d’œil", message: "Le pied de page du terminal affiche la version réellement installée. Vous pouvez la vérifier en un coup d’œil après une mise à jour." },
+    pt: { title: "A versão do seu POS à vista", message: "O rodapé do terminal mostra a versão realmente instalada. Pode verificar a sua versão de relance após atualizar." },
+  },
+};
 // Draft: keep outside the feed until the update channel is available to recipients.
 export const posUpdatesAnnouncementDraft = {
   id: "pos-updates-2026-10", revision: 1, category: "improvement", severity: "info",
   title: "Actualizaciones del terminal Volta POS",
-  message: "El menú del terminal permite consultar su versión y autorizar las actualizaciones en Android. Las versiones asignadas se descargan por internet y esperan una ventana de mantenimiento, batería suficiente y el fin de las operaciones antes de instalarse.",
+  message: "El POS avisa cuando hay una actualización y permite leer sus novedades. Puedes actualizar ahora, elegir fecha y hora o dejarla pendiente. Tu elección se conserva; si no se cumplen las condiciones en el plazo elegido, la actualización queda pendiente sin interrumpir el servicio.",
   translations: {
-    en: { title: "Volta POS terminal updates", message: "The terminal menu lets you check its version and authorize updates in Android. Assigned versions download over the internet and wait for a maintenance window, sufficient battery and completed operations before installation." },
-    it: { title: "Aggiornamenti del terminale Volta POS", message: "Il menu del terminale consente di consultare la versione e autorizzare gli aggiornamenti in Android. Le versioni assegnate vengono scaricate tramite internet e attendono una finestra di manutenzione, una carica sufficiente e la fine delle operazioni prima dell’installazione." },
-    fr: { title: "Mises à jour du terminal Volta POS", message: "Le menu du terminal permet de consulter sa version et d’autoriser les mises à jour dans Android. Les versions attribuées sont téléchargées par internet et attendent une période de maintenance, une batterie suffisante et la fin des opérations avant l’installation." },
-    pt: { title: "Atualizações do terminal Volta POS", message: "O menu do terminal permite consultar a versão e autorizar atualizações no Android. As versões atribuídas são descarregadas pela internet e aguardam uma janela de manutenção, bateria suficiente e o fim das operações antes da instalação." },
+    en: { title: "Volta POS terminal updates", message: "The POS notifies you when an update is available and lets you read its release notes. You can update now, choose a date and time or leave it pending. Your choice is saved; if conditions are not met within the selected window, the update remains pending without interrupting service." },
+    it: { title: "Aggiornamenti del terminale Volta POS", message: "Il POS segnala gli aggiornamenti disponibili e consente di leggerne le novità. Puoi aggiornare subito, scegliere data e ora o lasciare l’aggiornamento in sospeso. La scelta viene salvata; se le condizioni non sono soddisfatte nel periodo scelto, l’aggiornamento resta in sospeso senza interrompere il servizio." },
+    fr: { title: "Mises à jour du terminal Volta POS", message: "Le POS signale les mises à jour disponibles et permet de lire leurs nouveautés. Vous pouvez mettre à jour maintenant, choisir une date et une heure ou laisser la mise à jour en attente. Votre choix est conservé ; si les conditions ne sont pas réunies dans le délai choisi, elle reste en attente sans interrompre le service." },
+    pt: { title: "Atualizações do terminal Volta POS", message: "O POS avisa quando existe uma atualização e permite ler as novidades. Pode atualizar agora, escolher uma data e hora ou deixar pendente. A escolha fica guardada; se as condições não forem cumpridas no prazo escolhido, a atualização fica pendente sem interromper o serviço." },
   },
 };
 // Draft: publish only when APK 0.3.12 or later is distributed to the recipients.

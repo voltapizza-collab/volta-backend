@@ -21,12 +21,15 @@
     "test:pause": "node --test tests/orderAvailability.test.js tests/posUi.test.js tests/storePause.test.js",
     "pos:pilot": "node scripts/posPilotServer.js",
     "pos:admin": "node scripts/posAdmin.js",
+    "pos:releases": "node scripts/posReleases.js",
     "test:coupons": "node --test tests/couponFlow.test.js tests/couponConcurrency.test.js tests/checkoutCouponOverlap.test.js tests/couponRedeemUrls.test.js tests/stripeCheckout.test.js"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "@aws-sdk/client-s3": "^3.1146.0",
+    "@aws-sdk/s3-request-presigner": "^3.1146.0",
     "@prisma/client": "^5.2.0",
     "axios": "^1.14.0",
     "cloudinary": "^2.5.1",
