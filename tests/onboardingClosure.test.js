@@ -10,6 +10,109 @@ import { newOnboardingCatalog, updateOnboardingPricing } from '../services/onboa
 import closureRoutes from '../routes/onboardingClosure.js';
 import { isPublicWebRoute } from '../services/webAccess.js';
 import { normalizeOnboardingDefaults, offerDefaults } from '../services/onboardingDefaults.js';
+import { reviewContract } from '../services/onboardingReview.js';
+
+test('review creates a sign-first contract without manual supplementary terms and freezes selected amounts', () => {
+  const row = request('INSTALLMENTS'); row.formalData.commercialSelection.sms.initialRecharge = 'SEPARATE';
+  const review = reviewContract(row, { posTotalCents: 90000, defaults: {} }, input().generalTerms);
+  assert.equal(review.offer.pos.totalCents, 25000);
+  assert.equal(review.offer.totalCents, 4167);
+  assert.equal(review.offer.pos.payments.at(-1), 4165);
+  assert.equal(review.offer.workflow, 'SIGN_PAY_ACTIVATE');
+  assert.equal(review.offer.signatureDays, null);
+  assert.equal(review.offer.pos.delivery, null);
+  assert.match(review.offer.documentText, /Primera cuota después de firmar/);
+  assert.doesNotMatch(review.offer.documentText, /firma posterior|antes de la firma|Debe completar la firma/);
+  verifyOffer(review.offer);
+  const reordered = JSON.parse(JSON.stringify(review.offer)); verifyOffer(reordered);
+  delete reordered.workflow; assert.throws(() => verifyOffer(reordered), /offer_integrity_failed/);
+  assert.equal(review.fingerprint, reviewContract(row, { posTotalCents: 90000 }, input().generalTerms).fingerprint);
+});
+
+test('review button publishes the exact reviewed contract and sends one resumable payment email', async t => {
+  const f = fixture(); f.row().formalData.commercialSelection.sms.initialRecharge = 'SEPARATE';
+  let emails = [], isAdmin = true;
+  const app = express(); app.use(express.json());
+  app.use((req, _res, next) => { if (isAdmin) req.webSession = { role: 'global_admin' }; next(); });
+  app.use(onboardingRoutes(f.db, { stripeDeps: f.deps, sendEmail: async payload => { emails.push(payload); return { ok: true }; } }));
+  const server = app.listen(0, '127.0.0.1'); await new Promise(resolve => server.once('listening', resolve));
+  t.after(() => new Promise(resolve => server.close(resolve)));
+  const url = `http://127.0.0.1:${server.address().port}`;
+  const post = body => fetch(`${url}/requests/1/contract/send`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+  assert.equal((await post({})).status, 409);
+  const previewResponse = await fetch(`${url}/requests/1/review-contract`);
+  assert.equal(previewResponse.status, 200); const preview = await previewResponse.json();
+  assert.equal(preview.offer.totalCents, 25000);
+  const body = { reviewApproved: true, stockConfirmed: true, reviewFingerprint: preview.fingerprint, posTotalCents: 1 };
+  assert.equal((await post({ ...body, reviewFingerprint: 'stale' })).status, 409);
+  isAdmin = false; assert.equal((await post(body)).status, 403); isAdmin = true;
+  assert.equal((await post(body)).status, 200);
+  assert.equal(emails.length, 1);
+  assert.equal(f.row().formalData.closure.offer.totalCents, 25000);
+  assert.equal(f.row().formalData.closure.offer.documentText, preview.offer.documentText);
+  assert.match(emails[0].text, /Revisa y firma tu contrato. Después/);
+  assert.doesNotMatch(emails[0].text, /Después del pago dispones/);
+  assert.equal((await post(body)).status, 200); assert.equal(emails.length, 1);
+  assert.equal((await post({})).status, 200); assert.equal(emails.length, 2); // Explicit resend.
+});
+
+for (const mode of ['PURCHASE','INSTALLMENTS','RENT_QUOTE']) test(`signature before payment and automatic webhook activation: ${mode}`, async t => {
+  for (const key of ['GOOGLE_GEOCODING_KEY','GOOGLE_MAPS_API_KEY','REACT_APP_GOOGLE_KEY']) {
+    const previous = process.env[key]; delete process.env[key];
+    t.after(() => { if (previous === undefined) delete process.env[key]; else process.env[key] = previous; });
+  }
+  const previousSecret = process.env.STRIPE_ONBOARDING_WEBHOOK_SECRET;
+  process.env.STRIPE_ONBOARDING_WEBHOOK_SECRET = 'whsec_local_test';
+  t.after(() => { if (previousSecret === undefined) delete process.env.STRIPE_ONBOARDING_WEBHOOK_SECRET; else process.env.STRIPE_ONBOARDING_WEBHOOK_SECRET = previousSecret; });
+  const f = fixture(mode); f.row().formalData.commercialSelection.sms.initialRecharge = 'SEPARATE';
+  const hash = await offered(f, { workflow: 'SIGN_PAY_ACTIVATE' });
+  let partners = 0, stores = 0, emails = [], failMail = true;
+  f.db.$executeRawUnsafe = async () => 1;
+  f.db.partner = { findUnique: async () => null, create: async ({ data }) => { partners++; return { id: 10, ...data }; } };
+  f.db.store = { findUnique: async () => null, create: async ({ data }) => { stores++; assert.equal(data.acceptingOrders, false); return { id: 20, ...data }; } };
+  f.db.smsCreditLedger = { create: async () => assert.fail('No mandatory SMS recharge') };
+  const app = express(); app.use(express.json({ verify: (req, _res, buf) => { req.rawBody = buf; } }));
+  app.use(onboardingRoutes(f.db, { stripeDeps: { ...f.deps, constructStripeWebhookEvent }, sendEmail: async payload => {
+    if (failMail) return { ok: false, reason: 'test_transport_failure' };
+    emails.push(payload); return { ok: true };
+  } }));
+  const server = app.listen(0, '127.0.0.1'); await new Promise(resolve => server.once('listening', resolve));
+  t.after(() => new Promise(resolve => server.close(resolve)));
+  const post = (path, body) => fetch(`http://127.0.0.1:${server.address().port}${path}`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+  await assert.rejects(f.service.checkout(1, hash, ''), /prepayment_consent_required/);
+  await assert.rejects(f.service.consent(1, hash, {}), /contract_signature_required/);
+  assert.equal((await post('/form/test-only/sign-contract', { acceptedContract: true, offerHash: 'wrong' })).status, 409);
+  const sign = () => post('/form/test-only/sign-contract', { acceptedContract: true, offerHash: hash });
+  for (const response of await Promise.all([sign(), sign()])) assert.equal(response.status, 200);
+  assert.equal(partners, 0); assert.equal(emails.length, 0);
+  assert.equal(f.row().formalData.closure.status, 'AWAITING_PAYMENT');
+  assert.equal(closureView(f.row()).signed, true); assert.equal(closureView(f.row()).activated, false);
+  assert.equal(f.row().formalData.signedContract.offerHash, hash);
+  const signedAt = f.row().formalData.contractSignature.acceptedAt;
+  await assert.rejects(f.service.publish(1, { ...input(), replacesOfferHash: hash }), /signed_contract_cannot_change/);
+  await f.service.checkout(1, hash, 'https://example.invalid');
+  await post('/form/test-only/closure/refresh', {}); assert.equal(partners, 0);
+  const session = [...f.sessions.values()][0];
+  const event = { type: 'checkout.session.completed', data: { object: session } };
+  const webhook = () => {
+    const raw = JSON.stringify(event), time = Math.floor(Date.now() / 1000);
+    const signature = crypto.createHmac('sha256', 'whsec_local_test').update(`${time}.${raw}`).digest('hex');
+    return fetch(`http://127.0.0.1:${server.address().port}/stripe/webhook`, { method: 'POST', body: raw,
+      headers: { 'Content-Type': 'application/json', 'stripe-signature': `t=${time},v1=${signature}` } });
+  };
+  // A completed event alone cannot activate an unsettled payment.
+  assert.equal((await webhook()).status, 200); assert.equal(partners, 0);
+  f.paid();
+  assert.equal((await webhook()).status, 503); // Mail failure requests a Stripe retry; the paid activation is retained.
+  assert.equal(partners, 1); assert.equal(stores, 1); assert.equal(f.row().status, 'ACTIVATED');
+  assert.equal(f.row().formalData.contractSignature.acceptedAt, signedAt);
+  failMail = false;
+  await webhook(); await webhook();
+  assert.equal(emails.length, 1); assert.equal(partners, 1); assert.equal(stores, 1);
+  assert.match(emails[0].text, /QR de tu tienda/); assert.match(emails[0].text, /backoffice/);
+  assert.equal(f.row().formalData.credentialsNotification.emailStatus, 'SENT');
+  assert.equal(f.row().formalData.closure.payment.status, 'PAID');
+});
 
 const selection = mode => {
   const result = buildCommercialSelection({ posChoice: mode, posInstallments: 6, commercialAcknowledged: true, commercialVersion: onboardingCommercialCatalog().version }).selection;

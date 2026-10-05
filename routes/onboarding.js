@@ -9,9 +9,10 @@ import { assertCloudinaryConfigured } from "../services/cloudinaryConfig.js";
 import { buildPosPinData, generateSixDigitPin } from "../services/posCredentials.js";
 import { onboardingCommercialCatalog, buildCommercialSelection, needsCommercialClosure, withOnboardingSmsTariff } from '../services/onboardingCommercial.js';
 import { SMS_SELL_PRICE_EUR, readSmsPrice, smsPricingInfo } from '../services/smsCredits.js';
-import { newOnboardingCatalog } from '../services/onboardingPricing.js';
+import { reviewContract } from '../services/onboardingReview.js';
+import { newOnboardingCatalog, readOnboardingPricing } from '../services/onboardingPricing.js';
 import onboardingClosureRoutes from './onboardingClosure.js';
-import { closureView, createClosureService, hasClosure, lockedClosure, verifyOffer } from '../services/onboardingClosure.js';
+import { closureView, createClosureService, hasClosure, lockedClosure, verifyOffer, signsBeforePayment } from '../services/onboardingClosure.js';
 import * as stripe from '../services/stripe.js';
 
 const MAX_DOCUMENTS = 8;
@@ -269,7 +270,7 @@ export const buildOnboardingEmail = (request, formalUrl) => {
     ['Compra a plazos', `De 2 a 6 cuotas mensuales sin intereses. Total: ${money(catalog.posTotalCents)}. En 6 cuotas: 5 de ${money(lastPlan[0])} y la última de ${money(lastPlan[5])}.`],
     ['Renting de 36 meses', catalog.rental.monthlyCents
       ? `${money(catalog.rental.monthlyCents)}/mes IVA incluido. Total: ${money(catalog.rental.monthlyCents * 36)}. El POS pasa a ser tuyo al finalizar el plazo y completar las 36 mensualidades.`
-      : 'La cuota se confirmará en la oferta. El POS pasa a ser tuyo al finalizar el plazo y completar las 36 mensualidades.'],
+      : 'La cuota se confirmará antes de firmar y pagar. El POS pasa a ser tuyo al finalizar el plazo y completar las 36 mensualidades.'],
   ];
   const text = [
     `Hola ${request.name},`,
@@ -294,47 +295,7 @@ export const buildOnboardingEmail = (request, formalUrl) => {
     bodyHtml: `
       <p style="margin:0 0 14px">Estimado/a <strong>${safeName}</strong>:</p>
       <p style="margin:0 0 14px">Hemos recibido la solicitud de <strong>${safeBusinessName}</strong> en Volta Pizza.</p>
-      <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="border-collapse:collapse;margin:20px 0 22px;background:#ffb61c;border-radius:14px">
-        <tr>
-          <td style="padding:18px 18px">
-            <div style="color:#3b008b;font-size:12px;font-weight:900;text-transform:uppercase;letter-spacing:.1em">Estado actual</div>
-            <div style="margin-top:6px;color:#000000;font-size:22px;line-height:1.25;font-weight:900">Entramos en fase 2</div>
-            <div style="margin-top:8px;color:#2a173f;font-size:14px;line-height:1.5">Validaremos datos legales y operativos minimos antes de activar el acceso.</div>
-          </td>
-        </tr>
-      </table>
-
-      <div style="margin:0 0 12px;color:#3b008b;font-size:18px;font-weight:900;text-align:center">Que necesitamos de ti</div>
-      <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="border-collapse:separate;border-spacing:0 10px;margin:0 0 18px">
-        <tr>
-          <td width="44" valign="top" style="width:44px">
-            <div style="background:#3b008b;color:#ffffff;border-radius:999px;width:34px;height:34px;line-height:34px;text-align:center;font-weight:900">1</div>
-          </td>
-          <td style="background:#f8f5ff;border:1px solid #decfff;border-radius:12px;padding:12px 14px">
-            <strong style="color:#000000">Identificacion fiscal</strong><br>
-            <span style="color:#4b405a;font-size:14px">CIF/NIF/NIE o identificador fiscal del titular.</span>
-          </td>
-        </tr>
-        <tr>
-          <td width="44" valign="top" style="width:44px">
-            <div style="background:#6a3df0;color:#ffffff;border-radius:999px;width:34px;height:34px;line-height:34px;text-align:center;font-weight:900">2</div>
-          </td>
-          <td style="background:#f8f5ff;border:1px solid #decfff;border-radius:12px;padding:12px 14px">
-            <strong style="color:#000000">Responsable autorizado</strong><br>
-            <span style="color:#4b405a;font-size:14px">Datos de la persona que representa legalmente el negocio.</span>
-          </td>
-        </tr>
-        <tr>
-          <td width="44" valign="top" style="width:44px">
-            <div style="background:#ffb61c;color:#3b008b;border-radius:999px;width:34px;height:34px;line-height:34px;text-align:center;font-weight:900">3</div>
-          </td>
-          <td style="background:#f8f5ff;border:1px solid #decfff;border-radius:12px;padding:12px 14px">
-            <strong style="color:#000000">Documento de soporte</strong><br>
-            <span style="color:#4b405a;font-size:14px">Un documento basico de titularidad o representacion del negocio.</span>
-          </td>
-        </tr>
-      </table>
-
+      <p>Completa los datos del negocio y del responsable, y adjunta la identificación y el documento fiscal. Después de nuestra revisión recibirás el correo para firmar el contrato y pagar.</p>
       <div style="margin:20px 0 10px;color:#3b008b;font-size:18px;font-weight:900">Elige cómo pagar tu POS</div>
       <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="border-collapse:separate;border-spacing:0 8px">
         ${choices.map(([title, description]) => `<tr><td style="padding:14px;background:#f8f5ff;border:1px solid #decfff;border-radius:12px"><strong style="color:#3b008b;font-size:16px">${escapeHtml(title)}</strong><div style="margin-top:5px;line-height:1.5">${escapeHtml(description)}</div></td></tr>`).join('')}
@@ -501,15 +462,16 @@ export const buildClosureEmail = (request, contractUrl) => {
       : `Alquiler: ${money(pos.firstCents)}/mes. Consulta la propiedad, duración y devolución en las condiciones de esta versión.`
     : `${pos.mode === 'INSTALLMENTS' ? `Compra en ${pos.payments.length} cuotas` : 'Compra al contado'}: ${money(pos.totalCents)} IVA incluido.`;
   const supply = pos.delivery ? `Disponibilidad: ${pos.delivery.status === 'IN_STOCK' ? 'stock confirmado' : 'reposición con fecha comprometida'}. Entrega prevista: ${pos.delivery.expected}; fecha límite: ${pos.delivery.latest}.` : '';
+  const first = signsBeforePayment(offer);
   const summary = [mode, ...offer.lines.map(line => `${line.label}: ${money(line.amountCents)}`), `Pago inicial total: ${money(offer.totalCents)}.`, supply,
     'Suministro sujeto a stock. El contado pagado tiene prioridad entre asignaciones pendientes, respetando entregas comprometidas. Pagar o firmar no garantiza entrega inmediata.',
-    'Revisa el contrato completo, acepta las condiciones del pago previo, paga y firma cuando se confirme el cobro. Si ya pagaste, reanuda desde el mismo enlace sin volver a pagar.',
-    `Después del pago dispones de ${offer.signatureDays} días para firmar. Consulta las condiciones de cancelación y devolución en el documento. La tienda seguirá cerrada a pedidos hasta terminar su preparación.`].filter(Boolean);
+    first ? 'Revisa y firma tu contrato. Después, realiza el pago inicial desde el mismo enlace. Si ya pagaste, puedes consultar el estado sin volver a pagar.' : 'Revisa el contrato completo, acepta las condiciones del pago previo, paga y firma cuando se confirme el cobro. Si ya pagaste, reanuda desde el mismo enlace sin volver a pagar.',
+    first ? 'Al confirmarse el pago, recibirás automáticamente el acceso a tu negocio, el QR y las instrucciones de inicio y entrega del POS. La tienda seguirá cerrada a pedidos hasta terminar su preparación.' : `Después del pago dispones de ${offer.signatureDays} días para firmar. Consulta las condiciones de cancelación y devolución en el documento. La tienda seguirá cerrada a pedidos hasta terminar su preparación.`].filter(Boolean);
   return {
-    text: [`Hola ${request.name},`, `Estamos listos para dar el siguiente paso con ${request.businessName}.`, `Oferta ${offer.revision}.`, ...summary,
+    text: [`Hola ${request.name},`, `Hemos revisado los datos de ${request.businessName}.`, `Contrato, versión ${offer.revision}.`, ...summary,
       `Revisar condiciones y completar el alta: ${contractUrl}`].join('\n\n'),
-    html: buildEmailShell({ title: 'Estamos listos para dar el siguiente paso', preheader: 'Revisa tu oferta, completa el pago inicial y firma para preparar tu tienda.',
-      bodyHtml: `<p>Hola <strong>${escapeHtml(request.name)}</strong>. Hemos revisado los datos de <strong>${escapeHtml(request.businessName)}</strong>.</p><p>Oferta ${offer.revision}.</p>${summary.map(line => `<p>${escapeHtml(line)}</p>`).join('')}<p><a href="${escapeHtml(contractUrl)}" style="display:inline-block;background:#3b008b;color:#fff;padding:15px 20px;border-radius:12px;text-decoration:none">Revisar condiciones y completar el alta</a></p>${buildVoltaSignature()}` }),
+    html: buildEmailShell({ title: 'Tu contrato y pago inicial', preheader: first ? 'Firma tu contrato y completa el pago inicial.' : 'Revisa tu oferta, completa el pago inicial y firma para preparar tu tienda.',
+      bodyHtml: `<p>Hola <strong>${escapeHtml(request.name)}</strong>. Hemos revisado los datos de <strong>${escapeHtml(request.businessName)}</strong>.</p><p>Contrato, versión ${offer.revision}.</p>${summary.map(line => `<p>${escapeHtml(line)}</p>`).join('')}<p><a href="${escapeHtml(contractUrl)}" style="display:inline-block;background:#3b008b;color:#fff;padding:15px 20px;border-radius:12px;text-decoration:none">${first ? 'Firmar contrato y pagar' : 'Revisar condiciones y completar el alta'}</a></p>${buildVoltaSignature()}` }),
   };
 };
 
@@ -1046,21 +1008,23 @@ export default function onboardingRoutes(prisma, { sendEmail = sendSmtpEmail, st
     catch { return { ok: false, reason: 'email_send_failed' }; }
   };
   router.use((_req, res, next) => { res.set('Cache-Control', 'no-store'); next(); });
-  router.use(onboardingClosureRoutes(prisma, { mapRequest, stripeDeps, draftContract: request => {
+  const draftContract = request => {
     const content = buildSignedContractSnapshot({ ...request, formalData: { ...request.formalData, closure: undefined } }, {}).contentText;
     return content.slice(content.indexOf('REUNIDOS'), content.indexOf('FIRMAS'))
       .replace(/6\. Comisiones y liquidaciones[\s\S]*?7\. Obligaciones del Comerciante/, '6. Comisiones y liquidaciones\nSe aplican las condiciones particulares de esta oferta.\n\n7. Obligaciones del Comerciante');
-  } }));
+  };
 
-  const deliverWelcome = async (id, freshActivation) => {
+  const deliverWelcome = async (id, freshActivation, automatic = false) => {
     const deliveryId = crypto.randomUUID();
     const reserved = await lockedClosure(prisma, id, async (tx, row) => {
       if (row.status !== 'ACTIVATED' || !row.formalData?.signedContract || !row.formalData?.activation) throw Object.assign(new Error('onboarding_not_activated'), { status: 409 });
       const notice = row.formalData.credentialsNotification;
+      if (automatic && notice?.emailStatus === 'SENT') return null;
       if (notice?.emailStatus === 'SENDING' && Date.now() - new Date(notice.startedAt).getTime() < 120000) throw Object.assign(new Error('email_send_in_progress'), { status: 409 });
       return tx.onboardingRequest.update({ where: { id }, data: { formalData: { ...row.formalData,
         credentialsNotification: { emailStatus: 'SENDING', deliveryId, startedAt: new Date().toISOString() } } } });
     });
+    if (!reserved) return prisma.onboardingRequest.findUnique({ where: { id } });
     let result;
     try {
       const activation = freshActivation || reserved.formalData.activation;
@@ -1079,6 +1043,85 @@ export default function onboardingRoutes(prisma, { sendEmail = sendSmtpEmail, st
           emailSentAt: result.ok ? new Date().toISOString() : null, emailError: result.ok ? null : result.reason || 'email_send_failed' } } } });
     });
   };
+
+  const activateRequest = async (request, signedMeta, hash) => {
+    await ensureBackofficeCredentialColumns(prisma);
+    const storeCoordinates = await resolveOnboardingStoreCoordinates(request.formalData);
+    const activation = await prisma.$transaction(async (tx) => {
+      await tx.$queryRawUnsafe('SELECT id FROM OnboardingRequest WHERE id = ? FOR UPDATE', request.id);
+      const lockedRequest = await tx.onboardingRequest.findUnique({ where: { id: request.id } });
+
+      if (!lockedRequest) {
+        const error = new Error("onboarding_request_not_found");
+        error.status = 404;
+        throw error;
+      }
+
+      if (lockedRequest.status !== "CONTRACT_SENT") {
+        if (lockedRequest.status === 'ACTIVATED' && hasClosure(lockedRequest) && lockedRequest.formalData.closure.offer.hash === hash) return null;
+        const error = new Error("onboarding_request_not_signable");
+        error.status = 409;
+        throw error;
+      }
+
+      if (needsCommercialClosure(lockedRequest) && !hasClosure(lockedRequest)) throw Object.assign(new Error('commercial_closure_pending'), { status: 409 });
+      if (hasClosure(lockedRequest)) {
+        verifyOffer(lockedRequest.formalData.closure.offer);
+        if (!(signsBeforePayment(lockedRequest.formalData.closure.offer)
+          ? lockedRequest.formalData.closure.status === 'PAID' && lockedRequest.formalData.closure.payment?.status === 'PAID' && !lockedRequest.formalData.closure.cancelRequestedAt && lockedRequest.formalData.contractSignature?.offerHash === hash
+          : closureView(lockedRequest).canSign) || lockedRequest.formalData.closure.offer.hash !== hash) throw Object.assign(new Error('initial_payment_required'), { status: 409 });
+      }
+
+      const nextActivation = await createPartnerActivation(tx, lockedRequest, storeCoordinates);
+      const signedContract = buildSignedContractSnapshot(lockedRequest, signedMeta, nextActivation);
+      let signedClosure = lockedRequest.formalData.closure;
+      if (signedClosure) {
+        const sms = signedClosure.offer.sms;
+        let smsLedgerId = null;
+        if (sms.credits > 0 && sms.amountCents > 0) {
+          const partner = await tx.partner.update({ where: { id: nextActivation.partnerId },
+            data: { smsCredits: { increment: sms.credits }, smsRecharged: { increment: sms.credits } } });
+          const ledger = await tx.smsCreditLedger.create({ data: { partnerId: partner.id, type: 'RECHARGE', quantity: sms.credits,
+            balanceAfter: partner.smsCredits, amount: sms.amountCents / 100, unitPrice: sms.amountCents / 100 / sms.credits,
+            reference: `onboarding:${request.id}:${signedClosure.offer.id}`, provider: 'onboarding',
+            meta: { offerHash: signedClosure.offer.hash, paymentId: signedClosure.payment.id } } });
+          smsLedgerId = ledger.id;
+        }
+        signedClosure = { ...signedClosure, status: 'SIGNED', signedAt: signedMeta.acceptedAt, smsLedgerId };
+      }
+      await tx.onboardingRequest.update({
+        where: { id: request.id },
+        data: {
+          status: "ACTIVATED",
+          reviewedAt: lockedRequest.reviewedAt || new Date(),
+          formalData: {
+            ...(lockedRequest.formalData || {}),
+            ...(signedClosure ? { closure: signedClosure } : {}),
+            contractSignature: {
+              ...((lockedRequest.formalData || {}).contractSignature || {}),
+              ...signedMeta,
+            },
+            signedContract,
+            activation: safeActivation(nextActivation),
+          },
+        },
+      });
+
+      return nextActivation;
+    });
+    return activation;
+  };
+  const completePaid = async request => {
+    const closure = request.formalData?.closure;
+    if (!signsBeforePayment(closure?.offer)) return request;
+    if (closure.payment?.status !== 'PAID' || closure.cancelRequestedAt || !['PAID','SIGNED'].includes(closure.status)) return request;
+    if (request.formalData.contractSignature?.offerHash !== closure.offer.hash) return request;
+    const activation = request.status === 'ACTIVATED' ? null : await activateRequest(request, request.formalData.contractSignature, closure.offer.hash);
+    const completed = await deliverWelcome(request.id, activation, true);
+    if (completed.formalData.credentialsNotification?.emailStatus !== 'SENT') throw Object.assign(new Error('welcome_delivery_failed'), { status: 503 });
+    return completed;
+  };
+  router.use(onboardingClosureRoutes(prisma, { mapRequest, stripeDeps, draftContract, completePaid }));
   router.post('/requests/:id/credentials/send', async (req, res) => {
     try {
       if (req.webSession?.role !== 'global_admin') return res.status(403).json({ error: 'admin_required' });
@@ -1194,13 +1237,14 @@ export default function onboardingRoutes(prisma, { sendEmail = sendSmtpEmail, st
 
   router.post("/requests/:id/contract/send", async (req, res) => {
     try {
+      if (req.webSession?.role !== 'global_admin') return res.status(403).json({ error: 'admin_required' });
       const id = Number(req.params.id);
 
       if (!Number.isInteger(id) || id <= 0) {
         return res.status(400).json({ ok: false, error: "invalid_onboarding_request_id" });
       }
 
-      const request = await prisma.onboardingRequest.findUnique({ where: { id } });
+      let request = await prisma.onboardingRequest.findUnique({ where: { id } });
 
       if (!request) {
         return res.status(404).json({ ok: false, error: "onboarding_request_not_found" });
@@ -1211,23 +1255,45 @@ export default function onboardingRoutes(prisma, { sendEmail = sendSmtpEmail, st
       }
 
       if (needsCommercialClosure(request) && !hasClosure(request)) {
-        return res.status(409).json({ ok: false, error: 'commercial_closure_pending' });
+        if (req.body?.reviewApproved !== true || req.body?.stockConfirmed !== true) return res.status(409).json({ error: 'review_confirmation_required' });
+        const pricing = await readOnboardingPricing(prisma);
+        const review = reviewContract(request, pricing, draftContract(request));
+        if (req.body.reviewFingerprint !== review.fingerprint) return res.status(409).json({ error: 'review_changed' });
+        try { request = await closureService.publish(id, review.input, { role: 'global_admin', ip: req.ip }); }
+        catch (error) {
+          if (error.message !== 'offer_changed') throw error;
+          request = await prisma.onboardingRequest.findUnique({ where: { id } });
+          if (!signsBeforePayment(request.formalData?.closure?.offer)) throw error;
+        }
       }
 
       if (hasClosure(request)) {
-        if (['ACTIVATED','APPROVED','REJECTED'].includes(request.status) || request.formalData.closure.status !== 'OFFERED') {
+        if (['ACTIVATED','APPROVED','REJECTED'].includes(request.status) || !['OFFERED', 'AWAITING_PAYMENT', 'PAYMENT_PENDING'].includes(request.formalData.closure.status)) {
           return res.status(409).json({ ok: false, error: 'offer_not_sendable' });
         }
         const offer = request.formalData.closure.offer;
+        if (req.body?.reviewFingerprint && req.body.reviewFingerprint !== crypto.createHash('sha256').update(offer.documentText).digest('hex')) {
+          return res.status(409).json({ error: 'review_changed' });
+        }
         const url = buildContractUrl(request.token);
         verifyOffer(offer);
-        const emailBody = buildClosureEmail(request, url);
+        const deliveryId = crypto.randomUUID();
+        const reserved = await lockedClosure(prisma, id, async (tx, row) => {
+          if (row.formalData.closure.offer.hash !== offer.hash) throw Object.assign(new Error('offer_changed'), { status: 409 });
+          const notice = row.formalData.contractNotification;
+          if (req.body?.reviewFingerprint && notice?.emailStatus === 'SENT' && notice.offerHash === offer.hash) return null;
+          if (notice?.emailStatus === 'SENDING' && Date.now() - new Date(notice.startedAt).getTime() < 120000) throw Object.assign(new Error('email_send_in_progress'), { status: 409 });
+          return tx.onboardingRequest.update({ where: { id }, data: { reviewedAt: row.reviewedAt || new Date(), formalData: { ...row.formalData,
+            contractNotification: { emailStatus: 'SENDING', deliveryId, startedAt: new Date().toISOString(), offerHash: offer.hash } } } });
+        });
+        if (!reserved) return res.json({ ok: true, request: await mapRequest(await prisma.onboardingRequest.findUnique({ where: { id } })) });
+        const emailBody = buildClosureEmail(reserved, url);
         const result = await mail({ to: request.formalData.businessEmail || request.email,
-          subject: 'Estamos listos para dar el siguiente paso - Volta Pizza',
+          subject: 'Tu contrato y pago inicial - Volta Pizza',
           ...emailBody, replyTo: process.env.ONBOARDING_REPLY_TO || 'voltapizza@gmail.com',
         });
         const updated = await lockedClosure(prisma, id, (tx, latest) => {
-          if (latest.formalData.closure.offer.hash !== offer.hash) return latest;
+          if (latest.formalData.closure.offer.hash !== offer.hash || latest.formalData.contractNotification?.deliveryId !== deliveryId) return latest;
           return tx.onboardingRequest.update({ where: { id }, data: { formalData: {
             ...latest.formalData, contractNotification: { emailStatus: result.ok ? 'SENT' : result.skipped ? 'NOT_CONFIGURED' : 'FAILED',
               emailSentAt: result.ok ? new Date().toISOString() : null, emailError: result.ok ? null : result.reason || 'email_send_failed', offerHash: offer.hash, contractUrl: url },
@@ -1447,7 +1513,7 @@ export default function onboardingRoutes(prisma, { sendEmail = sendSmtpEmail, st
       }
 
       if (needsCommercialClosure(request) && !hasClosure(request)) return res.status(409).json({ ok: false, error: 'commercial_closure_pending' });
-      if (hasClosure(request)) await closureService.signingCheck(request.id, req.body.offerHash);
+      if (hasClosure(request) && !signsBeforePayment(request.formalData.closure.offer)) await closureService.signingCheck(request.id, req.body.offerHash);
       const contract = buildContractData(request);
       const signedMeta = {
         acceptedAt: new Date().toISOString(),
@@ -1462,69 +1528,21 @@ export default function onboardingRoutes(prisma, { sendEmail = sendSmtpEmail, st
         userAgent: cleanText(req.headers["user-agent"], 500),
         contractUrl: buildContractUrl(token),
       };
-      await ensureBackofficeCredentialColumns(prisma);
-      const storeCoordinates = await resolveOnboardingStoreCoordinates(request.formalData);
-
-      const activation = await prisma.$transaction(async (tx) => {
-        await tx.$queryRawUnsafe('SELECT id FROM OnboardingRequest WHERE id = ? FOR UPDATE', request.id);
-        const lockedRequest = await tx.onboardingRequest.findUnique({ where: { token } });
-
-        if (!lockedRequest) {
-          const error = new Error("onboarding_request_not_found");
-          error.status = 404;
-          throw error;
-        }
-
-        if (lockedRequest.status !== "CONTRACT_SENT") {
-          if (lockedRequest.status === 'ACTIVATED' && hasClosure(lockedRequest) && lockedRequest.formalData.closure.offer.hash === req.body.offerHash) return null;
-          const error = new Error("onboarding_request_not_signable");
-          error.status = 409;
-          throw error;
-        }
-
-        if (needsCommercialClosure(lockedRequest) && !hasClosure(lockedRequest)) throw Object.assign(new Error('commercial_closure_pending'), { status: 409 });
-        if (hasClosure(lockedRequest)) {
-          verifyOffer(lockedRequest.formalData.closure.offer);
-          if (!closureView(lockedRequest).canSign || lockedRequest.formalData.closure.offer.hash !== req.body.offerHash) throw Object.assign(new Error('initial_payment_required'), { status: 409 });
-        }
-
-        const nextActivation = await createPartnerActivation(tx, lockedRequest, storeCoordinates);
-        const signedContract = buildSignedContractSnapshot(lockedRequest, signedMeta, nextActivation);
-        let signedClosure = lockedRequest.formalData.closure;
-        if (signedClosure) {
-          const sms = signedClosure.offer.sms;
-          let smsLedgerId = null;
-          if (sms.credits > 0 && sms.amountCents > 0) {
-            const partner = await tx.partner.update({ where: { id: nextActivation.partnerId },
-              data: { smsCredits: { increment: sms.credits }, smsRecharged: { increment: sms.credits } } });
-            const ledger = await tx.smsCreditLedger.create({ data: { partnerId: partner.id, type: 'RECHARGE', quantity: sms.credits,
-              balanceAfter: partner.smsCredits, amount: sms.amountCents / 100, unitPrice: sms.amountCents / 100 / sms.credits,
-              reference: `onboarding:${request.id}:${signedClosure.offer.id}`, provider: 'onboarding',
-              meta: { offerHash: signedClosure.offer.hash, paymentId: signedClosure.payment.id } } });
-            smsLedgerId = ledger.id;
-          }
-          signedClosure = { ...signedClosure, status: 'SIGNED', signedAt: signedMeta.acceptedAt, smsLedgerId };
-        }
-        await tx.onboardingRequest.update({
-          where: { token },
-          data: {
-            status: "ACTIVATED",
-            reviewedAt: lockedRequest.reviewedAt || new Date(),
-            formalData: {
-              ...(lockedRequest.formalData || {}),
-              ...(signedClosure ? { closure: signedClosure } : {}),
-              contractSignature: {
-                ...((lockedRequest.formalData || {}).contractSignature || {}),
-                ...signedMeta,
-              },
-              signedContract,
-              activation: safeActivation(nextActivation),
-            },
-          },
+      if (signsBeforePayment(request.formalData.closure?.offer)) {
+        const signed = await lockedClosure(prisma, request.id, async (tx, row) => {
+          const c = row.formalData.closure;
+          verifyOffer(c.offer);
+          if (c.offer.hash !== req.body.offerHash) throw Object.assign(new Error('offer_changed'), { status: 409 });
+          if (row.formalData.contractSignature?.offerHash === c.offer.hash) return row;
+          if (!closureView(row).canSign) throw Object.assign(new Error('onboarding_request_not_signable'), { status: 409 });
+          return tx.onboardingRequest.update({ where: { id: row.id }, data: { formalData: { ...row.formalData,
+            contractSignature: signedMeta, signedContract: buildSignedContractSnapshot(row, signedMeta),
+            closure: { ...c, status: 'AWAITING_PAYMENT', signedAt: signedMeta.acceptedAt,
+              consent: { offerHash: c.offer.hash, acceptedAt: signedMeta.acceptedAt, ip: signedMeta.ipAddress, userAgent: signedMeta.userAgent } } } } });
         });
-
-        return nextActivation;
-      });
+        return res.json({ ok: true, request: await mapRequest(signed), signedContract: signed.formalData.signedContract });
+      }
+      const activation = await activateRequest(request, signedMeta, req.body.offerHash);
 
       if (!activation) {
         const completed = await prisma.onboardingRequest.findUnique({ where: { token } });

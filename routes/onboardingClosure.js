@@ -4,8 +4,9 @@ import { closureView, createClosureService, lockedClosure, closureError } from '
 import * as stripe from '../services/stripe.js';
 import { readOnboardingPricing, updateOnboardingPricing } from '../services/onboardingPricing.js';
 import { offerDefaults, onboardingSmsPackages, onboardingSmsPricing } from '../services/onboardingDefaults.js';
+import { reviewContract } from '../services/onboardingReview.js';
 
-export default function onboardingClosureRoutes(db, { mapRequest, draftContract, stripeDeps = stripe }) {
+export default function onboardingClosureRoutes(db, { mapRequest, draftContract, stripeDeps = stripe, completePaid = async row => row }) {
   const router = express.Router(), service = createClosureService(db, stripeDeps);
   const handle = fn => async (req, res) => {
     res.set('Cache-Control', 'no-store');
@@ -32,6 +33,11 @@ export default function onboardingClosureRoutes(db, { mapRequest, draftContract,
     const generalTerms = draftContract(row), price = pricing.defaults?.smsUnitPriceEur || SMS_SELL_PRICE_EUR;
     res.json({ generalTerms, defaults: offerDefaults(row, pricing, generalTerms), pricingRevision: pricing.revision, smsPackages: onboardingSmsPackages(price), smsPricing: onboardingSmsPricing(price) });
   }));
+  router.get('/requests/:id/review-contract', handle(async (req, res) => {
+    admin(req); const row = await requestFor(req);
+    const review = reviewContract(row, await readOnboardingPricing(db), draftContract(row));
+    res.json({ offer: review.offer, fingerprint: review.fingerprint });
+  }));
   router.post('/requests/:id/offer', handle(async (req, res) => {
     admin(req); const row = await requestFor(req);
     const updated = await service.publish(row.id, req.body, actor(req));
@@ -40,7 +46,7 @@ export default function onboardingClosureRoutes(db, { mapRequest, draftContract,
   router.post('/requests/:id/cash-payment', handle(async (req, res) => {
     admin(req); if (req.body.confirmReceived !== true) throw closureError('cash_confirmation_required');
     const row = await requestFor(req); const updated = await service.cash(row.id, req.body.offerHash, req.body.receipt, actor(req));
-    res.json({ ok: true, request: await mapRequest(updated) });
+    res.json({ ok: true, request: await mapRequest(await completePaid(updated)) });
   }));
   router.post('/requests/:id/resolve-cancellation', handle(async (req, res) => {
     admin(req); if (req.body.confirmRefund !== true) throw closureError('refund_confirmation_required');
@@ -50,7 +56,7 @@ export default function onboardingClosureRoutes(db, { mapRequest, draftContract,
   router.post('/requests/:id/reconcile-payment', handle(async (req, res) => {
     admin(req); const row = await requestFor(req);
     const updated = await service.reconcile(row.id, req.body.sessionId, req.body.refundId);
-    res.json({ ok: true, request: await mapRequest(updated) });
+    res.json({ ok: true, request: await mapRequest(await completePaid(updated)) });
   }));
   router.post('/form/:token/closure/consent', handle(async (req, res) => {
     if (req.body.accepted !== true) throw closureError('prepayment_consent_required');
@@ -67,7 +73,7 @@ export default function onboardingClosureRoutes(db, { mapRequest, draftContract,
     res.json({ ok: true, ...result });
   }));
   router.post('/form/:token/closure/refresh', handle(async (req, res) => {
-    const row = await requestFor(req); res.json({ ok: true, request: await mapRequest(await service.sync(row.id)) });
+    const row = await requestFor(req); res.json({ ok: true, request: await mapRequest(await completePaid(await service.sync(row.id))) });
   }));
   router.post('/form/:token/closure/cancel', handle(async (req, res) => {
     const row = await requestFor(req); res.json({ ok: true, request: await mapRequest(await service.cancel(row.id, req.body.offerHash)) });
@@ -97,7 +103,7 @@ export default function onboardingClosureRoutes(db, { mapRequest, draftContract,
         formalData: { ...row.formalData, closure: { ...c, payment: { ...c.payment, sessionId } } },
       } });
     });
-    await service.sync(id);
+    await completePaid(await service.sync(id));
     res.json({ received: true });
   }));
   return router;

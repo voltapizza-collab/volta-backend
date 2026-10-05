@@ -618,6 +618,20 @@ export const onboardingDefaultsAnnouncementDraft = {
   },
 };
 
+// Publish by replacing the prior closure announcement only once both services are available.
+export const onboardingSignatureFirstAnnouncementDraft = {
+  id: 'onboarding-payment-signature-2026-10', revision: 2, category: 'improvement', severity: 'info',
+  title: 'Revisa, envía el correo y completa el alta con el pago',
+  message: 'Desde la revisión de Onboarding, comprueba los datos, los documentos y el contrato generado y pulsa Enviar correo de pago. El comercio firma primero y paga después. Al confirmarse el cobro se prepara el alta y se envían automáticamente el acceso, el QR y las instrucciones.',
+  detail: 'Los importes se recuperan de la elección del comercio. Los SMS siguen disponibles mediante recargas opcionales por separado. Los contratos anteriores conservan sus condiciones.',
+  translations: {
+    en: { title: 'Review, send the email and activate after payment', message: 'In Onboarding review, check the details, documents and generated contract, then send the payment email. The merchant signs first and pays next. Confirmed payment triggers activation and automatically sends access, the QR code and instructions.', detail: 'Amounts come from the merchant’s saved selection. SMS remains available through optional separate top-ups. Previous contracts retain their terms.' },
+    it: { title: 'Verifica, invia l’email e attiva dopo il pagamento', message: 'Nella revisione di Onboarding, controlla dati, documenti e contratto generato, quindi invia l’email di pagamento. Il commerciante firma prima e paga dopo. La conferma del pagamento avvia l’attivazione e l’invio automatico di accesso, codice QR e istruzioni.', detail: 'Gli importi derivano dalla scelta salvata del commerciante. Gli SMS restano disponibili tramite ricariche facoltative separate. I contratti precedenti conservano le proprie condizioni.' },
+    fr: { title: 'Vérifiez, envoyez l’email et activez après paiement', message: 'Dans la révision Onboarding, vérifiez les données, les documents et le contrat généré, puis envoyez l’email de paiement. Le commerçant signe avant de payer. La confirmation du paiement déclenche l’activation et l’envoi automatique de l’accès, du code QR et des instructions.', detail: 'Les montants proviennent du choix enregistré du commerçant. Les SMS restent disponibles via des recharges facultatives séparées. Les contrats précédents conservent leurs conditions.' },
+    pt: { title: 'Reveja, envie o email e ative após o pagamento', message: 'Na revisão de Onboarding, confira os dados, documentos e contrato gerado e envie o email de pagamento. O comerciante assina primeiro e paga depois. A confirmação do pagamento inicia a ativação e o envio automático do acesso, código QR e instruções.', detail: 'Os valores vêm da escolha guardada do comerciante. Os SMS continuam disponíveis através de recargas opcionais separadas. Os contratos anteriores mantêm as suas condições.' },
+  },
+};
+
 backofficeAnnouncements.push(...[
   businessAccessAnnouncementDraft, storeReceptionAnnouncementDraft,
   onboardingCommercialAnnouncementDraft, onboardingClosureAnnouncementDraft,

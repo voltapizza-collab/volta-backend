@@ -87,7 +87,7 @@ test('HTTP saves partial drafts, resumes, validates submission, freezes selectio
   assert.equal((await post('/form/test-token/draft', fields)).status, 409);
   assert.equal((await post('/form/test-token', fields)).status, 409);
   response = await post('/requests/1/contract/send', {});
-  assert.equal(response.status, 409); assert.equal((await response.json()).error, 'commercial_closure_pending');
+  assert.equal(response.status, 403); assert.equal((await response.json()).error, 'admin_required');
   row.status = 'CONTRACT_SENT'; // Even manual status updates cannot bypass the legacy signature guard.
   response = await post('/form/test-token/sign-contract', { acceptedContract: true });
   assert.equal(response.status, 409); assert.equal((await response.json()).error, 'commercial_closure_pending');

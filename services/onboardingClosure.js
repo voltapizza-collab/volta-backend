@@ -25,12 +25,14 @@ const digest = value => crypto.createHash('sha256').update(JSON.stringify(value)
 const canonical = value => Array.isArray(value) ? value.map(canonical)
   : value && typeof value === 'object' ? Object.fromEntries(Object.keys(value).sort().map(key => [key, canonical(value[key])])) : value;
 export const hasClosure = request => Boolean(request?.formalData?.closure);
+export const signsBeforePayment = offer => offer?.workflow === 'SIGN_PAY_ACTIVATE';
 export const commercialRequest = request => Boolean(request?.formalData?.commercialCatalog || request?.formalData?.commercialSelection || request?.formalData?.onboardingDraft);
 const getClosure = request => request.formalData?.closure;
 const editable = request => requireValue(!['ACTIVATED', 'APPROVED', 'REJECTED'].includes(request.status), 'onboarding_request_closed');
 const documentKeys = ['id','revision','currency','vatIncluded','pos','sms','lines','totalCents','signatureDays','refundDays','documentText','publishedAt'];
 const offerHash = offer => {
   const data = Object.fromEntries(documentKeys.map(key => [key, offer[key]]));
+  if (offer.workflow) data.workflow = offer.workflow;
   if (offer.hashAlgorithm === 'sha256-canonical-json-v1') return digest(canonical({ ...data, hashAlgorithm: offer.hashAlgorithm }));
   requireValue(!offer.hashAlgorithm, 'offer_integrity_failed');
   return digest(data); // Preserve legacy versions without rewriting accepted documents.
@@ -38,6 +40,7 @@ const offerHash = offer => {
 export const verifyOffer = offer => requireValue(offer && offerHash(offer) === offer.hash, 'offer_integrity_failed');
 
 export function buildClosureOffer(request, input, revision = 1) {
+  const signatureFirst = input.workflow === 'SIGN_PAY_ACTIVATE';
   requireValue(input.approved === true, 'offer_approval_required');
   const selection = request.formalData?.commercialSelection;
   requireValue(selection && selection.status !== 'DRAFT' && request.submittedAt, 'submitted_selection_required');
@@ -46,9 +49,9 @@ export function buildClosureOffer(request, input, revision = 1) {
   const rental = mode === 'RENT_QUOTE';
   if (!rental) requireValue(validPosPrice(input.posTotalCents), 'invalid_pos_price');
   requireValue(['IN_STOCK', 'REPLENISHMENT'].includes(input.stockStatus), 'stock_confirmation_required');
-  const delivery = { status: input.stockStatus, expected: date(input.deliveryExpected), latest: date(input.deliveryLatest),
+  const delivery = signatureFirst ? null : { status: input.stockStatus, expected: date(input.deliveryExpected), latest: date(input.deliveryLatest),
     reference: text(input.supplyReference, 3, 200), terms: text(input.supplyTerms, 30, 4000) };
-  requireValue(delivery.expected >= today() && delivery.latest >= delivery.expected, 'delivery_date_required');
+  if (delivery) requireValue(delivery.expected >= today() && delivery.latest >= delivery.expected, 'delivery_date_required');
   const payments = mode === 'INSTALLMENTS' ? installmentAmounts(selection.pos.installmentCount, input.posTotalCents)
     : mode === 'PURCHASE' ? [input.posTotalCents] : Array(36).fill(cents(input.rentCents));
   const pos = { mode, payments, firstCents: rental ? cents(input.rentCents) : payments[0], depositCents: rental ? cents(input.depositCents) : 0,
@@ -56,37 +59,39 @@ export function buildClosureOffer(request, input, revision = 1) {
     ownershipTransfer: rental ? 'AFTER_TERM_AND_FULL_PAYMENT' : null, delivery,
     previousPriceCents: selection.pos.totalCents ?? null,
     priceChanged: !rental && selection.pos.totalCents !== input.posTotalCents,
-    cancellationTerms: rental ? text(input.cancellationTerms, 30, 4000) : null,
-    terms: text(input.equipmentTerms, 30, 8000), ownership: rental ? 'VOLTA' : 'PURCHASE', interestPercent: rental ? null : 0 };
+    cancellationTerms: rental ? (signatureFirst ? input.cancellationTerms || 'Se aplica la cláusula de resolución del contrato general.' : text(input.cancellationTerms, 30, 4000)) : null,
+    terms: signatureFirst ? input.equipmentTerms || '' : text(input.equipmentTerms, 30, 8000), ownership: rental ? 'VOLTA' : 'PURCHASE', interestPercent: rental ? null : 0 };
   requireValue(pos.firstCents > 0, 'rent_price_required');
   // Legacy offers retain their recharge. New onboarding selections leave recharges to the existing SMS tool.
   const smsRequested = selection.sms?.initialRecharge !== 'SEPARATE' && selection.sms?.requested !== false;
   const sms = { initialRecharge: smsRequested ? 'INCLUDED' : 'SEPARATE', amountCents: smsRequested ? cents(input.smsCents) : 0,
     credits: smsRequested ? input.smsCredits : 0, unit: 'SMS_SEGMENT', unitPriceEur: selection.sms?.unitPriceEur || SMS_SELL_PRICE_EUR };
   requireValue(!smsRequested || (sms.amountCents > 0 && Number.isSafeInteger(sms.credits) && sms.credits > 0 && sms.credits <= 100000), 'sms_package_required');
-  requireValue(Number.isInteger(input.signatureDays) && input.signatureDays >= 1 && input.signatureDays <= 60, 'signature_deadline_required');
-  requireValue(Number.isInteger(input.refundDays) && input.refundDays >= 1 && input.refundDays <= 30, 'refund_deadline_required');
+  if (!signatureFirst) {
+    requireValue(Number.isInteger(input.signatureDays) && input.signatureDays >= 1 && input.signatureDays <= 60, 'signature_deadline_required');
+    requireValue(Number.isInteger(input.refundDays) && input.refundDays >= 1 && input.refundDays <= 30, 'refund_deadline_required');
+  }
   const lines = [{ code: 'POS', label: rental ? 'POS: primera mensualidad de renting (36 meses)' : mode === 'INSTALLMENTS' ? 'POS: primera cuota' : 'Compra del POS', amountCents: pos.firstCents },
     ...(pos.depositCents ? [{ code: 'DEPOSIT', label: 'Fianza reembolsable del POS', amountCents: pos.depositCents }] : []),
     ...(smsRequested ? [{ code: 'SMS', label: `Recarga inicial: ${sms.credits} partes de SMS`, amountCents: sms.amountCents }] : [])];
   const f = request.formalData;
   const content = [
-    `CONTRATO VOLTA — OFERTA ${revision}`,
+    `CONTRATO VOLTA — VERSIÓN ${revision}`,
     `Comerciante: ${f.legalName}. NIF: ${f.taxId}. Negocio: ${f.commercialName}.`,
     `Representante: ${f.legalRepresentative}, ${f.representativeRole}. Correo: ${f.businessEmail}.`,
     `Domicilio: ${f.businessAddress}, ${f.postalCode}, ${f.city}, ${f.country}.`,
     text(input.generalTerms, 200),
     'CONDICIONES PARTICULARES. Prevalecen en materia económica sobre las condiciones generales anteriores.',
     'Ventas: 90 % del ticket para el comercio, 9 % para Volta y 1 % para el embajador. POS y SMS se pagan aparte; no se descuentan del 90 %.',
-    `Liquidaciones: ${text(input.settlementTerms, 30, 4000)}. Sobre cobros efectivos y fondos disponibles; Volta no anticipa fondos.`,
+    `Liquidaciones: ${signatureFirst ? input.settlementTerms || 'Conforme a las condiciones generales del contrato' : text(input.settlementTerms, 30, 4000)}. Sobre cobros efectivos y fondos disponibles; Volta no anticipa fondos.`,
     `Cuenta declarada: ${f.accountHolder}, ${f.iban}.`,
     'EQUIPO POS',
     rental ? `Renting: 36 mensualidades de ${money(pos.firstCents)}, IVA incluido. Total: ${money(pos.totalCents)}, IVA incluido. Duración de 36 meses desde la entrega operativa; primer mes por adelantado y restantes mensualmente desde esa entrega. La espera anterior a la entrega no devenga mensualidades y desplaza el inicio, fin y vencimientos restantes. Propiedad de Volta durante el plazo; al finalizar los 36 meses y completar las 36 mensualidades se transmite automáticamente al Comerciante sin precio residual ni mensualidad 37. No hay transmisión a los 24 meses ni al alcanzar el precio de venta al contado. Fianza reembolsable: ${money(pos.depositCents)}. Cancelación anticipada: ${pos.cancellationTerms}`
       : `Compra: ${money(pos.totalCents)} IVA incluido. ${payments.length > 1 ? `Sin intereses. Cuotas: ${payments.map(money).join(', ')}. Primera cuota antes de firmar; restantes cada mes a partir del primer pago.` : 'Pago completo antes de la firma.'}`,
     ...(pos.priceChanged ? [`Precio propuesto en fase 2: ${money(pos.previousPriceCents)}. Precio de esta oferta: ${money(pos.totalCents)}. Revisa y acepta el cambio antes de pagar.`] : []),
-    `Suministro sujeto al stock de Volta en las tres modalidades. Disponibilidad confirmada: ${delivery.status === 'IN_STOCK' ? 'en stock' : 'reposición con fecha comprometida'}. Referencia: ${delivery.reference}. Entrega prevista: ${delivery.expected}. Fecha límite: ${delivery.latest}. Pagar o firmar no garantiza entrega inmediata.`,
+    delivery ? `Suministro sujeto al stock de Volta en las tres modalidades. Disponibilidad confirmada: ${delivery.status === 'IN_STOCK' ? 'en stock' : 'reposición con fecha comprometida'}. Referencia: ${delivery.reference}. Entrega prevista: ${delivery.expected}. Fecha límite: ${delivery.latest}. Pagar o firmar no garantiza entrega inmediata.` : 'El suministro del POS está sujeto al stock disponible de Volta. Volta confirma el suministro durante la revisión y comunica la entrega al comercio. El pago no implica una entrega física inmediata.',
     'Las compras al contado con pago íntegro confirmado tienen prioridad entre asignaciones pendientes, respetando equipos ya asignados y fechas comprometidas. Sin stock ni fecha de reposición comprometible, el expediente espera sin exigir pago inicial.',
-    `Retraso, nueva fecha y cancelación por falta de suministro: ${delivery.terms}`,
+    delivery ? `Retraso, nueva fecha y cancelación por falta de suministro: ${delivery.terms}` : input.supplyTerms || '',
     pos.terms,
     'Las cuotas o rentas futuras se abonarán por enlaces de pago separados. Este pago inicial no autoriza cargos automáticos ni paga las cuotas futuras. La compra o transmisión del equipo no concede una licencia perpetua del servicio Volta.',
     'SISTEMA DE NOTIFICACIONES SMS. Volta dispone de una herramienta de gestión, notificación y comunicación por SMS, cuyo uso es opcional. El comercio puede utilizarla mediante recargas de saldo por paquetes. El precio por parte y los paquetes aplicables se muestran antes de cada recarga conforme a la tarifa vigente, que puede variar. Un mensaje puede consumir varias partes según su longitud y caracteres. El alta no obliga a utilizar SMS ni a recargar saldo.',
@@ -97,10 +102,14 @@ export function buildClosureOffer(request, input, revision = 1) {
     `Al aceptar y pagar, el comercio acepta estas condiciones de pago previo y su vinculación a esta versión. Debe completar la firma en ${input.signatureDays} días desde el cobro.`,
     `Antes de la firma no se entrega el equipo ni se consumen créditos SMS. Puede solicitar cancelación desde esta página. Si no firma en plazo, el alta queda bloqueada para resolver la cancelación. Volta tramitará la devolución íntegra de lo cobrado antes del alta en un máximo de ${input.refundDays} días desde la solicitud de cancelación o el vencimiento del plazo de firma. La llegada a la cuenta dependerá de la entidad de pago.`,
     'La firma posterior confirma el contrato completo de esta versión. Los cambios requieren una nueva aceptación. El justificante de pago y el contrato permanecerán disponibles en este enlace privado.',
-  ].join('\n\n');
+  ].filter(Boolean).join('\n\n');
+  const documentText = signatureFirst ? content
+    .replace('Primera cuota antes de firmar', 'Primera cuota después de firmar')
+    .replace('Pago completo antes de la firma.', 'Pago completo después de la firma.')
+    .replace(/PAGO PREVIO Y FINALIZACIÓN[\s\S]*$/, `FIRMA, PAGO Y ALTA\n\nEl comercio firma este contrato antes de abonar el pago inicial de ${money(lines.reduce((sum, line) => sum + line.amountCents, 0))}. La firma sin pago deja el expediente pendiente de pago. Una vez confirmado el cobro, Volta prepara el alta y envía automáticamente el acceso, el QR y las instrucciones de inicio y entrega. La tienda debe prepararse antes de abrir pedidos. El contrato firmado y el justificante permanecen disponibles en este enlace privado.`) : content;
   const offer = { id: crypto.randomUUID(), revision, hashAlgorithm: 'sha256-canonical-json-v1', currency: 'EUR', vatIncluded: true, pos, sms, lines,
     totalCents: lines.reduce((sum, line) => sum + line.amountCents, 0), signatureDays: input.signatureDays,
-    refundDays: input.refundDays, documentText: content, publishedAt: iso() };
+    refundDays: input.refundDays ?? null, documentText, publishedAt: iso(), ...(signatureFirst ? { workflow: 'SIGN_PAY_ACTIVATE', signatureDays: null } : {}) };
   return { ...offer, hash: offerHash(offer) };
 }
 
@@ -119,17 +128,19 @@ export function closureView(request) {
   const c = getClosure(request);
   if (!c) return null;
   const p = c.payment;
-  const deadline = p?.paidAt ? new Date(new Date(p.paidAt).getTime() + c.offer.signatureDays * 86400000).toISOString() : null;
+  const first = signsBeforePayment(c.offer);
+  const signed = c.status === 'SIGNED' || (first && request.formalData?.contractSignature?.offerHash === c.offer.hash);
+  const deadline = !first && p?.paidAt ? new Date(new Date(p.paidAt).getTime() + c.offer.signatureDays * 86400000).toISOString() : null;
   const overdue = c.status !== 'SIGNED' && deadline && Date.now() > new Date(deadline).getTime();
   return { offer: c.offer, consented: c.consent?.offerHash === c.offer.hash, status: c.status,
     payment: p ? { method: p.method, status: p.status, amountCents: p.amountCents, paidAt: p.paidAt,
       receipt: p.receipt || p.sessionId || null, refundStatus: p.refundStatus || null } : null,
     signatureDeadline: deadline, overdue: Boolean(overdue),
-    canSign: c.status === 'PAID' && p?.status === 'PAID' && !overdue && c.consent?.offerHash === c.offer.hash,
-    signed: c.status === 'SIGNED', signedAt: c.signedAt || null,
+    canSign: first ? !signed && c.status === 'OFFERED' : c.status === 'PAID' && p?.status === 'PAID' && !overdue && c.consent?.offerHash === c.offer.hash,
+    signed, activated: request.status === 'ACTIVATED', signedAt: c.signedAt || null,
     signerName: request.formalData?.contractSignature?.signerName || null,
     cancelRequested: Boolean(c.cancelRequestedAt),
-    refundDueAt: c.cancelRequestedAt || (overdue && deadline)
+    refundDueAt: c.offer.refundDays && (c.cancelRequestedAt || (overdue && deadline))
       ? new Date(new Date(c.cancelRequestedAt || deadline).getTime() + c.offer.refundDays * 86400000).toISOString() : null };
 }
 
@@ -144,6 +155,7 @@ export function createClosureService(db, deps = stripe) {
       editable(request);
       const old = getClosure(request);
       requireValue(!old || body.replacesOfferHash === old.offer.hash, 'offer_changed');
+      requireValue(!old || !signsBeforePayment(old.offer) || request.formalData.contractSignature?.offerHash !== old.offer.hash, 'signed_contract_cannot_change');
       requireValue(!old?.payment || ['EXPIRED', 'REFUNDED'].includes(old.payment.status), 'resolve_existing_payment_first');
       const offer = buildClosureOffer(request, body, (old?.offer.revision || 0) + 1);
       const { history: oldHistory, ...previous } = old || {};
@@ -153,6 +165,7 @@ export function createClosureService(db, deps = stripe) {
   async function consent(id, hash, evidence) {
     return lockedClosure(db, id, async (tx, request) => {
       const c = assertCurrent(request, hash);
+      requireValue(!signsBeforePayment(c.offer), 'contract_signature_required');
       requireValue(!['CANCEL_REQUESTED','CANCELLED','REFUND_PENDING','REFUNDED','REVERSED'].includes(c.status), 'closure_cancelled');
       if (c.consent?.offerHash === hash) return request;
       return save(tx, request, { ...c, consent: { offerHash: hash, acceptedAt: iso(), ip: evidence.ip, userAgent: evidence.userAgent }, status: 'ACCEPTED' });
@@ -200,6 +213,7 @@ export function createClosureService(db, deps = stripe) {
     const reserved = await lockedClosure(db, id, async (tx, request) => {
       const c = assertCurrent(request, hash);
       requireValue(c.consent?.offerHash === hash, 'prepayment_consent_required');
+      if (signsBeforePayment(c.offer)) requireValue(request.formalData.contractSignature?.offerHash === hash, 'contract_signature_required');
       requireValue(!c.cancelRequestedAt && !['REFUNDED','REVERSED','CANCELLED','REFUND_PENDING'].includes(c.status), 'closure_cancelled');
       if (c.payment?.status === 'PAID') return request;
       if (c.payment && c.payment.status !== 'EXPIRED') {
@@ -230,6 +244,7 @@ export function createClosureService(db, deps = stripe) {
     return lockedClosure(db, id, async (tx, request) => {
       const c = assertCurrent(request, hash);
       requireValue(c.consent?.offerHash === hash, 'prepayment_consent_required');
+      if (signsBeforePayment(c.offer)) requireValue(request.formalData.contractSignature?.offerHash === hash, 'contract_signature_required');
       requireValue(!c.cancelRequestedAt && !['REFUNDED','REVERSED','CANCELLED'].includes(c.status), 'closure_cancelled');
       if (c.payment?.method === 'CASH' && c.payment.status === 'PAID' && c.payment.receipt === receipt) return request;
       requireValue(!c.payment || c.payment.status === 'EXPIRED', 'resolve_existing_payment_first');
