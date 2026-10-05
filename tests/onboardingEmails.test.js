@@ -1,11 +1,25 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { buildOnboardingEmail, buildClosureEmail, buildCredentialsEmail } from '../routes/onboarding.js';
+import { onboardingCommercialCatalog } from '../services/onboardingCommercial.js';
 
 test('invitation explains selection, stock and absence of payment or signature', () => {
   const email = buildOnboardingEmail({ name: '<script>test</script>', businessName: 'Test & Shop' }, 'https://example.invalid/onboarding/test');
   assert.match(email.text, /renting de 36 meses/); assert.match(email.text, /no se cobra ni se firma/);
   assert.match(email.html, /&lt;script&gt;/); assert.doesNotMatch(email.html, /<script>/);
+});
+
+test('first email shows three visible payment options using the frozen application price', () => {
+  const commercialCatalog = onboardingCommercialCatalog(29999);
+  commercialCatalog.rental.monthlyCents = 1250;
+  const mail = buildOnboardingEmail({ name: 'Test', businessName: 'Test', formalData: { commercialCatalog } }, 'https://example.invalid/test');
+  for (const body of [mail.html, mail.text]) {
+    assert.match(body, /299,99/); assert.match(body, /12,50/); assert.match(body, /450,00/);
+    assert.match(body, /tarjeta/); assert.match(body, /efectivo/); assert.match(body, /5 de 50,00/); assert.match(body, /49,99/);
+    assert.doesNotMatch(body, /250,00/);
+    assert.match(body, /Notificaciones SMS opcionales: 0,075 € por parte/);
+    assert.match(body, /el alta no obliga a recargar/);
+  }
 });
 test('closure email contains itemized initial payment, rental ownership, delivery and resume instructions', () => {
   const row = { name: 'Test', businessName: 'Shop', formalData: { closure: { offer: { revision: 3, signatureDays: 7, totalCents: 2100,

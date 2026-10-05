@@ -605,7 +605,19 @@ export const onboardingClosureAnnouncementDraft = {
   },
 };
 
-// Coordinated backend/storefront release verified on 5 October 2026.
+// Draft: keep out of the feed until the coordinated backend/storefront release.
+export const onboardingDefaultsAnnouncementDraft = {
+  id: 'onboarding-shared-defaults-2026-10', revision: 1, category: 'improvement', severity: 'info',
+  title: 'Tarifas y ofertas de incorporación más claras',
+  message: 'Configura las tarifas vigentes del POS y SMS y las condiciones comunes desde Onboarding. El primer correo presenta las tres modalidades del POS. Los SMS son una herramienta disponible de uso opcional, con recargas por separado: el proceso explica la tarifa vigente y los paquetes, sin casilla de contratación ni recarga obligatoria. El contrato describe el servicio sin fijar un precio permanente.',
+  translations: {
+    en: { title: 'Clearer onboarding prices and offers', message: 'Set current POS and SMS prices and common terms in Onboarding. The first email presents the three POS options. SMS is an available tool with optional usage and separate top-ups: onboarding explains current prices and packages, without an activation checkbox or mandatory top-up. The contract describes the service without fixing a permanent price.' },
+    it: { title: 'Tariffe e offerte di adesione più chiare', message: 'Configura tariffe vigenti di POS e SMS e condizioni comuni in Onboarding. La prima email presenta le tre opzioni del POS. Gli SMS sono uno strumento disponibile di uso facoltativo, con ricariche separate: il processo spiega tariffe e pacchetti vigenti, senza casella di attivazione né ricarica obbligatoria. Il contratto descrive il servizio senza fissare un prezzo permanente.' },
+    fr: { title: 'Des tarifs et offres d’inscription plus clairs', message: 'Configurez les tarifs actuels du POS et des SMS et les conditions communes dans Onboarding. Le premier email présente les trois options du POS. Les SMS sont un outil disponible à usage facultatif, avec des recharges séparées : le parcours explique les tarifs et forfaits actuels, sans case d’activation ni recharge obligatoire. Le contrat décrit le service sans fixer de prix permanent.' },
+    pt: { title: 'Tarifas e propostas de adesão mais claras', message: 'Configure as tarifas vigentes do POS e SMS e as condições comuns em Onboarding. O primeiro email apresenta as três modalidades do POS. Os SMS são uma ferramenta disponível de uso opcional, com recargas separadas: o processo explica as tarifas e os pacotes vigentes, sem caixa de ativação nem recarga obrigatória. O contrato descreve o serviço sem fixar um preço permanente.' },
+  },
+};
+
 backofficeAnnouncements.push(...[
   businessAccessAnnouncementDraft, storeReceptionAnnouncementDraft,
   onboardingCommercialAnnouncementDraft, onboardingClosureAnnouncementDraft,

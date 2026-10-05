@@ -9,9 +9,13 @@ import { buildCommercialSelection, onboardingCommercialCatalog } from '../servic
 import { newOnboardingCatalog, updateOnboardingPricing } from '../services/onboardingPricing.js';
 import closureRoutes from '../routes/onboardingClosure.js';
 import { isPublicWebRoute } from '../services/webAccess.js';
+import { normalizeOnboardingDefaults, offerDefaults } from '../services/onboardingDefaults.js';
 
-const selection = mode => buildCommercialSelection({ posChoice: mode, posInstallments: 6,
-  commercialAcknowledged: true, commercialVersion: onboardingCommercialCatalog().version }).selection;
+const selection = mode => {
+  const result = buildCommercialSelection({ posChoice: mode, posInstallments: 6, commercialAcknowledged: true, commercialVersion: onboardingCommercialCatalog().version }).selection;
+  result.sms.initialRecharge = 'INCLUDED'; // Historical offer fixtures include a paid recharge.
+  return result;
+};
 const request = (mode = 'PURCHASE') => ({ id: 1, token: 'test-only', status: 'IN_REVIEW', submittedAt: new Date(),
   formalData: { commercialSelection: selection(mode), legalName: 'Test', taxId: 'TEST', commercialName: 'Test store',
     legalRepresentative: 'Test', representativeRole: 'Owner', businessEmail: 'test@example.invalid',
@@ -84,6 +88,25 @@ test('variable sale price drives every installment, contract and first payment; 
   rent.pos.payments[0] = 1; assert.throws(() => verifyOffer(rent), /offer_integrity_failed/);
 });
 
+test('optional SMS excludes charges even with stale package inputs; the contract freezes the unit tariff', () => {
+  const row = request(); row.formalData.commercialSelection.sms.initialRecharge = 'SEPARATE';
+  const without = buildClosureOffer(row, input());
+  assert.deepEqual(without.lines.map(line => line.code), ['POS']);
+  assert.equal(without.totalCents, 28001); assert.equal(without.sms.credits, 0);
+  assert.equal(offerDefaults(row, { defaults: { smsCents: 1000 } }, '').smsCents, 0);
+  assert.match(without.documentText, /cuyo uso es opcional/);
+  assert.doesNotMatch(without.documentText, /0,075|133 partes/);
+  assert.match(without.documentText, /tarifa vigente, que puede variar/);
+  verifyOffer(without);
+  row.formalData.commercialSelection.sms.initialRecharge = 'INCLUDED';
+  const withSms = buildClosureOffer(row, { ...input(), smsCredits: 133 });
+  assert.equal(withSms.totalCents, 29001); assert.equal(withSms.sms.unitPriceEur, '0.0750');
+  assert.match(withSms.documentText, /133 partes por 10.00 EUR/);
+  withSms.sms.unitPriceEur = '0.1'; assert.throws(() => verifyOffer(withSms), /offer_integrity_failed/);
+  delete row.formalData.commercialSelection.sms.initialRecharge;
+  assert.equal(buildClosureOffer(row, input()).totalCents, 29001); // Preserve pre-checkbox selections.
+});
+
 test('offer integrity survives MySQL JSON key reordering but detects changed amounts or payment order', () => {
   const reorder = value => Array.isArray(value) ? value.map(reorder) : value && typeof value === 'object'
     ? Object.fromEntries(Object.keys(value).reverse().map(key => [key, reorder(value[key])])) : value;
@@ -110,6 +133,34 @@ test('default tariff only changes future catalogs; stale administrative edits ar
   assert.equal(buildCommercialSelection({ posChoice: 'PURCHASE' }, { catalog: previous }).selection.pos.totalCents, 25000);
   await assert.rejects(updateOnboardingPricing(f.db, { posTotalCents: 1, revision: 1 }, 'x'), /invalid_pos_price/);
   await assert.rejects(updateOnboardingPricing(f.db, { posTotalCents: 29000, revision: 0 }, 'x'), /pricing_changed/);
+});
+
+test('shared settings calculate rentals and SMS while preserving existing catalog and contract snapshots', async () => {
+  const f = fixture('RENT_QUOTE');
+  const defaults = { ...input(), rentMode: 'PRICE_24', rentCents: null };
+  await updateOnboardingPricing(f.db, { posTotalCents: 25000, revision: 0, defaults }, 'test-admin');
+  const catalog = await newOnboardingCatalog(f.db);
+  assert.equal(catalog.rental.monthlyCents, 1042); assert.equal(catalog.rental.totalCents, 37512);
+  assert.equal(catalog.sms.packages[0].credits, 133); // Existing SMS service tariff, not an invented onboarding tariff.
+  const row = request('RENT_QUOTE'); row.formalData.commercialCatalog = structuredClone(catalog);
+  row.formalData.commercialSelection.sms.initialRecharge = 'SEPARATE';
+  const prepared = offerDefaults(row, await f.db.onboardingPricing.findUnique(), input().generalTerms);
+  const signedVersion = buildClosureOffer(row, { ...input(), ...prepared });
+  await updateOnboardingPricing(f.db, { posTotalCents: 30000, revision: 1, defaults: { ...defaults, smsCents: 1500 } }, 'test-admin');
+  const next = await newOnboardingCatalog(f.db);
+  assert.equal(next.rental.monthlyCents, 1250); assert.equal(next.sms.packages[0].credits, 133);
+  const original = offerDefaults(row, await f.db.onboardingPricing.findUnique(), input().generalTerms);
+  assert.equal(original.rentCents, 1042); assert.equal(original.smsCredits, 0); assert.equal(original.posTotalCents, 25000);
+  verifyOffer(signedVersion); assert.equal(signedVersion.pos.totalCents, 37512);
+  await assert.rejects(updateOnboardingPricing(f.db, { posTotalCents: 30000, revision: 1, defaults }, 'test-admin'), /pricing_changed/);
+});
+
+test('incomplete defaults do not invent commercial terms and invalid defaults are rejected', () => {
+  const settings = normalizeOnboardingDefaults({});
+  assert.equal(settings.rentCents, null); assert.equal(settings.signatureDays, null); assert.equal(settings.settlementTerms, '');
+  for (const input of [{ rentMode: 'invalid' }, { rentCents: -1 }, { depositCents: -1 }, { signatureDays: 61 }, { refundDays: 31 }, { equipmentTerms: 'short' }, { smsCents: 1.1 }]) {
+    assert.throws(() => normalizeOnboardingDefaults(input), /invalid_onboarding_defaults/);
+  }
 });
 
 test('consent is required; concurrent checkout retries reuse one payment; deferred payment cannot sign', async () => {
@@ -189,12 +240,13 @@ test('HTTP rejects non-admin price/offer writes and invalid webhooks; token endp
   assert.equal(isPublicWebRoute('POST', '/onboarding/form/token/closure/checkout'), true);
 });
 
-test('real signature route activates and grants SMS once under double submission, preserving the exact offer', async t => {
+for (const smsRequested of [true, false]) test(`real signature activates once, SMS requested=${smsRequested}, preserving the exact offer`, async t => {
   for (const key of ['SMTP_USER','GMAIL_USER','SMTP_PASS','GMAIL_APP_PASSWORD','GOOGLE_GEOCODING_KEY','GOOGLE_MAPS_API_KEY','REACT_APP_GOOGLE_KEY']) {
     const previous = process.env[key]; delete process.env[key];
     t.after(() => { if (previous === undefined) delete process.env[key]; else process.env[key] = previous; });
   }
-  const f = fixture(), hash = await offered(f); let partners = 0, stores = 0, ledgers = 0, credits = 0;
+  const f = fixture(); f.row().formalData.commercialSelection.sms.initialRecharge = smsRequested ? 'INCLUDED' : 'SEPARATE';
+  const hash = await offered(f); let partners = 0, stores = 0, ledgers = 0, credits = 0;
   f.db.$executeRawUnsafe = async () => 1;
   f.db.partner = { findUnique: async () => null,
     create: async ({ data }) => { partners++; return { id: 10, ...data }; },
@@ -212,7 +264,9 @@ test('real signature route activates and grants SMS once under double submission
   const originalDocument = f.row().formalData.closure.offer.documentText;
   const responses = await Promise.all([sign(), sign()]);
   for (const response of responses) { const result = await response.json(); assert.equal(response.status, 200, JSON.stringify(result)); }
-  assert.deepEqual({ partners, stores, ledgers, credits }, { partners: 1, stores: 1, ledgers: 1, credits: 100 });
+  assert.deepEqual({ partners, stores, ledgers, credits }, { partners: 1, stores: 1, ledgers: smsRequested ? 1 : 0, credits: smsRequested ? 100 : 0 });
+  assert.equal(f.row().formalData.closure.offer.totalCents, smsRequested ? 29001 : 28001);
+  if (!smsRequested) assert.equal(f.row().formalData.closure.smsLedgerId, null);
   assert.equal(f.row().formalData.signedContract.contentText, originalDocument);
   assert.equal(f.row().formalData.signedContract.offerHash, hash);
   assert.equal(f.row().formalData.closure.status, 'SIGNED');

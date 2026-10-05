@@ -1,0 +1,17 @@
+# Simplificación de ofertas y primer correo
+
+5 de octubre de 2026. El primer correo incorpora tres bloques visibles: contado, compra a plazos y renting de 36 meses; usa el catálogo congelado de la solicitud y explica tarjeta por Stripe y efectivo para contado. No se reenvían los correos anteriores.
+
+Global Manager → Onboarding → «Tarifas vigentes del POS y SMS · condiciones generales» reúne ambos precios editables. La tarifa SMS admite hasta cuatro decimales de euro por parte; el valor inicial sigue siendo 0,075 €. Se guarda en `OnboardingPricing.defaults.smsUnitPriceEur` con control de revisión. Las pantallas de SMS, presupuestos y nuevas recargas usan la misma tarifa; 10 € equivalen actualmente a 133 partes. Un mensaje puede consumir varias partes según longitud y caracteres.
+
+Corrección solicitada por Luigi: se retira la casilla de solicitar SMS. La herramienta existe dentro de Volta y su uso es opcional; las nuevas altas no añaden recarga obligatoria. El formulario informa de la tarifa vigente y de un paquete de ejemplo y lo incluye en la aceptación general de condiciones. El contrato explica el sistema, las recargas separadas y el uso opcional, sin fijar precio unitario ni cantidad de un paquete futuro. Las recargas siguen disponibles desde el backoffice.
+
+Cambiar la tarifa actualiza nuevas recargas; no cambia el número de partes de saldos ya comprados. Si la tarifa cambia mientras el comercio tiene abierto el formulario de recarga, se le pide revisar los paquetes actualizados. Stripe conserva precio y cantidad en su sesión: un webhook posterior respeta lo comprado, aunque la tarifa haya cambiado. Se conservan las ofertas y contratos anteriores, incluidos sus paquetes acordados; no se reescriben pagos.
+
+Las condiciones todavía no aprobadas no reciben valores inventados. La configuración puede guardarse parcialmente, pero no se prepara una oferta hasta completar lo exigido. El renting permite cuota fija o precio dividido entre 24/36, siempre con 36 mensualidades, cuota redondeada a céntimos y total visible. No se selecciona ni se aplica una nueva regla económica a producción sin la decisión de Luigi. La opción inicial conserva el comportamiento de cuota fija pendiente de configurar.
+
+Cada solicitud muestra tres importes: POS, SMS y primer pago total. La revisión habitual solo requiere stock, fecha y aprobación. La fecha prevista se propone también como fecha límite; esta última y la referencia pueden ajustarse expresamente. Los detalles económicos y contractuales se mantienen accesibles en bloques plegados. El resumen original del comercio y el contrato administrativo también están plegados para evitar duplicaciones. El cliente conserva el documento completo visible antes del pago.
+
+Los importes propuestos del POS y renting quedan congelados en nuevas solicitudes. La tarifa SMS informativa se consulta vigente al abrir el onboarding y antes de recargar. Los expedientes antiguos conservan las recargas ya ofertadas. Los cambios concurrentes conservan el control de revisión.
+
+Migración aditiva: `20261005140000_add_onboarding_defaults`, columna JSON nullable en `OnboardingPricing`. Requiere backend y storefront coordinados. Pruebas: precios y redondeo, catálogo congelado, concurrencia, campos incompletos, carga automática, primer correo, SMS opcionales y alta con/sin recarga ante doble firma. Persistencia y migración comprobadas contra MySQL local aislado. Cambios preparados localmente, pendientes de publicación.

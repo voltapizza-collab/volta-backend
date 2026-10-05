@@ -1,4 +1,8 @@
-const VERSION = 'pos-2026-10-v2';
+import { SMS_SELL_PRICE_EUR, smsPricingInfo } from './smsCredits.js';
+const VERSION = 'pos-2026-10-v3';
+// Add explanatory tariff metadata to older invitations without changing their POS prices or saved offers.
+export const withOnboardingSmsTariff = catalog => ({ ...catalog,
+  sms: { optional: true, unitPriceEur: SMS_SELL_PRICE_EUR, ...catalog.sms } });
 export const validPosPrice = value => Number.isSafeInteger(value) && value >= 100 && value <= 1000000;
 export function installmentAmounts(count, total = 25000) {
   if (!Number.isInteger(count) || count < 2 || count > 6) throw new Error('invalid_installments');
@@ -11,7 +15,7 @@ export function onboardingCommercialCatalog(total = 25000, revision = 0) {
   return { version: `${VERSION}-${revision}-${total}`, currency: 'EUR', vatIncluded: true, posTotalCents: total,
     installments: Object.fromEntries([2, 3, 4, 5, 6].map(count => [count, installmentAmounts(count, total)])),
     rental: { status: 'QUOTE_REQUIRED', monthlyCents: null, depositCents: null, durationMonths: 36, ownershipTransfer: 'AFTER_TERM_AND_FULL_PAYMENT' },
-    sms: { status: 'QUOTE_REQUIRED', initialCents: null, credits: null },
+    sms: { ...smsPricingInfo(), initialCents: 0, credits: 0 },
   };
 }
 export function buildCommercialSelection(body, { draft = false, catalog = onboardingCommercialCatalog() } = {}) {
@@ -30,12 +34,12 @@ export function buildCommercialSelection(body, { draft = false, catalog = onboar
     selection: { schemaVersion: 2, catalogVersion: catalog.version, status: draft ? 'DRAFT' : 'PENDING_REVIEW',
       currency: 'EUR', vatIncluded: true, pos: { mode: posChoice, totalCents: payments ? catalog.posTotalCents : null,
         installmentCents: payments, installmentCount: payments?.length || null, interestPercent: payments ? 0 : null,
-        firstPaymentCents: payments?.[0] ?? null, interval: posChoice === 'INSTALLMENTS' ? 'MONTHLY' : null,
-        monthlyRentCents: null, depositCents: null,
+        firstPaymentCents: payments?.[0] ?? (posChoice === 'RENT_QUOTE' ? catalog.rental.monthlyCents : null), interval: posChoice === 'INSTALLMENTS' ? 'MONTHLY' : null,
+        monthlyRentCents: posChoice === 'RENT_QUOTE' ? catalog.rental.monthlyCents : null, depositCents: posChoice === 'RENT_QUOTE' ? catalog.rental.depositCents : null,
         durationMonths: posChoice === 'RENT_QUOTE' ? 36 : null,
         ownership: posChoice === 'RENT_QUOTE' ? 'VOLTA' : 'PURCHASE_TERMS_PENDING',
         rentalTermsStatus: posChoice === 'RENT_QUOTE' ? 'QUOTE_REQUIRED' : null },
-      sms: { status: 'QUOTE_REQUIRED', initialCents: null, credits: null },
+      sms: { ...withOnboardingSmsTariff(catalog).sms, initialRecharge: 'SEPARATE', initialCents: 0, credits: 0 },
       settlement: { merchantPercent: 90, voltaPercent: 9, ambassadorPercent: 1,
         scheduleStatus: 'TO_BE_AGREED', advanceFunds: false, deductPosOrSms: false },
       initialTotalCents: null, acknowledged: commercialAcknowledged,

@@ -1,5 +1,9 @@
 # Avisos del backoffice
 
+## Oferta simplificada — borrador del 5 de octubre de 2026
+
+`onboardingDefaultsAnnouncementDraft` incluye ES/EN/IT/FR/PT. Mantener fuera del feed hasta publicar backend y storefront con la columna de configuración común. Explica la configuración única, la revisión de importes y entrega y los tres bloques del primer correo. [Detalle](onboarding-shared-defaults.md).
+
 ## Publicación del onboarding — 5 de octubre de 2026
 
 Tras confirmar backend y storefront en producción, se activan en ES/EN/IT/FR/PT las notas de accesos por negocio, recepción de pedidos, elección comercial, oferta/pago/firma y tres correos. Conservan sus identificadores originales; las constantes terminadas en `Draft` se incorporan al feed con fechas de publicación y caducidad. Las secciones históricas de borrador siguientes quedan sustituidas por esta actualización para esas cinco notas. Las pruebas externas de pago/correo y POS quedan a cargo de Luigi; no se anuncia su realización.

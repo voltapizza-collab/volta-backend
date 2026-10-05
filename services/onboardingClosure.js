@@ -1,6 +1,7 @@
 import crypto from 'node:crypto';
 import { installmentAmounts, validPosPrice } from './onboardingCommercial.js';
 import * as stripe from './stripe.js';
+import { SMS_SELL_PRICE_EUR } from './smsCredits.js';
 
 export const closureError = (message, status = 409) => Object.assign(new Error(message), { status });
 const requireValue = (condition, message) => { if (!condition) throw closureError(message); };
@@ -58,13 +59,16 @@ export function buildClosureOffer(request, input, revision = 1) {
     cancellationTerms: rental ? text(input.cancellationTerms, 30, 4000) : null,
     terms: text(input.equipmentTerms, 30, 8000), ownership: rental ? 'VOLTA' : 'PURCHASE', interestPercent: rental ? null : 0 };
   requireValue(pos.firstCents > 0, 'rent_price_required');
-  const sms = { amountCents: cents(input.smsCents), credits: input.smsCredits, unit: 'SMS_SEGMENT' };
-  requireValue(sms.amountCents > 0 && Number.isSafeInteger(sms.credits) && sms.credits > 0 && sms.credits <= 100000, 'sms_package_required');
+  // Legacy offers retain their recharge. New onboarding selections leave recharges to the existing SMS tool.
+  const smsRequested = selection.sms?.initialRecharge !== 'SEPARATE' && selection.sms?.requested !== false;
+  const sms = { initialRecharge: smsRequested ? 'INCLUDED' : 'SEPARATE', amountCents: smsRequested ? cents(input.smsCents) : 0,
+    credits: smsRequested ? input.smsCredits : 0, unit: 'SMS_SEGMENT', unitPriceEur: selection.sms?.unitPriceEur || SMS_SELL_PRICE_EUR };
+  requireValue(!smsRequested || (sms.amountCents > 0 && Number.isSafeInteger(sms.credits) && sms.credits > 0 && sms.credits <= 100000), 'sms_package_required');
   requireValue(Number.isInteger(input.signatureDays) && input.signatureDays >= 1 && input.signatureDays <= 60, 'signature_deadline_required');
   requireValue(Number.isInteger(input.refundDays) && input.refundDays >= 1 && input.refundDays <= 30, 'refund_deadline_required');
   const lines = [{ code: 'POS', label: rental ? 'POS: primera mensualidad de renting (36 meses)' : mode === 'INSTALLMENTS' ? 'POS: primera cuota' : 'Compra del POS', amountCents: pos.firstCents },
     ...(pos.depositCents ? [{ code: 'DEPOSIT', label: 'Fianza reembolsable del POS', amountCents: pos.depositCents }] : []),
-    { code: 'SMS', label: `Recarga inicial: ${sms.credits} segmentos SMS`, amountCents: sms.amountCents }];
+    ...(smsRequested ? [{ code: 'SMS', label: `Recarga inicial: ${sms.credits} partes de SMS`, amountCents: sms.amountCents }] : [])];
   const f = request.formalData;
   const content = [
     `CONTRATO VOLTA — OFERTA ${revision}`,
@@ -85,7 +89,9 @@ export function buildClosureOffer(request, input, revision = 1) {
     `Retraso, nueva fecha y cancelación por falta de suministro: ${delivery.terms}`,
     pos.terms,
     'Las cuotas o rentas futuras se abonarán por enlaces de pago separados. Este pago inicial no autoriza cargos automáticos ni paga las cuotas futuras. La compra o transmisión del equipo no concede una licencia perpetua del servicio Volta.',
-    `SMS: ${sms.credits} segmentos por ${money(sms.amountCents)}, IVA incluido. Los mensajes largos o con ciertos caracteres pueden consumir varios segmentos. Se acreditan tras pago y firma.`,
+    'SISTEMA DE NOTIFICACIONES SMS. Volta dispone de una herramienta de gestión, notificación y comunicación por SMS, cuyo uso es opcional. El comercio puede utilizarla mediante recargas de saldo por paquetes. El precio por parte y los paquetes aplicables se muestran antes de cada recarga conforme a la tarifa vigente, que puede variar. Un mensaje puede consumir varias partes según su longitud y caracteres. El alta no obliga a utilizar SMS ni a recargar saldo.',
+    ...(smsRequested ? [`Recarga incluida en esta oferta: ${sms.credits} partes por ${money(sms.amountCents)}, IVA incluido. Se acreditan tras pago y firma.`]
+      : ['Las recargas SMS se gestionan por separado desde el backoffice y no se incluyen en este pago inicial.']),
     'PAGO PREVIO Y FINALIZACIÓN',
     `Hoy se abonan: ${lines.map(line => `${line.label}: ${money(line.amountCents)}`).join('; ')}. Total: ${money(lines.reduce((sum, line) => sum + line.amountCents, 0))}.`,
     `Al aceptar y pagar, el comercio acepta estas condiciones de pago previo y su vinculación a esta versión. Debe completar la firma en ${input.signatureDays} días desde el cobro.`,

@@ -105,6 +105,7 @@ export const createSmsCreditsCheckoutSession = async ({
   partner,
   amountCents,
   credits,
+  unitPriceEur,
   successUrl,
   cancelUrl,
 }) => {
@@ -126,6 +127,7 @@ export const createSmsCreditsCheckoutSession = async ({
   appendParam(params, "metadata[partnerId]", partnerId);
   appendParam(params, "metadata[credits]", credits);
   appendParam(params, "metadata[amountCents]", amountCents);
+  if (unitPriceEur) appendParam(params, "metadata[unitPriceEur]", unitPriceEur);
   appendParam(params, "payment_intent_data[metadata][purpose]", "sms_credit_purchase");
   appendParam(params, "payment_intent_data[metadata][partnerId]", partnerId);
   appendParam(params, "payment_intent_data[metadata][credits]", credits);

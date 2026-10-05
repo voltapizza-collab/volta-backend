@@ -481,6 +481,7 @@ model IngredientSuggestion {
 model OnboardingPricing {
   id Int @id
   posTotalCents Int @default(25000)
+  defaults Json?
   revision Int @default(0)
   updatedBy String? @db.VarChar(191)
   updatedAt DateTime @updatedAt

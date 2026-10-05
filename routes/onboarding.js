@@ -7,7 +7,8 @@ import { v2 as cloudinary } from "cloudinary";
 import { sendSmtpEmail } from "../services/email.js";
 import { assertCloudinaryConfigured } from "../services/cloudinaryConfig.js";
 import { buildPosPinData, generateSixDigitPin } from "../services/posCredentials.js";
-import { onboardingCommercialCatalog, buildCommercialSelection, needsCommercialClosure } from '../services/onboardingCommercial.js';
+import { onboardingCommercialCatalog, buildCommercialSelection, needsCommercialClosure, withOnboardingSmsTariff } from '../services/onboardingCommercial.js';
+import { SMS_SELL_PRICE_EUR, readSmsPrice, smsPricingInfo } from '../services/smsCredits.js';
 import { newOnboardingCatalog } from '../services/onboardingPricing.js';
 import onboardingClosureRoutes from './onboardingClosure.js';
 import { closureView, createClosureService, hasClosure, lockedClosure, verifyOffer } from '../services/onboardingClosure.js';
@@ -177,8 +178,8 @@ const buildFormalUrl = (token) => `${publicFrontendUrl()}/onboarding/${encodeURI
 
 const buildContractUrl = (token) => `${buildFormalUrl(token)}?contract=1`;
 
-const mapRequest = (request) => ({
-  commercialCatalog: request.formalData?.commercialCatalog || onboardingCommercialCatalog(),
+const mapRequestBase = (request) => ({
+  commercialCatalog: withOnboardingSmsTariff(request.formalData?.commercialCatalog || onboardingCommercialCatalog()),
   commercialClosurePending: needsCommercialClosure(request),
   closure: closureView(request),
   id: request.id,
@@ -259,6 +260,17 @@ export const buildOnboardingEmail = (request, formalUrl) => {
   const safeName = escapeHtml(request.name);
   const safeBusinessName = escapeHtml(request.businessName);
   const safeFormalUrl = escapeHtml(formalUrl);
+  const catalog = request.formalData?.commercialCatalog || onboardingCommercialCatalog();
+  const money = value => new Intl.NumberFormat('es-ES', { style: 'currency', currency: 'EUR' }).format(value / 100);
+  const lastPlan = catalog.installments[6];
+  const smsNotice = `Notificaciones SMS opcionales: ${new Intl.NumberFormat('es-ES', { maximumFractionDigits: 4 }).format(Number(catalog.sms?.unitPriceEur || SMS_SELL_PRICE_EUR))} € por parte de SMS. Un mensaje puede consumir varias partes según su longitud y caracteres. Volta incluye esta herramienta de comunicación. Puedes usarla cuando quieras recargando saldo por paquetes; el alta no obliga a recargar. La tarifa vigente se muestra antes de cada recarga.`;
+  const choices = [
+    ['Al contado', `${money(catalog.posTotalCents)} IVA incluido. Un solo pago.`],
+    ['Compra a plazos', `De 2 a 6 cuotas mensuales sin intereses. Total: ${money(catalog.posTotalCents)}. En 6 cuotas: 5 de ${money(lastPlan[0])} y la última de ${money(lastPlan[5])}.`],
+    ['Renting de 36 meses', catalog.rental.monthlyCents
+      ? `${money(catalog.rental.monthlyCents)}/mes IVA incluido. Total: ${money(catalog.rental.monthlyCents * 36)}. El POS pasa a ser tuyo al finalizar el plazo y completar las 36 mensualidades.`
+      : 'La cuota se confirmará en la oferta. El POS pasa a ser tuyo al finalizar el plazo y completar las 36 mensualidades.'],
+  ];
   const text = [
     `Hola ${request.name},`,
     "",
@@ -266,6 +278,9 @@ export const buildOnboardingEmail = (request, formalUrl) => {
     "Tu proceso entra ahora en la fase 2: validacion basica de datos legales y operativos.",
     "Necesitamos que completes el formulario con CIF/NIF/NIE, datos del responsable y documentacion basica para validar el alta.",
     "Elige también cómo incorporar tu POS: contado, compra a plazos o renting de 36 meses, y revisa las notificaciones SMS. En esta fase no se cobra ni se firma. Confirmaremos precio, stock y entrega antes del pago.",
+    ...choices.map(([title, description]) => `${title}: ${description}`),
+    smsNotice,
+    'Podrás pagar por tarjeta mediante Stripe. En la compra al contado también se admite efectivo confirmado por Volta. Las tres modalidades están sujetas a stock; el contado pagado tiene prioridad entre asignaciones pendientes, respetando compromisos previos.',
     "",
     `Sube la informacion aqui: ${formalUrl}`,
     "",
@@ -320,10 +335,16 @@ export const buildOnboardingEmail = (request, formalUrl) => {
         </tr>
       </table>
 
-      <p style="margin:0 0 22px;text-align:center">
+      <div style="margin:20px 0 10px;color:#3b008b;font-size:18px;font-weight:900">Elige cómo pagar tu POS</div>
+      <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="border-collapse:separate;border-spacing:0 8px">
+        ${choices.map(([title, description]) => `<tr><td style="padding:14px;background:#f8f5ff;border:1px solid #decfff;border-radius:12px"><strong style="color:#3b008b;font-size:16px">${escapeHtml(title)}</strong><div style="margin-top:5px;line-height:1.5">${escapeHtml(description)}</div></td></tr>`).join('')}
+      </table>
+      <p style="font-size:13px;line-height:1.5">Pago por tarjeta mediante Stripe; para compra al contado, también efectivo confirmado por Volta. Suministro sujeto a stock. El contado pagado tiene prioridad entre asignaciones pendientes, respetando compromisos previos.</p>
+      <p style="margin:16px 0 22px;text-align:center">
         <a href="${safeFormalUrl}" style="display:inline-block;background:#3b008b;color:#ffffff;padding:15px 26px;border-radius:999px;font-weight:900;text-decoration:none;box-shadow:0 8px 18px rgba(59,0,139,.24)">Completar fase 2</a>
       </p>
-      <p>Elige también tu POS: contado, compra a plazos o renting de 36 meses, y revisa las notificaciones SMS. En esta fase no se cobra ni se firma. Confirmaremos precio, stock y entrega antes del pago.</p>
+      <p>${escapeHtml(smsNotice)}</p>
+      <p>En esta fase no se cobra ni se firma. Confirmaremos los importes, el stock y la entrega antes del pago.</p>
       <div style="background:#fff8e7;border-left:5px solid #ffb61c;padding:12px 14px;margin:0 0 20px;color:#3b2c4a;font-size:13px">
         Si el boton no funciona, copia este enlace:<br><a href="${safeFormalUrl}" style="color:#6a3df0;word-break:break-all;font-weight:700">${safeFormalUrl}</a>
       </div>
@@ -1015,6 +1036,10 @@ const buildFormalData = (body, supportingDocuments = []) => {
 
 export default function onboardingRoutes(prisma, { sendEmail = sendSmtpEmail, stripeDeps = stripe } = {}) {
   const router = express.Router();
+  const mapRequest = async request => {
+    const mapped = mapRequestBase(request);
+    return { ...mapped, commercialCatalog: { ...mapped.commercialCatalog, sms: smsPricingInfo(await readSmsPrice(prisma)) } };
+  };
   const closureService = createClosureService(prisma, stripeDeps);
   const mail = async payload => {
     try { return await sendEmail(payload); }
@@ -1059,7 +1084,7 @@ export default function onboardingRoutes(prisma, { sendEmail = sendSmtpEmail, st
       if (req.webSession?.role !== 'global_admin') return res.status(403).json({ error: 'admin_required' });
       const id = Number(req.params.id);
       if (!Number.isSafeInteger(id) || id < 1) return res.status(400).json({ error: 'invalid_onboarding_request_id' });
-      return res.json({ ok: true, request: mapRequest(await deliverWelcome(id)) });
+      return res.json({ ok: true, request: await mapRequest(await deliverWelcome(id)) });
     } catch (error) { return res.status(error.status || 503).json({ error: error.status ? error.message : 'welcome_delivery_failed' }); }
   });
 
@@ -1113,7 +1138,7 @@ export default function onboardingRoutes(prisma, { sendEmail = sendSmtpEmail, st
             },
       });
 
-      return res.status(201).json({ ok: true, request: mapRequest(updated) });
+      return res.status(201).json({ ok: true, request: await mapRequest(updated) });
     } catch (error) {
       console.error("[onboarding.requests.create] error:", error);
       return res.status(500).json({ ok: false, error: "onboarding_request_failed" });
@@ -1130,7 +1155,7 @@ export default function onboardingRoutes(prisma, { sendEmail = sendSmtpEmail, st
         take: 200,
       });
 
-      return res.json({ ok: true, requests: requests.map(mapRequest) });
+      return res.json({ ok: true, requests: await Promise.all(requests.map(mapRequest)) });
     } catch (error) {
       console.error("[onboarding.requests.list] error:", error);
       return res.status(500).json({ ok: false, error: "onboarding_list_failed" });
@@ -1159,7 +1184,7 @@ export default function onboardingRoutes(prisma, { sendEmail = sendSmtpEmail, st
         });
       });
 
-      return res.json({ ok: true, request: mapRequest(updated) });
+      return res.json({ ok: true, request: await mapRequest(updated) });
     } catch (error) {
       console.error("[onboarding.requests.status] error:", error);
       if (error.status) return res.status(error.status).json({ ok: false, error: error.message });
@@ -1208,7 +1233,7 @@ export default function onboardingRoutes(prisma, { sendEmail = sendSmtpEmail, st
               emailSentAt: result.ok ? new Date().toISOString() : null, emailError: result.ok ? null : result.reason || 'email_send_failed', offerHash: offer.hash, contractUrl: url },
           } } });
         });
-        return res.json({ ok: true, request: mapRequest(updated) });
+        return res.json({ ok: true, request: await mapRequest(updated) });
       }
 
       if (["REJECTED", "ACTIVATED"].includes(request.status)) {
@@ -1249,7 +1274,7 @@ export default function onboardingRoutes(prisma, { sendEmail = sendSmtpEmail, st
         },
       });
 
-      return res.json({ ok: true, request: mapRequest(updated) });
+      return res.json({ ok: true, request: await mapRequest(updated) });
     } catch (error) {
       console.error("[onboarding.contract.send] error:", error);
       if (error.status) return res.status(error.status).json({ ok: false, error: error.message });
@@ -1303,7 +1328,7 @@ export default function onboardingRoutes(prisma, { sendEmail = sendSmtpEmail, st
         } } },
       });
       if (saved.count !== 1) return res.status(409).json({ ok: false, error: 'onboarding_request_changed' });
-      return res.json({ ok: true, request: mapRequest(await prisma.onboardingRequest.findUnique({ where: { token } })) });
+      return res.json({ ok: true, request: await mapRequest(await prisma.onboardingRequest.findUnique({ where: { token } })) });
     } catch (error) {
       console.error('[onboarding.draft]', error);
       return res.status(500).json({ ok: false, error: 'onboarding_draft_failed' });
@@ -1319,7 +1344,7 @@ export default function onboardingRoutes(prisma, { sendEmail = sendSmtpEmail, st
         return res.status(404).json({ ok: false, error: "onboarding_request_not_found" });
       }
 
-      return res.json({ ok: true, request: mapRequest(request) });
+      return res.json({ ok: true, request: await mapRequest(request) });
     } catch (error) {
       console.error("[onboarding.form.get] error:", error);
       return res.status(500).json({ ok: false, error: "onboarding_form_failed" });
@@ -1382,7 +1407,7 @@ export default function onboardingRoutes(prisma, { sendEmail = sendSmtpEmail, st
       // The review state is visible in the form. Keep the three principal emails:
       // invitation, approved offer, welcome after payment and signature.
       const updated = await prisma.onboardingRequest.findUnique({ where: { token } });
-      return res.json({ ok: true, request: mapRequest(updated) });
+      return res.json({ ok: true, request: await mapRequest(updated) });
     } catch (error) {
       console.error("[onboarding.form.submit] error:", error);
       if (error?.status === 400) {
@@ -1416,7 +1441,7 @@ export default function onboardingRoutes(prisma, { sendEmail = sendSmtpEmail, st
 
       if (request.status !== "CONTRACT_SENT") {
         if (request.status === 'ACTIVATED' && hasClosure(request) && req.body.offerHash === request.formalData.closure.offer.hash) {
-          return res.json({ ok: true, request: mapRequest(request), activation: safeActivation(request.formalData.activation), signedContract: request.formalData.signedContract });
+          return res.json({ ok: true, request: await mapRequest(request), activation: safeActivation(request.formalData.activation), signedContract: request.formalData.signedContract });
         }
         return res.status(409).json({ ok: false, error: "onboarding_request_not_signable" });
       }
@@ -1468,13 +1493,17 @@ export default function onboardingRoutes(prisma, { sendEmail = sendSmtpEmail, st
         let signedClosure = lockedRequest.formalData.closure;
         if (signedClosure) {
           const sms = signedClosure.offer.sms;
-          const partner = await tx.partner.update({ where: { id: nextActivation.partnerId },
-            data: { smsCredits: { increment: sms.credits }, smsRecharged: { increment: sms.credits } } });
-          const ledger = await tx.smsCreditLedger.create({ data: { partnerId: partner.id, type: 'RECHARGE', quantity: sms.credits,
-            balanceAfter: partner.smsCredits, amount: sms.amountCents / 100, unitPrice: sms.amountCents / 100 / sms.credits,
-            reference: `onboarding:${request.id}:${signedClosure.offer.id}`, provider: 'onboarding',
-            meta: { offerHash: signedClosure.offer.hash, paymentId: signedClosure.payment.id } } });
-          signedClosure = { ...signedClosure, status: 'SIGNED', signedAt: signedMeta.acceptedAt, smsLedgerId: ledger.id };
+          let smsLedgerId = null;
+          if (sms.credits > 0 && sms.amountCents > 0) {
+            const partner = await tx.partner.update({ where: { id: nextActivation.partnerId },
+              data: { smsCredits: { increment: sms.credits }, smsRecharged: { increment: sms.credits } } });
+            const ledger = await tx.smsCreditLedger.create({ data: { partnerId: partner.id, type: 'RECHARGE', quantity: sms.credits,
+              balanceAfter: partner.smsCredits, amount: sms.amountCents / 100, unitPrice: sms.amountCents / 100 / sms.credits,
+              reference: `onboarding:${request.id}:${signedClosure.offer.id}`, provider: 'onboarding',
+              meta: { offerHash: signedClosure.offer.hash, paymentId: signedClosure.payment.id } } });
+            smsLedgerId = ledger.id;
+          }
+          signedClosure = { ...signedClosure, status: 'SIGNED', signedAt: signedMeta.acceptedAt, smsLedgerId };
         }
         await tx.onboardingRequest.update({
           where: { token },
@@ -1499,7 +1528,7 @@ export default function onboardingRoutes(prisma, { sendEmail = sendSmtpEmail, st
 
       if (!activation) {
         const completed = await prisma.onboardingRequest.findUnique({ where: { token } });
-        return res.json({ ok: true, request: mapRequest(completed), activation: safeActivation(completed.formalData.activation), signedContract: completed.formalData.signedContract });
+        return res.json({ ok: true, request: await mapRequest(completed), activation: safeActivation(completed.formalData.activation), signedContract: completed.formalData.signedContract });
       }
 
       const committed = await prisma.onboardingRequest.findUnique({ where: { token } });
@@ -1507,7 +1536,7 @@ export default function onboardingRoutes(prisma, { sendEmail = sendSmtpEmail, st
 
       const finalRequest = await deliverWelcome(request.id, activation);
 
-      return res.json({ ok: true, request: mapRequest(finalRequest), activation: safeActivation(activation), signedContract });
+      return res.json({ ok: true, request: await mapRequest(finalRequest), activation: safeActivation(activation), signedContract });
     } catch (error) {
       console.error("[onboarding.contract.sign] error:", error);
       if (error?.status) {

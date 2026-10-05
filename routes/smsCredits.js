@@ -10,6 +10,7 @@ import {
   SMS_PROVIDER_COST_EUR,
   SMS_PROVIDER_COST_USD,
   SMS_SELL_PRICE_EUR,
+  readSmsPrice,
 } from "../services/smsCredits.js";
 import {
   constructStripeWebhookEvent,
@@ -92,11 +93,16 @@ const getVisibleSmsLedgerWhere = async (prisma, partnerId = null) => {
 
 export default function smsCreditsRoutes(prisma) {
   const router = express.Router();
+  router.use(async (req, res, next) => {
+    if (req.path === '/stripe/webhook') return next(); // Paid sessions carry their own price snapshot.
+    try { req.smsPrice = await readSmsPrice(prisma); next(); }
+    catch { res.status(503).json({ ok: false, error: "sms_pricing_unavailable" }); }
+  });
 
   router.get("/quote", (req, res) => {
     const amount = parseAmount(req.query.amount);
     const quantity = parsePositiveInt(req.query.quantity);
-    const credits = quantity || creditsFromAmount(amount);
+    const credits = quantity || creditsFromAmount(amount, req.smsPrice);
 
     if (!credits) {
       return res.status(400).json({ ok: false, error: "bad_recharge_amount" });
@@ -105,16 +111,16 @@ export default function smsCreditsRoutes(prisma) {
     return res.json({
       ok: true,
       credits,
-      amount: amount || amountFromCredits(credits),
-      sellPrice: Number(SMS_SELL_PRICE_EUR),
+      amount: amount || amountFromCredits(credits, req.smsPrice),
+      sellPrice: Number(req.smsPrice),
       providerCost: Number(SMS_PROVIDER_COST_EUR),
       providerCostUsd: Number(SMS_PROVIDER_COST_USD),
-      marginPerSms: Number((Number(SMS_SELL_PRICE_EUR) - Number(SMS_PROVIDER_COST_EUR)).toFixed(4)),
+      marginPerSms: Number((Number(req.smsPrice) - Number(SMS_PROVIDER_COST_EUR)).toFixed(4)),
       unit: "SMS_1_PART",
     });
   });
 
-  router.get("/global/summary", async (_req, res) => {
+  router.get("/global/summary", async (req, res) => {
     try {
       const visibleLedgerWhere = await getVisibleSmsLedgerWhere(prisma);
       const [partners, ledger, telnyxBalance] = await Promise.all([
@@ -163,18 +169,18 @@ export default function smsCreditsRoutes(prisma) {
       return res.json({
         ok: true,
         pricing: {
-          sellPrice: Number(SMS_SELL_PRICE_EUR),
+          sellPrice: Number(req.smsPrice),
           providerCost: Number(SMS_PROVIDER_COST_EUR),
           providerCostUsd: Number(SMS_PROVIDER_COST_USD),
-          marginPerSms: Number((Number(SMS_SELL_PRICE_EUR) - Number(SMS_PROVIDER_COST_EUR)).toFixed(4)),
-          messagesPer10Eur: creditsFromAmount(10),
+          marginPerSms: Number((Number(req.smsPrice) - Number(SMS_PROVIDER_COST_EUR)).toFixed(4)),
+          messagesPer10Eur: creditsFromAmount(10, req.smsPrice),
           unit: "SMS_1_PART",
         },
         payments: {
           stripeCheckoutEnabled: isStripeCheckoutConfigured(),
           stripeWebhookEnabled: isStripeWebhookConfigured(),
         },
-        packages: getSmsCreditPackages(),
+        packages: getSmsCreditPackages(req.smsPrice),
         providerInventory: {
           ok: telnyxBalance.ok,
           currency: telnyxBalance.currency || null,
@@ -192,7 +198,7 @@ export default function smsCreditsRoutes(prisma) {
           error: telnyxBalance.ok ? null : telnyxBalance.error,
         },
         totals,
-        estimatedMarginEur: Number((totals.consumed * (Number(SMS_SELL_PRICE_EUR) - Number(SMS_PROVIDER_COST_EUR))).toFixed(4)),
+        estimatedMarginEur: Number((totals.consumed * (Number(req.smsPrice) - Number(SMS_PROVIDER_COST_EUR))).toFixed(4)),
         partners: partners.map((partner) => ({
           ...partner,
           isLow: partner.smsCredits <= partner.smsLowBalanceThreshold,
@@ -214,7 +220,7 @@ export default function smsCreditsRoutes(prisma) {
     try {
       const visibleLedgerWhere = await getVisibleSmsLedgerWhere(prisma, partnerId);
       const [balance, ledger] = await Promise.all([
-        getPartnerSmsBalance(prisma, partnerId),
+        getPartnerSmsBalance(prisma, partnerId, req.smsPrice),
         prisma.smsCreditLedger.findMany({
           where: { partnerId, ...visibleLedgerWhere },
           orderBy: { createdAt: "desc" },
@@ -230,17 +236,17 @@ export default function smsCreditsRoutes(prisma) {
         ok: true,
         balance,
         pricing: {
-          sellPrice: Number(SMS_SELL_PRICE_EUR),
+          sellPrice: Number(req.smsPrice),
           providerCost: Number(SMS_PROVIDER_COST_EUR),
           providerCostUsd: Number(SMS_PROVIDER_COST_USD),
-          marginPerSms: Number((Number(SMS_SELL_PRICE_EUR) - Number(SMS_PROVIDER_COST_EUR)).toFixed(4)),
-          messagesPer10Eur: creditsFromAmount(10),
+          marginPerSms: Number((Number(req.smsPrice) - Number(SMS_PROVIDER_COST_EUR)).toFixed(4)),
+          messagesPer10Eur: creditsFromAmount(10, req.smsPrice),
           unit: "SMS_1_PART",
         },
         payments: {
           stripeCheckoutEnabled: isStripeCheckoutConfigured(),
         },
-        packages: getSmsCreditPackages(),
+        packages: getSmsCreditPackages(req.smsPrice),
         ledger,
       });
     } catch (error) {
@@ -250,11 +256,14 @@ export default function smsCreditsRoutes(prisma) {
   });
 
   router.post("/:partnerId/checkout-session", async (req, res) => {
+    if (req.body.smsUnitPriceEur != null && Number(req.body.smsUnitPriceEur) !== Number(req.smsPrice)) {
+      return res.status(409).json({ ok: false, error: 'sms_price_changed' });
+    }
     const partnerId = parsePositiveInt(req.params.partnerId);
     const packageAmount = parseAmount(req.body.packageAmount);
     const amount = packageAmount || parseAmount(req.body.amount);
     const amountCents = amountToCents(amount);
-    const requestedCredits = parsePositiveInt(req.body.quantity) || creditsFromAmount(amount);
+    const requestedCredits = creditsFromAmount(amount, req.smsPrice);
 
     if (!partnerId) {
       return res.status(400).json({ ok: false, error: "partnerId_required" });
@@ -285,6 +294,7 @@ export default function smsCreditsRoutes(prisma) {
         partner,
         amountCents,
         credits: requestedCredits,
+        unitPriceEur: req.smsPrice,
         successUrl,
         cancelUrl,
       });
@@ -314,7 +324,7 @@ export default function smsCreditsRoutes(prisma) {
     const amount = packageAmount || req.body.amount;
 
     try {
-      const requestedCredits = parsePositiveInt(req.body.quantity) || creditsFromAmount(amount);
+      const requestedCredits = parsePositiveInt(req.body.quantity) || creditsFromAmount(amount, req.smsPrice);
       if (!requestedCredits) {
         return res.status(400).json({ ok: false, error: "bad_recharge_amount" });
       }
@@ -334,6 +344,7 @@ export default function smsCreditsRoutes(prisma) {
         partnerId,
         amount,
         quantity: req.body.quantity,
+        unitPriceEur: req.smsPrice,
         reference: req.body.reference || "manual_recharge",
         note: req.body.note || null,
         meta: {
@@ -416,6 +427,7 @@ export default function smsCreditsRoutes(prisma) {
         partnerId,
         amount,
         quantity: credits,
+        unitPriceEur: metadata.unitPriceEur || SMS_SELL_PRICE_EUR,
         reference: sessionId,
         note: "Stripe Checkout SMS credits purchase",
         meta: {

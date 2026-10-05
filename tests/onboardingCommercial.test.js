@@ -16,7 +16,9 @@ test('all installment plans sum to 250 euros and ignore client price/ownership i
   assert.equal(result.selection.pos.totalCents, 25000);
   assert.equal(result.selection.initialTotalCents, null);
   assert.equal(result.selection.status, 'PENDING_REVIEW');
-  assert.equal(result.selection.sms.initialCents, null);
+  assert.equal(result.selection.sms.initialCents, 0);
+  assert.equal(result.selection.sms.initialRecharge, 'SEPARATE');
+  assert.equal(result.fields.smsRequested, undefined);
   assert.equal(result.selection.settlement.deductPosOrSms, false);
 });
 test('rental is a quote request with Volta ownership and no invented price or deposit', () => {
@@ -56,7 +58,7 @@ test('HTTP saves partial drafts, resumes, validates submission, freezes selectio
   t.after(() => new Promise(resolve => server.close(resolve)));
   const url = `http://127.0.0.1:${server.address().port}`;
   const post = (path, body) => fetch(url + path, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
-  let response = await post('/form/test-token/draft', { commercialName: 'Mi tienda', posChoice: 'INSTALLMENTS', posInstallments: 6,
+  let response = await post('/form/test-token/draft', { commercialName: 'Mi tienda', posChoice: 'INSTALLMENTS', posInstallments: 6, smsRequested: true,
     activation: { partnerId: 99 }, supportingDocuments: [{ type: 'BANK' }] });
   assert.equal(response.status, 200);
   assert.equal(row.status, 'EMAIL_SENT'); assert.equal(row.submittedAt, undefined);
@@ -64,6 +66,7 @@ test('HTTP saves partial drafts, resumes, validates submission, freezes selectio
   assert.equal(row.formalData.supportingDocuments.length, 2);
   const loaded = await (await fetch(url + '/form/test-token')).json();
   assert.equal(loaded.request.formalData.onboardingDraft.commercialName, 'Mi tienda');
+  assert.equal(loaded.request.formalData.onboardingDraft.smsRequested, undefined);
   assert.equal(loaded.request.commercialCatalog.posTotalCents, 25000);
   conflict = true;
   assert.equal((await post('/form/test-token/draft', { commercialName: 'Stale' })).status, 409);
@@ -80,6 +83,7 @@ test('HTTP saves partial drafts, resumes, validates submission, freezes selectio
   assert.equal(row.status, 'IN_REVIEW');
   assert.equal(row.formalData.onboardingDraft, undefined);
   assert.equal(row.formalData.commercialSelection.pos.firstPaymentCents, 4167);
+  assert.equal(row.formalData.commercialSelection.sms.initialRecharge, 'SEPARATE');
   assert.equal((await post('/form/test-token/draft', fields)).status, 409);
   assert.equal((await post('/form/test-token', fields)).status, 409);
   response = await post('/requests/1/contract/send', {});
