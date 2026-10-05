@@ -605,7 +605,7 @@ export const onboardingClosureAnnouncementDraft = {
   },
 };
 
-// Draft: keep out of the feed until the coordinated backend/storefront release.
+// Published after verifying the coordinated backend/storefront release on 5 October 2026.
 export const onboardingDefaultsAnnouncementDraft = {
   id: 'onboarding-shared-defaults-2026-10', revision: 1, category: 'improvement', severity: 'info',
   title: 'Tarifas y ofertas de incorporación más claras',
@@ -625,3 +625,7 @@ backofficeAnnouncements.push(...[
 ].map(announcement => ({ ...announcement,
   publishedAt: '2026-10-05T09:50:00.000Z', expiresAt: '2027-01-05T09:50:00.000Z',
 })));
+
+backofficeAnnouncements.push({ ...onboardingDefaultsAnnouncementDraft,
+  publishedAt: '2026-10-05T11:18:00.000Z', expiresAt: '2027-01-05T11:18:00.000Z',
+});

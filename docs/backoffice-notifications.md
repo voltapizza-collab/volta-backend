@@ -1,8 +1,8 @@
 # Avisos del backoffice
 
-## Oferta simplificada — borrador del 5 de octubre de 2026
+## Oferta simplificada y tarifa SMS vigente — publicado el 5 de octubre de 2026
 
-`onboardingDefaultsAnnouncementDraft` incluye ES/EN/IT/FR/PT. Mantener fuera del feed hasta publicar backend y storefront con la columna de configuración común. Explica la configuración única, la revisión de importes y entrega y los tres bloques del primer correo. [Detalle](onboarding-shared-defaults.md).
+`onboardingDefaultsAnnouncementDraft` incluye ES/EN/IT/FR/PT y entra en el feed tras verificar ambos servicios y la migración. Explica la configuración común, la tarifa SMS editable, el servicio de uso opcional sin casilla y la información económica durante el onboarding. [Detalle](onboarding-shared-defaults.md).
 
 ## Publicación del onboarding — 5 de octubre de 2026
 
