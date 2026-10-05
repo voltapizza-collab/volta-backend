@@ -1,3 +1,4 @@
+import { multipartWebScope } from '../services/webAccess.js';
 import express from "express";
 import multer from "multer";
 import { v2 as cloudinary } from "cloudinary";
@@ -1101,7 +1102,7 @@ router.get("/suggestions", async (req, res) => {
     res.status(500).json({ error: "Error fetching suggestions" });
   }
 });
-router.post("/", upload.single("image"), async (req, res) => {
+router.post("/", upload.single("image"), multipartWebScope(prisma), async (req, res) => {
   try {
     await ensureIngredientMediaColumns(prisma);
 
@@ -1182,7 +1183,7 @@ router.post("/", upload.single("image"), async (req, res) => {
   }
 });
 
-router.patch("/:id", upload.single("image"), async (req, res) => {
+router.patch("/:id", upload.single("image"), multipartWebScope(prisma), async (req, res) => {
   try {
     await ensureIngredientMediaColumns(prisma);
 

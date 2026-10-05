@@ -35,17 +35,6 @@ const amountToCents = (value) => {
   return amount ? Math.round(amount * 100) : null;
 };
 
-const isSafeReturnUrl = (value) => {
-  if (!value) return false;
-
-  try {
-    const url = new URL(value);
-    return url.protocol === "http:" || url.protocol === "https:";
-  } catch (_error) {
-    return false;
-  }
-};
-
 const getFallbackFrontendUrl = (req) => {
   const configuredUrl =
     process.env.PUBLIC_FRONTEND_URL?.trim() ||
@@ -58,14 +47,11 @@ const getFallbackFrontendUrl = (req) => {
   return configuredUrl.replace(/\/$/, "");
 };
 
-const getCheckoutReturnUrls = (req) => {
-  const fallbackBase = getFallbackFrontendUrl(req);
-  const fallbackSuccessUrl = `${fallbackBase}/Backoffice?sms_payment=success&session_id={CHECKOUT_SESSION_ID}`;
-  const fallbackCancelUrl = `${fallbackBase}/Backoffice?sms_payment=cancel`;
-
+const getCheckoutReturnUrls = (req, partner) => {
+  const base = `${getFallbackFrontendUrl(req)}/backoffice/${encodeURIComponent(partner.slug)}`;
   return {
-    successUrl: isSafeReturnUrl(req.body.successUrl) ? req.body.successUrl : fallbackSuccessUrl,
-    cancelUrl: isSafeReturnUrl(req.body.cancelUrl) ? req.body.cancelUrl : fallbackCancelUrl,
+    successUrl: `${base}?sms_payment=success&session_id={CHECKOUT_SESSION_ID}`,
+    cancelUrl: `${base}?sms_payment=cancel`,
   };
 };
 
@@ -294,7 +280,7 @@ export default function smsCreditsRoutes(prisma) {
 
       const { telnyxBalance, telnyxAvailableMessages, availableToSell } = await getAvailableToSell(prisma);
 
-      const { successUrl, cancelUrl } = getCheckoutReturnUrls(req);
+      const { successUrl, cancelUrl } = getCheckoutReturnUrls(req, partner);
       const session = await createSmsCreditsCheckoutSession({
         partner,
         amountCents,

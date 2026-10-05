@@ -541,3 +541,66 @@ export const clearanceTopDealAnnouncementDraft = {
     pt: { title: "Liquidação dentro do Top Deal", message: "Selecione Produto em liquidação ao criar ou editar um Top Deal. Uma faixa vermelha horizontal com texto centrado que desaparece e reaparece suavemente identifica o produto na ementa e permite recolha sem pedido mínimo, incluindo carrinhos mistos. Mantêm-se as quantidades e a duração do Top Deal.", detail: "A entrega exige o mínimo em produtos após descontos, sem contar portes. A liquidação não recebe descontos adicionais nem desbloqueia ofertas ou portes grátis. Os packs mantêm o preço global mesmo quando incluem produtos também vendidos em liquidação; os descontos individuais não se acumulam. Os restantes produtos mantêm os benefícios; os blocos de entrega adicionais gerados pela liquidação são cobrados." },
   },
 };
+// Draft: publish only after the coordinated web-auth migration and recovery checks.
+export const businessAccessAnnouncementDraft = {
+  id: "business-access-2026-10", revision: 1, category: "improvement", severity: "info",
+  title: "El acceso de tu negocio",
+  message: "Los enlaces del backoffice y del POS web identifican tu negocio. En la bienvenida recibirás un enlace temporal para crear tu contraseña. El acceso comprueba tu cuenta antes de mostrar datos.",
+  translations: {
+    en: { title: "Your business access", message: "The backoffice and web POS links identify your business. Your welcome email includes a temporary link to create your password. Access verifies your account before displaying data." },
+    it: { title: "L’accesso della tua attività", message: "I link del backoffice e del POS web identificano la tua attività. L’email di benvenuto include un link temporaneo per creare la password. L’accesso verifica l’account prima di mostrare i dati." },
+    fr: { title: "L’accès à votre établissement", message: "Les liens du backoffice et du POS web identifient votre établissement. L’email de bienvenue contient un lien temporaire pour créer votre mot de passe. L’accès vérifie votre compte avant d’afficher les données." },
+    pt: { title: "O acesso ao seu negócio", message: "Os links do backoffice e do POS web identificam o seu negócio. O email de boas-vindas inclui um link temporário para criar a sua palavra-passe. O acesso verifica a conta antes de mostrar os dados." },
+  },
+};
+
+// Publish only with the coordinated backend, backoffice and POS release.
+export const storeReceptionAnnouncementDraft = {
+  id: 'store-reception-2026-10', revision: 1, category: 'improvement', severity: 'info',
+  title: 'Abrir pedidos con un estado claro',
+  message: 'En Tiendas verás si la tienda está habilitada y si recibe pedidos online. Abrir pedidos comprueba la preparación y explica qué falta. El POS usa el mismo control; las pausas y los horarios conservan los pedidos programados.',
+  translations: {
+    en: { title: 'Open orders with a clear status', message: 'Stores now shows whether a store is enabled and receiving online orders. Open orders checks readiness and explains what is missing. The POS uses the same control; pauses and opening hours preserve scheduled orders.' },
+    it: { title: 'Apri gli ordini con uno stato chiaro', message: 'In Negozi puoi vedere se il negozio è abilitato e riceve ordini online. Apri ordini verifica la preparazione e spiega cosa manca. Il POS usa lo stesso controllo; pause e orari conservano gli ordini programmati.' },
+    fr: { title: 'Ouvrir les commandes avec un état clair', message: 'Boutiques indique si la boutique est activée et reçoit des commandes en ligne. Ouvrir les commandes vérifie la préparation et explique ce qui manque. Le POS utilise le même contrôle ; les pauses et horaires préservent les commandes programmées.' },
+    pt: { title: 'Abrir pedidos com um estado claro', message: 'Em Lojas podes ver se a loja está habilitada e recebe pedidos online. Abrir pedidos verifica a preparação e explica o que falta. O POS usa o mesmo controlo; as pausas e os horários mantêm os pedidos agendados.' },
+  },
+};
+
+// Publish only when the full offer/payment/signature flow is available.
+export const onboardingCommercialAnnouncementDraft = {
+  id: 'onboarding-commercial-2026-10', revision: 1, category: 'improvement', severity: 'info',
+  title: 'Elige tu POS durante la incorporación',
+  message: 'La fase 2 permite elegir compra al contado o cuotas y solicitar una oferta de alquiler. Puedes guardar el avance y revisar el resumen antes de enviarlo. El equipo y los SMS se pagan aparte de las ventas; enviar el formulario no realiza ningún cobro.',
+  translations: {
+    en: { title: 'Choose your POS during onboarding', message: 'Phase 2 lets you choose an upfront purchase or installments, or request a rental quote. Save your progress and review the summary before submitting. Equipment and SMS are paid separately from sales; submitting the form does not charge you.' },
+    it: { title: 'Scegli il POS durante l’attivazione', message: 'La fase 2 permette di scegliere acquisto immediato o rate e richiedere un preventivo di noleggio. Puoi salvare i progressi e controllare il riepilogo prima dell’invio. Attrezzatura e SMS si pagano separatamente dalle vendite; l’invio non comporta addebiti.' },
+    fr: { title: 'Choisissez votre POS pendant l’inscription', message: 'La phase 2 permet de choisir un achat comptant ou échelonné et de demander un devis de location. Enregistrez votre progression et vérifiez le récapitulatif avant l’envoi. Le matériel et les SMS sont payés séparément des ventes ; l’envoi du formulaire ne déclenche aucun paiement.' },
+    pt: { title: 'Escolhe o POS durante a adesão', message: 'A fase 2 permite escolher compra a pronto ou em prestações e pedir uma proposta de aluguer. Podes guardar o progresso e rever o resumo antes de enviar. O equipamento e os SMS são pagos separadamente das vendas; enviar o formulário não gera cobranças.' },
+  },
+};
+// Draft: activate only after the coordinated onboarding closure release.
+export const onboardingEmailsAnnouncementDraft = {
+  id: 'onboarding-three-emails-2026-10', revision: 1, category: 'improvement', severity: 'info',
+  title: 'La incorporación en tres correos',
+  message: 'Recibirás la solicitud, la oferta para pagar y firmar, y la bienvenida con el acceso de tu negocio. Si falla la bienvenida, Volta puede reenviarla sin repetir el alta ni el pago. La recepción de pedidos se abre después de preparar la tienda.',
+  translations: {
+    en: { title: 'Onboarding in three emails', message: 'You receive the application, the offer to pay and sign, and a welcome email with access to your business. If the welcome email fails, Volta can resend it without repeating activation or payment. Order reception opens after the store is ready.' },
+    it: { title: 'L’adesione in tre email', message: 'Riceverai la richiesta, l’offerta da pagare e firmare e il benvenuto con l’accesso alla tua attività. Se l’email di benvenuto non viene inviata, Volta può reinviarla senza ripetere l’attivazione o il pagamento. La ricezione degli ordini si apre dopo aver preparato il negozio.' },
+    fr: { title: 'L’inscription en trois emails', message: 'Vous recevez la demande, l’offre à payer et à signer, puis un email de bienvenue avec l’accès à votre établissement. En cas d’échec de l’envoi, Volta peut renvoyer le message de bienvenue sans répéter l’activation ni le paiement. La réception des commandes s’ouvre après la préparation de la boutique.' },
+    pt: { title: 'A adesão em três emails', message: 'Receberá a candidatura, a oferta para pagar e assinar e as boas-vindas com o acesso ao seu negócio. Se o envio das boas-vindas falhar, a Volta pode reenviá-las sem repetir a ativação nem o pagamento. A receção de pedidos abre depois de preparar a loja.' },
+  },
+};
+
+export const onboardingClosureAnnouncementDraft = {
+  id: 'onboarding-payment-signature-2026-10', revision: 1, category: 'improvement', severity: 'info',
+  title: 'Precio del POS y cierre de incorporación',
+  message: 'En Global Manager, abre Onboarding para definir la tarifa de nuevas altas y preparar la oferta de cada comercio. Revisa precio, disponibilidad y entrega; el cliente acepta las condiciones, paga y después firma.',
+  detail: 'El renting admite 36 mensualidades con transmisión final del POS. Cada oferta conserva sus importes. El pago debe confirmarse antes de la firma; las cancelaciones y devoluciones se consultan en el expediente.',
+  translations: {
+    en: { title: 'POS pricing and onboarding completion', message: 'In Global Manager, open Onboarding to set the price for new applications and prepare each merchant’s offer. Check pricing, availability and delivery; the merchant accepts the terms, pays, then signs.', detail: 'Rental plans support 36 monthly payments with final ownership transfer. Each offer keeps its agreed amounts. Payment must be confirmed before signing; cancellations and refunds are tracked in the application.' },
+    it: { title: 'Prezzo del POS e completamento dell’adesione', message: 'In Global Manager, apri Onboarding per impostare il prezzo delle nuove richieste e preparare l’offerta di ogni commerciante. Verifica prezzo, disponibilità e consegna; il cliente accetta le condizioni, paga e poi firma.', detail: 'Il noleggio prevede 36 rate mensili con trasferimento finale della proprietà del POS. Ogni offerta conserva i propri importi. Il pagamento deve essere confermato prima della firma; annullamenti e rimborsi sono visibili nella pratica.' },
+    fr: { title: 'Prix du POS et finalisation de l’inscription', message: 'Dans Global Manager, ouvrez Onboarding pour définir le prix des nouvelles demandes et préparer l’offre de chaque commerçant. Vérifiez le prix, la disponibilité et la livraison ; le client accepte les conditions, paie puis signe.', detail: 'La location prévoit 36 mensualités avec transfert final de propriété du POS. Chaque offre conserve ses montants. Le paiement doit être confirmé avant la signature ; annulations et remboursements sont suivis dans le dossier.' },
+    pt: { title: 'Preço do POS e conclusão da adesão', message: 'No Global Manager, abra Onboarding para definir o preço das novas candidaturas e preparar a oferta de cada comerciante. Verifique preço, disponibilidade e entrega; o cliente aceita as condições, paga e depois assina.', detail: 'O renting prevê 36 mensalidades com transferência final da propriedade do POS. Cada oferta conserva os seus valores. O pagamento deve ser confirmado antes da assinatura; cancelamentos e reembolsos são acompanhados no processo.' },
+  },
+};

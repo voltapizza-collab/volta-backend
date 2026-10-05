@@ -270,7 +270,7 @@ export async function sendStoreStatusTrackingSms(
     return { ok: false, skipped: true, reason: "missing_context" };
   }
 
-  const isActive = Boolean(store?.active);
+  const isActive = Boolean(store?.active) && store?.acceptingOrders !== false;
   const reference = `store-status:${storeId}:${isActive ? "open" : "closed"}`;
   const occurredAt = store?.updatedAt || store?.createdAt || new Date();
   const meta = {

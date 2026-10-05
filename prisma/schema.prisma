@@ -354,6 +354,20 @@ model Ingredient {
   @@index([semanticStatus])
   @@index([imageStatus])
 }
+
+// Browser sessions use opaque tokens; only their SHA-256 hashes are persisted.
+model WebSession {
+  tokenHash      String   @id @db.Char(64)
+  role           String   @db.VarChar(24)
+  partnerId      Int?
+  storeId        Int?
+  credentialHash String   @db.Char(64)
+  expiresAt      DateTime @db.DateTime(3)
+  createdAt      DateTime @default(now()) @db.DateTime(3)
+
+  @@index([partnerId], map: "WebSession_partner")
+  @@index([expiresAt], map: "WebSession_expiry")
+}
 model IngredientCatalogState {
   ingredientId Int @id
   ingredient Ingredient @relation(fields: [ingredientId], references: [id], onDelete: Restrict)
@@ -464,6 +478,14 @@ model IngredientSuggestion {
   reviewedAt DateTime?
   @@index([status])
 }
+model OnboardingPricing {
+  id Int @id
+  posTotalCents Int @default(25000)
+  revision Int @default(0)
+  updatedBy String? @db.VarChar(191)
+  updatedAt DateTime @updatedAt
+}
+
 model OnboardingRequest {
   id           Int      @id @default(autoincrement())
   token        String   @unique @db.VarChar(191)

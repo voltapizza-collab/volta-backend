@@ -1,3 +1,5 @@
+import crypto from 'node:crypto';
+import { signPublicAction } from '../services/publicCapabilities.js';
 import express from "express";
 import { getOrderMinimum, getShippingBenefitFee, getDeliveryBlocks } from "../services/fulfillmentPolicy.js";
 import { validateCheckoutAvailability } from "../services/checkoutAvailability.js";
@@ -564,7 +566,7 @@ const buildReturnUrl = (req, status, fallbackPath = "/", extraParams = {}) => {
 const genSaleCode = async (prisma) => {
   let code;
   do {
-    code = `WEB-${Date.now().toString(36).toUpperCase()}-${Math.floor(1000 + Math.random() * 9000)}`;
+    code = `WEB-${crypto.randomBytes(16).toString("hex").toUpperCase()}`;
   } while (await prisma.sale.findUnique({ where: { code } }));
   return code;
 };
@@ -1461,6 +1463,7 @@ export default function checkoutRoutes(prisma) {
         saleId: result.sale.id,
         orderCode: result.sale.code,
         notified: result.shouldNotify,
+        repeatReceipt: signPublicAction("repeat", result.sale.id, new Date(result.sale.createdAt).getTime() + 365 * 86400000),
       });
     } catch (error) {
       console.error("[checkout.session.confirm] error:", error);

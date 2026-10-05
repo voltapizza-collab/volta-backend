@@ -77,6 +77,30 @@ export const retrieveCheckoutSession = async (sessionId) => {
   });
 };
 
+export const retrieveOnboardingIntent = id => stripeApiRequest({ method: 'GET', path: `/payment_intents/${encodeURIComponent(id)}?expand[]=latest_charge` });
+export const expireOnboardingSession = id => stripeRequest(`/checkout/sessions/${encodeURIComponent(id)}/expire`, new URLSearchParams(), `onboarding-expire-${id}`);
+export const retrieveOnboardingRefund = id => stripeApiRequest({ method: 'GET', path: `/refunds/${encodeURIComponent(id)}` });
+export const refundOnboardingPayment = ({ intentId, amount, key, requestId }) => stripeRequest('/refunds', new URLSearchParams({
+  payment_intent: intentId, amount: String(amount), 'metadata[purpose]': 'onboarding_initial', 'metadata[requestId]': String(requestId),
+}), key);
+export const createOnboardingCheckout = ({ request, offer, payment, returnUrl }) => {
+  const params = new URLSearchParams({ mode: 'payment', success_url: `${returnUrl}&payment=return`, cancel_url: `${returnUrl}&payment=cancel`,
+    client_reference_id: `onboarding:${request.id}:${offer.id}`, customer_email: request.formalData.businessEmail || request.email,
+    expires_at: String(Math.floor(new Date(payment.createdAt).getTime() / 1000) + 3600), locale: 'es',
+  });
+  // Uses payment methods enabled for this Stripe account. Deferred methods stay pending.
+  offer.lines.forEach((line, i) => {
+    params.set(`line_items[${i}][quantity]`, '1');
+    params.set(`line_items[${i}][price_data][currency]`, 'eur');
+    params.set(`line_items[${i}][price_data][unit_amount]`, String(line.amountCents));
+    params.set(`line_items[${i}][price_data][product_data][name]`, line.label);
+  });
+  for (const [key, value] of Object.entries({ purpose: 'onboarding_initial', requestId: request.id, offerId: offer.id, offerHash: offer.hash, paymentId: payment.id })) {
+    params.set(`metadata[${key}]`, String(value)); params.set(`payment_intent_data[metadata][${key}]`, String(value));
+  }
+  return stripeRequest('/checkout/sessions', params, `onboarding-${payment.id}`);
+};
+
 export const createSmsCreditsCheckoutSession = async ({
   partner,
   amountCents,
@@ -251,8 +275,8 @@ const safeCompare = (left, right) => {
   return leftBuffer.length === rightBuffer.length && crypto.timingSafeEqual(leftBuffer, rightBuffer);
 };
 
-export const constructStripeWebhookEvent = (payload, signatureHeader) => {
-  const webhookSecret = getStripeWebhookSecret();
+export const constructStripeWebhookEvent = (payload, signatureHeader, secretOverride) => {
+  const webhookSecret = secretOverride || getStripeWebhookSecret();
   if (!webhookSecret) {
     throw new Error("stripe_webhook_not_configured");
   }

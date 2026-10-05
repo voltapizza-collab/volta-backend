@@ -1,3 +1,5 @@
+import webAuthRoutes from './routes/webAuth.js';
+import { webAccess } from './services/webAccess.js';
 import express from "express";
 import cors from "cors";
 import fs from "fs";
@@ -69,6 +71,9 @@ if (fs.existsSync(envPath)) {
 }
 
 const app = express();
+// Set only to the verified number of trusted proxies in this deployment.
+const trustedProxyHops = Number(process.env.TRUST_PROXY_HOPS || 0);
+if (Number.isInteger(trustedProxyHops) && trustedProxyHops > 0 && trustedProxyHops <= 5) app.set('trust proxy', trustedProxyHops);
 const hostRedirects = {
   "juego.mycrushpizza.com": "https://voltapizza.com/mycrushpizza/coupons",
 };
@@ -180,6 +185,9 @@ app.use(
   })
 );
 
+app.use("/api/auth", webAuthRoutes(prisma));
+app.use(webAccess(prisma));
+
 app.use("/stores/:storeId/ingredients", storeIngredientsRoutes);
 app.use("/api/stores/:storeId/ingredients", storeIngredientsRoutes);
 app.use("/stores", storesRouter);
@@ -244,11 +252,12 @@ const publicBackofficeUrl =
     ? `${configuredFrontendUrl.replace(/\/$/, "")}/Backoffice`
     : "https://voltapizza.com/Backoffice");
 
-app.get(["/Backoffice", "/backoffice"], (req, res) => {
+app.get(["/Backoffice", "/backoffice", "/backoffice/:partnerSlug"], (req, res) => {
   const queryString = req.originalUrl.includes("?")
     ? req.originalUrl.slice(req.originalUrl.indexOf("?"))
     : "";
-  res.redirect(302, `${publicBackofficeUrl}${queryString}`);
+  const destination = req.params.partnerSlug ? `${publicBackofficeUrl.replace(/\/$/, '')}/${encodeURIComponent(req.params.partnerSlug)}` : publicBackofficeUrl;
+  res.redirect(302, `${destination}${queryString}`);
 });
 
 

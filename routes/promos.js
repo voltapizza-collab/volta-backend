@@ -1,3 +1,4 @@
+import { multipartWebScope } from '../services/webAccess.js';
 import express from "express";
 import { withProductReferences, promoProductIds } from "../services/productLinks.js";
 import multer from "multer";
@@ -227,7 +228,7 @@ export default function promosRoutes(prisma) {
     }
   });
 
-  router.post("/", upload.single("image"), async (req, res) => {
+  router.post("/", upload.single("image"), multipartWebScope(prisma), async (req, res) => {
     const partnerId = parsePositiveInt(req.body.partnerId);
     const title = String(req.body.title || "").trim();
     const totalPrice = Number(req.body.totalPrice || 0);
@@ -282,7 +283,7 @@ export default function promosRoutes(prisma) {
     }
   });
 
-  router.put("/:id", upload.single("image"), async (req, res) => {
+  router.put("/:id", upload.single("image"), multipartWebScope(prisma), async (req, res) => {
     const id = parsePositiveInt(req.params.id);
     const partnerId = parsePositiveInt(req.body.partnerId);
     const title = String(req.body.title || "").trim();

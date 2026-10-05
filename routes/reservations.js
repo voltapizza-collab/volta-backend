@@ -1,3 +1,4 @@
+import { signPublicAction } from '../services/publicCapabilities.js';
 import express from "express";
 import { reserveSmsCreditForMessage, refundSmsCreditForMessage } from "../services/smsCredits.js";
 import { isPartnerSmsServiceEnabled } from "../services/smsNotificationSettings.js";
@@ -407,7 +408,8 @@ export default function reservationsRoutes(prisma) {
         : false;
 
       if (customerPhone && reservationSmsEnabled) {
-        const cancelLink = `${publicFrontendBaseUrl()}/reservation/${reservation.id}/cancel`;
+        const cancelToken = signPublicAction("cancel", reservation.id, Math.max(Date.now(), new Date(reservation.reservationDateTime).getTime()) + 86400000);
+        const cancelLink = `${publicFrontendBaseUrl()}/reservation/${reservation.id}/cancel?token=${encodeURIComponent(cancelToken)}`;
         const text = buildReservationSms({
           customerName,
           reservationDate,

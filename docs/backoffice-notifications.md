@@ -1,5 +1,21 @@
 # Avisos del backoffice
 
+## Tres correos de incorporación — borrador local, 5 de octubre de 2026
+
+`onboardingEmailsAnnouncementDraft` contiene ES/EN/IT/FR/PT y permanece fuera del feed. Describe solicitud, oferta y bienvenida, así como el reenvío de bienvenida sin repetir alta ni pago. Publicar tras desplegar el recorrido completo y comprobar el envío externo. Véase [verificación final](onboarding-final-verification.md).
+
+## Pago previo y firma — borrador local, 5 de octubre de 2026
+
+`onboardingClosureAnnouncementDraft` contiene ES/EN/IT/FR/PT y permanece fuera del feed. Publicar únicamente tras desplegar el cierre completo y su migración, configurar el webhook de onboarding y comprobar los pagos en el entorno correspondiente. Describe tarifa y precio por expediente, disponibilidad, renting de 36 meses y pago antes de firma. Véase [el despliegue del punto 4](onboarding-closure-rollout.md).
+
+## Equipo y notificaciones en fase 2 — borrador local, 4 de octubre de 2026
+
+`onboardingCommercialAnnouncementDraft` incluye ES/EN/IT/FR/PT y queda fuera del feed. Añade elección del POS, resumen y guardado parcial. Alquiler y SMS son solicitudes de oferta sin importes aprobados. Publicar junto al cierre completo con pago/firma del punto 4; esta fase bloquea expresamente el contrato antiguo para nuevas elecciones económicas. Ver [detalle de implementación](onboarding-commercial-rollout.md).
+
+## Accesos por negocio — borrador local, 4 de octubre de 2026
+
+`businessAccessAnnouncementDraft` incluye ES/EN/IT/FR/PT y permanece fuera del feed. Publicar solo después del despliegue conjunto de backend y storefront, la migración de sesiones y la comprobación de recuperación de cuentas. Ver [preparación del despliegue](web-access-rollout.md). La nota describe enlaces del negocio y creación de contraseña desde una invitación temporal.
+
 ## Preparación de logos — borrador local, octubre de 2026
 
 `logoPreparationAnnouncementDraft` incluye ES/EN/IT/FR/PT y permanece fuera del feed. Publicar tras desplegar backend y storefront y aplicar `20261002090000_add_partner_logo_original`. El backend prepara JPG/PNG/WebP estáticos de hasta 8 MB y 16 megapíxeles: detecta el fondo uniforme conectado al borde, conserva blancos interiores y transparencia existente, recorta márgenes y genera un PNG de hasta 1200 px. También reconoce esquinas blancas coincidentes cuando un dibujo redondeado toca los bordes. Los fondos ambiguos se conservan con estado `needs_review`.

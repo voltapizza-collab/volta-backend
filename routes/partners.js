@@ -1,6 +1,8 @@
+import { issueWebSession, createAuthLimiter } from '../services/webSessions.js';
 import { COVERAGE_ROUTE_ESTIMATE_FACTOR, getGoogleGeocodingKey, geocodeAddress, geocodeCustomerAddress, computeDrivingDistances, haversineKm, isPreciseCustomerGeocode } from "../services/deliveryGeography.js";
 export { isPreciseCustomerGeocode } from "../services/deliveryGeography.js";
 import express from "express";
+import { buildOrderAvailability } from '../services/orderAvailability.js';
 import { withProductReferences } from "../services/productLinks.js";
 import crypto from "crypto";
 import { v2 as cloudinary } from "cloudinary";
@@ -23,6 +25,7 @@ import {
 } from "../services/posCredentials.js";
 
 const router = express.Router();
+router.use(["/backoffice-login", "/pos-login", "/backoffice-password/request", "/backoffice-password/reset", "/backoffice-demo-session"], createAuthLimiter());
 
 const STOREFRONT_BUTTON_IDS = [
   "selectProducts",
@@ -57,6 +60,7 @@ const sanitizeSummaryStore = (store) => {
   const { posPinHash, posPinEncrypted, ...safeStore } = store || {};
   return {
     ...safeStore,
+    orderStatus: buildOrderAvailability(store).status,
     pickupEnabled: store?.pickupEnabled !== false,
     deliveryEnabled: store?.deliveryEnabled !== false,
     posCredentialsConfigured: Boolean(posPinHash),
@@ -788,8 +792,13 @@ router.post("/backoffice-demo-session", async (req, res) => {
       return res.status(401).json({ error: "Credenciales invalidas." });
     }
 
+    await ensurePartnerSettingsColumns();
+    if (req.body.partnerSlug && req.body.partnerSlug !== 'volta-demo') return res.status(403).json({ error: "business_mismatch" });
     const session = await ensureBackofficeDemoSession(prisma);
-    return res.json(session);
+    const credential = hashPassword(crypto.randomBytes(32).toString("hex"));
+    await prisma.$executeRawUnsafe("UPDATE Partner SET backofficePasswordHash = COALESCE(backofficePasswordHash, ?) WHERE id = ?", credential, session.partnerId);
+    const rows = await prisma.$queryRawUnsafe("SELECT backofficePasswordHash FROM Partner WHERE id = ?", session.partnerId);
+    return res.json(await issueWebSession(prisma, { ...session, role: "backoffice", isDemo: true }, rows[0].backofficePasswordHash));
   } catch (error) {
     console.error("[backoffice-demo-session]", error);
     return res.status(500).json({ error: "No se pudo preparar la sesion demo." });
@@ -830,13 +839,18 @@ router.post("/pos-login", async (req, res) => {
       username
     );
 
-    const match = (rows || []).find((row) => row.posPinHash && verifySecret(pin, row.posPinHash));
+    const matches = (rows || []).filter(row =>
+      (!req.body.partnerSlug || row.partnerSlug === req.body.partnerSlug) &&
+      (!req.body.storeSlug || row.storeSlug === req.body.storeSlug) &&
+      row.posPinHash && verifySecret(pin, row.posPinHash));
+    const match = matches.length === 1 ? matches[0] : null;
 
     if (!match) {
       return res.status(401).json({ error: "invalid_credentials" });
     }
 
-    return res.json({
+    return res.json(await issueWebSession(prisma, {
+      role: "pos",
       partnerId: Number(match.partnerId),
       storeId: Number(match.storeId),
       partnerName: match.partnerName,
@@ -845,7 +859,7 @@ router.post("/pos-login", async (req, res) => {
       storeSlug: match.storeSlug,
       storeCity: match.storeCity || null,
       isDemo: false,
-    });
+    }, match.posPinHash));
   } catch (error) {
     console.error("[pos-login]", error);
     return res.status(500).json({ error: "pos_login_failed" });
@@ -857,7 +871,7 @@ router.post("/backoffice-login", async (req, res) => {
     await ensurePartnerSettingsColumns();
 
     const username = compactCredential(req.body?.username);
-    const password = String(req.body?.password || "").trim();
+    const password = String(req.body?.password || "");
 
     if (!username || !password) {
       return res.status(400).json({ error: "credentials_required" });
@@ -872,16 +886,14 @@ router.post("/backoffice-login", async (req, res) => {
     );
     const partner = rows?.[0] || null;
 
-    if (!partner || partner.active === false) {
+    if (!partner || !partner.active) {
       return res.status(401).json({ error: "invalid_credentials" });
     }
 
     const storedHash = partner.backofficePasswordHash || "";
-    const valid = storedHash
-      ? verifyPassword(password, storedHash)
-      : compactCredential(password) === compactCredential(partner.slug);
+    const valid = password.length <= 1024 && Boolean(storedHash) && verifyPassword(password, storedHash);
 
-    if (!valid) {
+    if (!valid || (req.body.partnerSlug && req.body.partnerSlug !== partner.slug)) {
       return res.status(401).json({ error: "invalid_credentials" });
     }
 
@@ -891,7 +903,8 @@ router.post("/backoffice-login", async (req, res) => {
     });
     const store = stores[0] || null;
 
-    return res.json({
+    return res.json(await issueWebSession(prisma, {
+      role: "backoffice",
       partnerId: Number(partner.id),
       storeId: store?.id || null,
       partnerName: partner.name,
@@ -899,7 +912,7 @@ router.post("/backoffice-login", async (req, res) => {
       storeName: store?.storeName || null,
       storeSlug: store?.slug || null,
       isDemo: false,
-    });
+    }, storedHash));
   } catch (error) {
     console.error("[backoffice-login]", error);
     return res.status(500).json({ error: "backoffice_login_failed" });
@@ -949,7 +962,7 @@ router.post("/backoffice-password/request", async (req, res) => {
       const token = crypto.randomBytes(32).toString("hex");
       const tokenHash = hashResetToken(token);
       const expiresAt = new Date(Date.now() + 60 * 60 * 1000);
-      const resetUrl = `${publicFrontendUrl()}/Backoffice?reset=${encodeURIComponent(token)}`;
+      const resetUrl = `${publicFrontendUrl()}/backoffice/${encodeURIComponent(partner.slug)}?reset=${encodeURIComponent(token)}`;
 
       await prisma.$executeRawUnsafe(
         `UPDATE Partner
@@ -1006,15 +1019,15 @@ router.post("/backoffice-password/reset", async (req, res) => {
     await ensurePartnerSettingsColumns();
 
     const token = String(req.body?.token || "").trim();
-    const password = String(req.body?.password || "").trim();
+    const password = String(req.body?.password || "");
 
-    if (!token || password.length < 6) {
+    if (!/^[a-f0-9]{64}$/.test(token) || password.length < 12 || password.length > 1024) {
       return res.status(400).json({ error: "invalid_password_reset" });
     }
 
     const tokenHash = hashResetToken(token);
     const rows = await prisma.$queryRawUnsafe(
-      `SELECT id
+      `SELECT id, slug
          FROM Partner
         WHERE backofficeResetTokenHash = ?
           AND backofficeResetExpiresAt > NOW()
@@ -1023,19 +1036,20 @@ router.post("/backoffice-password/reset", async (req, res) => {
     );
     const partner = rows?.[0] || null;
 
-    if (!partner) {
+    if (!partner || (req.body.partnerSlug && req.body.partnerSlug !== partner.slug)) {
       return res.status(400).json({ error: "invalid_or_expired_token" });
     }
 
-    await prisma.$executeRawUnsafe(
+    const changed = await prisma.$executeRawUnsafe(
       `UPDATE Partner
           SET backofficePasswordHash = ?,
               backofficeResetTokenHash = NULL,
               backofficeResetExpiresAt = NULL
-        WHERE id = ?`,
+        WHERE id = ? AND backofficeResetTokenHash = ? AND backofficeResetExpiresAt > NOW()`,
       hashPassword(password),
-      Number(partner.id)
+      Number(partner.id), tokenHash
     );
+    if (Number(changed) !== 1) return res.status(400).json({ error: "invalid_or_expired_token" });
 
     return res.json({ ok: true });
   } catch (error) {
@@ -1327,7 +1341,7 @@ router.get("/:slug", async (req, res) => {
 
     res.json({
       ...partner,
-      stores,
+      stores: stores.map(sanitizeSummaryStore),
     });
   } catch (e) {
     console.error("GET PARTNER BY SLUG ERROR:", e);

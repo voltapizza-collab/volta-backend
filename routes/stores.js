@@ -1,4 +1,6 @@
 import express from "express";
+import { readStoreOpening } from '../services/storeOpening.js';
+import { buildOrderAvailability } from '../services/orderAvailability.js';
 import { loadStoreMenuProducts } from "../services/storeMenuProducts.js";
 import { getBoostSettings } from "../services/boostSettings.js";
 import { sendStoreStatusTrackingSms } from "../services/trackingNotifications.js";
@@ -59,6 +61,7 @@ const sanitizeStore = (store) => {
   const { posPinHash, posPinEncrypted, ...safeStore } = store;
   return {
     ...safeStore,
+    orderStatus: buildOrderAvailability(store).status,
     posCredentialsConfigured: Boolean(posPinHash),
     posCredentialsRecoverable: Boolean(posPinEncrypted),
     posCredentialsEnabled: store.posCredentialsEnabled !== false,
@@ -968,6 +971,51 @@ const attachStorePublicMenu = (router, prisma) => {
 export default function storesRoutes(prisma) {
   const router = express.Router();
 
+  router.get('/:id/order-reception', async (req, res) => {
+    const id = parsePositiveInt(req.params.id);
+    if (!id) return res.status(400).json({ error: 'invalid_store' });
+    try {
+      const state = await readStoreOpening(prisma, id);
+      res.set('Cache-Control', 'no-store');
+      return state ? res.json(state) : res.status(404).json({ error: 'store_not_found' });
+    } catch (error) {
+      console.error('[stores.order-reception]', error);
+      return res.status(503).json({ error: 'opening_status_unavailable' });
+    }
+  });
+
+  router.patch('/:id/order-reception', async (req, res) => {
+    const id = parsePositiveInt(req.params.id);
+    if (!id || typeof req.body?.acceptingOrders !== 'boolean') return res.status(400).json({ error: 'invalid_reception' });
+    try {
+      const result = await prisma.$transaction(async tx => {
+        // Serialize opening against edits/disabling of this store.
+        await tx.$queryRawUnsafe('SELECT id FROM Store WHERE id = ? FOR UPDATE', id);
+        const store = await tx.store.findUnique({ where: { id } });
+        if (!store) return { code: 404, body: { error: 'store_not_found' } };
+        if (req.body.acceptingOrders) {
+          const state = await readStoreOpening(tx, id);
+          if (!state.canOpen) return { code: 409, body: { error: 'store_not_ready', ...state } };
+        }
+        // Closing must work even if menu/payment configuration is incomplete.
+        const updated = await tx.store.update({ where: { id }, data: { acceptingOrders: req.body.acceptingOrders },
+          select: { id: true, active: true, acceptingOrders: true, operationsPaused: true } });
+        return { code: 200, body: updated, changed: store.acceptingOrders !== updated.acceptingOrders };
+      });
+      if (result.changed) {
+        try {
+          const current = await prisma.store.findUnique({ where: { id }, include: { partner: true } });
+          await sendStoreStatusTrackingSms(prisma, { store: current });
+        } catch (error) { console.error('[stores.order-reception notification]', error); }
+      }
+      res.set('Cache-Control', 'no-store');
+      return res.status(result.code).json(result.body);
+    } catch (error) {
+      console.error('[stores.order-reception]', error);
+      return res.status(503).json({ error: 'reception_change_failed' });
+    }
+  });
+
   router.patch("/:id/operations-pause", async (req, res) => {
     const id = parsePositiveInt(req.params.id);
     if (!id || typeof req.body?.paused !== "boolean") {
@@ -1001,7 +1049,7 @@ export default function storesRoutes(prisma) {
     try {
       const previous = await prisma.store.findUnique({
         where: { id },
-        select: { active: true, latitude: true, longitude: true },
+        select: { active: true, acceptingOrders: true, latitude: true, longitude: true },
       });
 
       if (!previous) {
@@ -1014,7 +1062,7 @@ export default function storesRoutes(prisma) {
 
       const updated = await prisma.store.update({
         where: { id },
-        data: { active },
+        data: { active, ...(!active || !previous.active ? { acceptingOrders: false } : {}) },
         include: {
           partner: {
             select: {
@@ -1026,7 +1074,8 @@ export default function storesRoutes(prisma) {
       });
 
       let notification = null;
-      if (previous?.active !== updated.active) {
+      // Enabling the store does not open reception. Notify only a real closure here.
+      if (previous.active && previous.acceptingOrders && !updated.active) {
         if (updated.partnerId) {
           const partnerRows = await prisma.$queryRawUnsafe(
             "SELECT trackingNotificationSettings FROM Partner WHERE id = ?",
@@ -1053,7 +1102,7 @@ export default function storesRoutes(prisma) {
         }
       }
 
-      return res.json({ ok: true, active: updated.active, notification });
+      return res.json({ ok: true, active: updated.active, acceptingOrders: updated.acceptingOrders, notification });
     } catch (error) {
       console.error("[PATCH /stores/:id/active]", error);
       return res.status(400).json({ error: error.message });
@@ -1389,6 +1438,7 @@ export default function storesRoutes(prisma) {
           data: {
             partnerId,
             ...payload,
+            acceptingOrders: false,
             ...buildPosPinData(posPin),
           },
         });
@@ -1469,6 +1519,10 @@ export default function storesRoutes(prisma) {
 
       const payload = buildStorePayload(req.body, existing);
 
+      if (req.body.acceptingOrders === true) {
+        return res.status(409).json({ error: 'use_order_reception', message: 'Abre los pedidos con la acción Abrir pedidos.' });
+      }
+
       if (!payload.pickupEnabled && !payload.deliveryEnabled) {
         return res.status(400).json({ error: "delivery_method_required" });
       }
@@ -1499,10 +1553,8 @@ export default function storesRoutes(prisma) {
           latitude: nextData.latitude,
           longitude: nextData.longitude,
           active: nextData.active,
-          acceptingOrders:
-            typeof req.body.acceptingOrders === "boolean"
-              ? payload.acceptingOrders
-              : existing.acceptingOrders,
+          acceptingOrders: !nextData.active || !existing.active || req.body.acceptingOrders === false
+            ? false : existing.acceptingOrders,
           pickupEnabled: payload.pickupEnabled,
           deliveryEnabled: payload.deliveryEnabled,
           acceptsReservations: payload.acceptsReservations,

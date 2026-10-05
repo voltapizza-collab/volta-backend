@@ -1,0 +1,38 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import express from 'express';
+import { signPublicAction, verifyPublicAction } from '../services/publicCapabilities.js';
+import { webAccess } from '../services/webAccess.js';
+import myordersRoutes from '../routes/myorders.js';
+
+test('customer actions bind purpose, id and expiry; repeat reads only signed receipt ids', async t => {
+  const original = process.env.WEB_ACTION_SIGNING_KEY;
+  process.env.WEB_ACTION_SIGNING_KEY = 'unit-test-only-public-actions';
+  t.after(() => { if (original == null) delete process.env.WEB_ACTION_SIGNING_KEY; else process.env.WEB_ACTION_SIGNING_KEY = original; });
+  const repeat = signPublicAction('repeat', 501, Date.now() + 60000);
+  const cancel = signPublicAction('cancel', 91, Date.now() + 60000);
+  assert.equal(verifyPublicAction(repeat, 'repeat'), 501);
+  assert.equal(verifyPublicAction(repeat, 'cancel'), null);
+  assert.equal(verifyPublicAction(repeat, 'repeat', Date.now() + 120000), null);
+  assert.equal(verifyPublicAction(`${repeat.slice(0, -1)}${repeat.endsWith('a') ? 'b' : 'a'}`, 'repeat'), null);
+  let where;
+  const db = { customer: { findMany: async () => [] }, sale: { findMany: async args => { where = args.where; return []; } } };
+  const app = express(); app.use(express.json()); app.use(webAccess(db)); app.use('/api/myorders', myordersRoutes(db));
+  app.use((_req, res) => res.json({ reached: true }));
+  const server = await new Promise(resolve => { const s = app.listen(0, '127.0.0.1', () => resolve(s)); });
+  t.after(() => new Promise(resolve => { server.closeAllConnections(); server.close(resolve); }));
+  const url = path => `http://127.0.0.1:${server.address().port}${path}`;
+  const path = '/api/myorders/repeat/recent?partnerId=2&storeId=21&phone=600000000';
+  assert.equal((await fetch(url(path))).status, 401);
+  const response = await fetch(url(path), { headers: { 'X-Volta-Receipts': JSON.stringify([repeat]) } });
+  assert.equal(response.status, 200);
+  assert.deepEqual(where.id, { in: [501] });
+  assert.equal(where.partnerId, 2);
+  assert.equal(where.storeId, 21);
+  assert.equal(where.status, 'PAID');
+  const patch = (id, token) => fetch(url(`/api/reservations/${id}/cancel`), { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ cancelToken: token }) });
+  assert.equal((await patch(91, cancel)).status, 200);
+  assert.equal((await patch(92, cancel)).status, 403);
+  assert.equal((await patch(91, repeat)).status, 403);
+  assert.equal((await patch(91, '')).status, 401);
+});

@@ -888,7 +888,7 @@ export const buildRepeatCartDraft = (sale) => {
 
 const findRepeatSales = async (
   prisma,
-  { partnerId, storeId, customerId, phone, rawPhone, take = 1 }
+  { partnerId, storeId, customerId, phone, rawPhone, take = 1, authorizedSaleIds }
 ) => {
   const matchingCustomerIds = phone
     ? (
@@ -911,8 +911,9 @@ const findRepeatSales = async (
   return prisma.sale.findMany({
     where: {
       partnerId,
+      ...(authorizedSaleIds ? { id: { in: authorizedSaleIds } } : {}),
       ...(storeId ? { storeId } : {}),
-      status: { not: "CANCELED" },
+      status: authorizedSaleIds ? "PAID" : { not: "CANCELED" },
       OR: [
         ...(customerId ? [{ customerId }] : []),
         ...(matchingCustomerIds.length
@@ -1072,11 +1073,12 @@ const findBoostableSale = async (prisma, { orderId, orderCode }) => {
   const id = parsePositiveInt(orderId);
   const code = String(orderCode || "").trim().toUpperCase();
 
-  if (!id && !code) return null;
+  if (!code) return null;
 
   return prisma.sale.findFirst({
     where: {
-      ...(id ? { id } : { code }),
+      code,
+      ...(id ? { id } : {}),
       processed: false,
       status: "PAID",
     },
@@ -1160,6 +1162,7 @@ export default function myordersRoutes(prisma) {
         customerId,
         phone,
         rawPhone,
+        authorizedSaleIds: req.authorizedRepeatSaleIds,
         take: 3,
       });
 
@@ -1198,6 +1201,7 @@ export default function myordersRoutes(prisma) {
         customerId,
         phone,
         rawPhone,
+        authorizedSaleIds: req.authorizedRepeatSaleIds,
         take: 1,
       });
 
@@ -1310,6 +1314,15 @@ export default function myordersRoutes(prisma) {
       console.error("[myorders.boosts.activate] error:", error);
       return res.status(500).json({ error: "Error activando Boots" });
     }
+  });
+
+  // Public queue length contains no customer/order records.
+  router.get("/queue-size", async (req, res) => {
+    const partnerId = parsePositiveInt(req.query.partnerId);
+    const storeId = parsePositiveInt(req.query.storeId);
+    if (!partnerId || !storeId) return res.status(400).json({ error: "store_required" });
+    const queueSize = await prisma.sale.count({ where: pendingOrderWhere({ partnerId, storeId, activeStoresOnly: false }) });
+    return res.json({ queueSize });
   });
 
   router.get("/pending", async (req, res) => {

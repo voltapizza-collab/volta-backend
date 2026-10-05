@@ -1,3 +1,4 @@
+import { multipartWebScope } from '../services/webAccess.js';
 import express from "express";
 import { deleteUnlinkedProduct, getProductLinks } from "../services/productLinks.js";
 import multer from "multer";
@@ -573,7 +574,7 @@ export default function pizzasRoutes(prisma) {
     }
   });
 
-  router.post("/", upload.single("image"), async (req, res) => {
+  router.post("/", upload.single("image"), multipartWebScope(prisma), async (req, res) => {
     try {
       const body = getRequestBody(req);
       const {
@@ -706,7 +707,7 @@ export default function pizzasRoutes(prisma) {
     }
   });
 
-  router.put("/:id", upload.single("image"), async (req, res) => {
+  router.put("/:id", upload.single("image"), multipartWebScope(prisma), async (req, res) => {
     try {
       const body = getRequestBody(req);
       const id = Number(req.params.id);

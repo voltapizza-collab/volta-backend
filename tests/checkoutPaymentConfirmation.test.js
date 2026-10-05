@@ -3,17 +3,22 @@ import { test } from 'node:test';
 import express from 'express';
 import checkoutRoutes from '../routes/checkout.js';
 import { formatSale } from '../routes/myorders.js';
+import { verifyPublicAction } from '../services/publicCapabilities.js';
 
 test('Stripe confirmation saves the paid method and state and remains idempotent', async (t) => {
   const originalFetch = globalThis.fetch;
   const originalKey = process.env.STRIPE_SECRET_KEY;
+  const originalActionKey = process.env.WEB_ACTION_SIGNING_KEY;
+  process.env.WEB_ACTION_SIGNING_KEY = 'test-public-action-signing-key';
   process.env.STRIPE_SECRET_KEY = 'sk_test_unit';
   t.after(() => {
     globalThis.fetch = originalFetch;
     if (originalKey == null) delete process.env.STRIPE_SECRET_KEY;
     else process.env.STRIPE_SECRET_KEY = originalKey;
+    if (originalActionKey == null) delete process.env.WEB_ACTION_SIGNING_KEY;
+    else process.env.WEB_ACTION_SIGNING_KEY = originalActionKey;
   });
-  let sale = { id: 1, code: 'PAYMENT-TEST', status: 'AWAITING_PAYMENT', products: [],
+  let sale = { id: 1, code: 'PAYMENT-TEST', createdAt: new Date(), status: 'AWAITING_PAYMENT', products: [],
     stripeCheckoutSessionId: 'cs_payment_test',
     customerData: { paymentMode: 'card', paymentMethod: 'card', paymentStatus: 'awaiting_card_payment',
       email: 'saved@example.com', delivery: { method: 'PICKUP' } } };
@@ -48,7 +53,9 @@ test('Stripe confirmation saves the paid method and state and remains idempotent
   paid = true;
   const confirmed = await confirm();
   assert.equal(confirmed.status, 200);
-  assert.equal((await confirmed.json()).notified, true);
+  const confirmation = await confirmed.json();
+  assert.equal(confirmation.notified, true);
+  assert.equal(verifyPublicAction(confirmation.repeatReceipt, 'repeat'), 1);
   assert.equal(writes, 1);
   assert.equal(sale.status, 'PAID');
   assert.equal(sale.customerData.paymentMode, 'card');
@@ -60,6 +67,8 @@ test('Stripe confirmation saves the paid method and state and remains idempotent
 
   const repeated = await confirm();
   assert.equal(repeated.status, 200);
-  assert.equal((await repeated.json()).notified, false);
+  const repeatedResult = await repeated.json();
+  assert.equal(repeatedResult.notified, false);
+  assert.equal(repeatedResult.repeatReceipt, confirmation.repeatReceipt);
   assert.equal(writes, 1);
 });
