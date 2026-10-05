@@ -1,5 +1,9 @@
 # Avisos del backoffice
 
+## Publicación del onboarding — 5 de octubre de 2026
+
+Tras confirmar backend y storefront en producción, se activan en ES/EN/IT/FR/PT las notas de accesos por negocio, recepción de pedidos, elección comercial, oferta/pago/firma y tres correos. Conservan sus identificadores originales; las constantes terminadas en `Draft` se incorporan al feed con fechas de publicación y caducidad. Las secciones históricas de borrador siguientes quedan sustituidas por esta actualización para esas cinco notas. Las pruebas externas de pago/correo y POS quedan a cargo de Luigi; no se anuncia su realización.
+
 ## Tres correos de incorporación — borrador local, 5 de octubre de 2026
 
 `onboardingEmailsAnnouncementDraft` contiene ES/EN/IT/FR/PT y permanece fuera del feed. Describe solicitud, oferta y bienvenida, así como el reenvío de bienvenida sin repetir alta ni pago. Publicar tras desplegar el recorrido completo y comprobar el envío externo. Véase [verificación final](onboarding-final-verification.md).

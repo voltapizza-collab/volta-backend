@@ -1,6 +1,6 @@
 # Punto 5: verificación local y prueba final de Luigi
 
-5 de octubre de 2026. Implementación y comprobaciones locales completadas. **No está publicado.** Luigi realizará las pruebas externas de correo, Stripe y puesta en marcha. No se han enviado correos reales, cobrado pagos ni modificado comercios de producción durante esta comprobación.
+5 de octubre de 2026. **Publicado en producción y comprobado el acceso y la recepción del webhook.** Backend `1a25491`, storefront `cbc372b`; ambos despliegues confirmados SUCCESS en Railway. Las dos migraciones se aplicaron correctamente. Se conservaron usuario y contraseña de Global Manager, con validación en el servidor. La variable del webhook y la clave estable de acciones están configuradas. Luigi realizará las pruebas externas de correo, pago real y puesta en marcha. No se han enviado correos, cobrado pagos ni modificado comercios durante la verificación de publicación. Las instrucciones de preparación siguientes se conservan como referencia para otros entornos.
 
 ## Cambios terminados
 
@@ -26,7 +26,7 @@ El ensayo se reproduce con `scripts/rehearseOnboarding.js` y una base nueva cuyo
 
 1. Publicar backend y storefront coordinadamente, generar Prisma Client y aplicar las migraciones de sesiones y precio indicadas en [accesos](web-access-rollout.md) y [cierre](onboarding-closure-rollout.md). Mantener las novedades en borrador hasta comprobar la publicación.
 2. Configurar el administrador global conforme al documento de accesos, la firma de acciones/sesiones, URL pública y SMTP del entorno. Ejecutar `node scripts/checkOnboardingReadiness.js` desde el backend para revisar presencia de configuración sin mostrar secretos.
-3. Para ensayar cobros sin dinero real, configurar Stripe en modo prueba y el webhook `POST /api/onboarding/stripe/webhook`, con su secreto y eventos del documento de cierre. **La configuración local inspeccionada contiene una clave Stripe LIVE, carece de `STRIPE_ONBOARDING_WEBHOOK_SECRET` y no tiene `VOLTA_ADMIN_USERNAME`/`VOLTA_ADMIN_PASSWORD_HASH`.** No se modificaron esas variables. La configuración del servidor de despliegue debe comprobarse por separado.
+3. Para ensayar cobros sin dinero real, configurar Stripe en modo prueba y el webhook `POST /api/onboarding/stripe/webhook`, con su secreto y eventos del documento de cierre. **Producción utiliza Stripe LIVE:** completar un pago allí cobra dinero real. Se comprobó en Stripe el destino activo con los nueve eventos y en el backend la aceptación de una sonda firmada sin operación de pago y el rechazo de otra sin firma. Esto no sustituye la prueba de entrega originada por un pago en Stripe. Las variables del administrador, webhook y firma se comprobaron/configuraron en Railway; la copia local de `.env` no se sincronizó con esos secretos.
 4. Cargar condiciones comerciales aprobadas: renta mensual, posible fianza, cancelación, SMS, liquidaciones y entrega. Los 250 € son la referencia inicial editable del POS; 11 € fue solo un importe de ensayo, no una renta aprobada.
 
 ## Recorrido que realizará Luigi

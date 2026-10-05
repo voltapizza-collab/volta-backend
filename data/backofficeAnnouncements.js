@@ -604,3 +604,12 @@ export const onboardingClosureAnnouncementDraft = {
     pt: { title: 'Preço do POS e conclusão da adesão', message: 'No Global Manager, abra Onboarding para definir o preço das novas candidaturas e preparar a oferta de cada comerciante. Verifique preço, disponibilidade e entrega; o cliente aceita as condições, paga e depois assina.', detail: 'O renting prevê 36 mensalidades com transferência final da propriedade do POS. Cada oferta conserva os seus valores. O pagamento deve ser confirmado antes da assinatura; cancelamentos e reembolsos são acompanhados no processo.' },
   },
 };
+
+// Coordinated backend/storefront release verified on 5 October 2026.
+backofficeAnnouncements.push(...[
+  businessAccessAnnouncementDraft, storeReceptionAnnouncementDraft,
+  onboardingCommercialAnnouncementDraft, onboardingClosureAnnouncementDraft,
+  onboardingEmailsAnnouncementDraft,
+].map(announcement => ({ ...announcement,
+  publishedAt: '2026-10-05T09:50:00.000Z', expiresAt: '2027-01-05T09:50:00.000Z',
+})));

@@ -1,5 +1,7 @@
 # Punto 4: oferta, pago inicial y firma
 
+**Actualización de publicación, 5 de octubre:** backend y storefront desplegados y migraciones aplicadas; acceso administrativo, tarifa y verificación de firma del webhook comprobados en producción. Véase [verificación final](onboarding-final-verification.md). El texto siguiente conserva el historial de preparación local.
+
 5 de octubre de 2026. Implementación local, pendiente de publicación. Se continúa la base de cierre existente y se conservan los cambios locales de los pasos 1–3. No se han cobrado pagos, enviado correos reales ni activado comercios de producción.
 
 ## Recorrido implementado
