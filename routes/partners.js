@@ -1,4 +1,4 @@
-import { issueWebSession, createAuthLimiter } from '../services/webSessions.js';
+import { issueWebSession, createAuthLimiter, backofficeCredential } from '../services/webSessions.js';
 import { COVERAGE_ROUTE_ESTIMATE_FACTOR, getGoogleGeocodingKey, geocodeAddress, geocodeCustomerAddress, computeDrivingDistances, haversineKm, isPreciseCustomerGeocode } from "../services/deliveryGeography.js";
 export { isPreciseCustomerGeocode } from "../services/deliveryGeography.js";
 import express from "express";
@@ -891,7 +891,7 @@ router.post("/backoffice-login", async (req, res) => {
     }
 
     const storedHash = partner.backofficePasswordHash || "";
-    const valid = password.length <= 1024 && Boolean(storedHash) && verifyPassword(password, storedHash);
+    const valid = password.length <= 1024 && (storedHash ? verifyPassword(password, storedHash) : password === partner.slug);
 
     if (!valid || (req.body.partnerSlug && req.body.partnerSlug !== partner.slug)) {
       return res.status(401).json({ error: "invalid_credentials" });
@@ -912,10 +912,34 @@ router.post("/backoffice-login", async (req, res) => {
       storeName: store?.storeName || null,
       storeSlug: store?.slug || null,
       isDemo: false,
-    }, storedHash));
+      rememberDevice: req.body.rememberDevice !== false,
+    }, backofficeCredential(partner)));
   } catch (error) {
     console.error("[backoffice-login]", error);
     return res.status(500).json({ error: "backoffice_login_failed" });
+  }
+});
+
+router.post("/backoffice-password/change", async (req, res) => {
+  try {
+    const session = req.webSession;
+    if (session?.role !== 'backoffice') return res.status(403).json({ error: 'business_scope_denied' });
+    const password = String(req.body?.password || '');
+    const currentPassword = String(req.body?.currentPassword || '');
+    if (!password.length || password.length > 1024 || currentPassword.length > 1024) return res.status(400).json({ error: 'password_required' });
+    const rows = await prisma.$queryRawUnsafe('SELECT id, slug, backofficePasswordHash FROM Partner WHERE id = ? LIMIT 1', session.partnerId);
+    const partner = rows?.[0];
+    if (!partner || !(partner.backofficePasswordHash ? verifyPassword(currentPassword, partner.backofficePasswordHash) : currentPassword === partner.slug)) {
+      return res.status(400).json({ error: 'incorrect_current_password' });
+    }
+    const hash = hashPassword(password);
+    const changed = await prisma.$executeRawUnsafe(`UPDATE Partner SET backofficePasswordHash = ?, backofficeResetTokenHash = NULL, backofficeResetExpiresAt = NULL
+      WHERE id = ? AND COALESCE(backofficePasswordHash, '') = ?`, hash, session.partnerId, partner.backofficePasswordHash || '');
+    if (Number(changed) !== 1) return res.status(409).json({ error: 'password_changed_retry' });
+    return res.json(await issueWebSession(prisma, session, hash));
+  } catch (error) {
+    console.error('[backoffice-password.change]', error.code || error.name);
+    return res.status(500).json({ error: 'password_change_failed' });
   }
 });
 
@@ -1021,7 +1045,7 @@ router.post("/backoffice-password/reset", async (req, res) => {
     const token = String(req.body?.token || "").trim();
     const password = String(req.body?.password || "");
 
-    if (!/^[a-f0-9]{64}$/.test(token) || password.length < 12 || password.length > 1024) {
+    if (!/^[a-f0-9]{64}$/.test(token) || !password.length || password.length > 1024) {
       return res.status(400).json({ error: "invalid_password_reset" });
     }
 

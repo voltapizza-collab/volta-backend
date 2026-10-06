@@ -1,4 +1,4 @@
-import { issueBackofficeInvitation, safeActivation, ensureBackofficeCredentialColumns } from '../services/backofficeInvitation.js';
+import { safeActivation, ensureBackofficeCredentialColumns } from '../services/backofficeInvitation.js';
 import crypto from "crypto";
 import axios from "axios";
 import express from "express";
@@ -596,7 +596,7 @@ const buildSignedContractSnapshot = (request, signature, activation = null) => {
 
 export const buildCredentialsEmail = (request, activation) => {
   const backofficeUrl = `${publicFrontendUrl()}/backoffice/${encodeURIComponent(activation.partnerSlug)}`;
-  const invitationUrl = activation.invitationUrl || backofficeUrl;
+
   const posUrl = `${publicFrontendUrl()}/pos/${encodeURIComponent(activation.partnerSlug)}/${encodeURIComponent(activation.storeSlug)}`;
   const storefrontUrl = `${publicFrontendUrl()}/${activation.partnerSlug}/order`;
   const posCredentials = Array.isArray(activation.posCredentials) && activation.posCredentials.length
@@ -639,13 +639,13 @@ export const buildCredentialsEmail = (request, activation) => {
     `QR de tu tienda: ${qrUrl}`,
     "",
     `Backoffice: ${backofficeUrl}`,
-    `Usuario: ${activation.username}`,
-    `Crear contrasena (enlace de un solo uso, valido 24 horas): ${invitationUrl}`,
+    `Usuario: ${activation.partnerSlug}`,
+    `Contraseña inicial: ${activation.partnerSlug} (si ya la cambiaste, utiliza tu contraseña personal).`,
     "",
     `POS: ${posUrl}`,
     ...posTextLines,
     "",
-    "Crea tu contraseña con el enlace del correo. Si caduca, solicita uno nuevo en el acceso a tu backoffice. Guarda el PIN del POS de forma segura. Antes de activar la tienda, revisa que direccion, coordenadas, carta y horarios esten configurados.",
+    "Puedes entrar directamente. Cambiar la contraseña es opcional desde Ajustes → Cuenta y contraseña. Guarda el PIN del POS de forma segura. Antes de activar la tienda, revisa que direccion, coordenadas, carta y horarios esten configurados.",
     "",
     "Gracias,",
     "Equipo Volta Pizza",
@@ -679,8 +679,8 @@ export const buildCredentialsEmail = (request, activation) => {
             <div style="color:#3b008b;font-size:12px;font-weight:900;text-transform:uppercase;letter-spacing:.1em">Backoffice</div>
             <div style="margin-top:10px;color:#000000;font-size:15px;line-height:1.7">
               URL: <a href="${escapeHtml(backofficeUrl)}" style="color:#6a3df0;font-weight:900;text-decoration:none">${escapeHtml(backofficeUrl)}</a><br>
-              Usuario: <strong>${escapeHtml(activation.username)}</strong><br>
-              <a href="${escapeHtml(invitationUrl)}">Crear mi contraseña</a> — enlace de un solo uso, válido 24 horas.
+              Usuario: <strong>${escapeHtml(activation.partnerSlug)}</strong><br>
+              Contraseña inicial: <strong>${escapeHtml(activation.partnerSlug)}</strong>. Si ya la cambiaste, utiliza tu contraseña personal.
             </div>
           </td>
         </tr>
@@ -699,10 +699,10 @@ export const buildCredentialsEmail = (request, activation) => {
         </tr>
       </table>
       <p style="margin:0 0 22px;text-align:center">
-        <a href="${escapeHtml(invitationUrl)}" style="display:inline-block;background:#3b008b;color:#ffffff;padding:15px 26px;border-radius:999px;font-weight:900;text-decoration:none;box-shadow:0 8px 18px rgba(59,0,139,.24)">Crear mi contraseña</a>
+        <a href="${escapeHtml(backofficeUrl)}" style="display:inline-block;background:#3b008b;color:#ffffff;padding:15px 26px;border-radius:999px;font-weight:900;text-decoration:none;box-shadow:0 8px 18px rgba(59,0,139,.24)">Entrar al backoffice</a>
       </p>
       <div style="background:#fff8e7;border-left:5px solid #ffb61c;padding:12px 14px;margin:0 0 20px;color:#3b2c4a;font-size:13px">
-        Crea tu contraseña con el enlace del correo. Si caduca, solicita uno nuevo en el acceso a tu backoffice. Guarda el PIN del POS de forma segura. Antes de activar la tienda, revisa que direccion, coordenadas, carta y horarios esten configurados.
+        Puedes entrar directamente. Cambiar la contraseña es opcional desde Ajustes → Cuenta y contraseña. Guarda el PIN del POS de forma segura. Antes de activar la tienda, revisa que direccion, coordenadas, carta y horarios esten configurados.
       </div>
       ${buildVoltaSignature()}
     `,
@@ -1030,8 +1030,7 @@ export default function onboardingRoutes(prisma, { sendEmail = sendSmtpEmail, st
     let result;
     try {
       const activation = freshActivation || reserved.formalData.activation;
-      const invitationUrl = await issueBackofficeInvitation(prisma, activation.partnerId, activation.partnerSlug, publicFrontendUrl());
-      const body = buildCredentialsEmail(reserved, { ...activation, invitationUrl });
+      const body = buildCredentialsEmail(reserved, activation);
       const url = buildContractUrl(reserved.token);
       result = await mail({ to: reserved.formalData.businessEmail || reserved.email, subject: 'Bienvenido a Volta: contrato y accesos de tu negocio',
         text: `${body.text}\n\nTu contrato firmado y justificante: ${url}`,

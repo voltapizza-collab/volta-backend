@@ -542,6 +542,18 @@ export const clearanceTopDealAnnouncementDraft = {
   },
 };
 // Draft: publish only after the coordinated web-auth migration and recovery checks.
+export const simpleBackofficeAccessAnnouncementDraft = {
+  id: 'business-access-2026-10', revision: 2, category: 'improvement', severity: 'info',
+  title: 'Acceso sencillo y contraseña opcional',
+  message: 'El usuario y la contraseña inicial son el identificador del partner. Puedes recordar este dispositivo durante 90 días y cambiar tu contraseña cuando quieras desde Ajustes → Cuenta y contraseña, sin longitud mínima ni caracteres especiales obligatorios. Si ya elegiste una contraseña, sigue vigente.',
+  translations: {
+    en: { title: 'Simple access and optional password changes', message: 'The initial username and password are your partner identifier. Remember this device for 90 days and change your password whenever you choose in Settings → Account and password, without a minimum length or required special characters. Any password you already chose remains valid.' },
+    it: { title: 'Accesso semplice e cambio password facoltativo', message: 'Il nome utente e la password iniziali sono l’identificativo del partner. Puoi ricordare questo dispositivo per 90 giorni e cambiare la password in Impostazioni → Account e password, senza lunghezza minima o caratteri speciali obbligatori. La password già scelta resta valida.' },
+    fr: { title: 'Accès simple et changement de mot de passe facultatif', message: 'L’identifiant et le mot de passe initiaux sont l’identifiant du partner. Vous pouvez mémoriser cet appareil pendant 90 jours et modifier le mot de passe dans Paramètres → Compte et mot de passe, sans longueur minimale ni caractères spéciaux obligatoires. Le mot de passe déjà choisi reste valide.' },
+    pt: { title: 'Acesso simples e alteração opcional da palavra-passe', message: 'O utilizador e a palavra-passe iniciais são o identificador do partner. Pode lembrar este dispositivo durante 90 dias e alterar a palavra-passe em Definições → Conta e palavra-passe, sem comprimento mínimo nem caracteres especiais obrigatórios. A palavra-passe já escolhida mantém-se válida.' },
+  },
+};
+
 export const businessAccessAnnouncementDraft = {
   id: "business-access-2026-10", revision: 1, category: "improvement", severity: "info",
   title: "El acceso de tu negocio",

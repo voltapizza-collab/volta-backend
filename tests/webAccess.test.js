@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import express from 'express';
 import { webAccess, authorizeBackoffice, assertWebInput, isPublicWebRoute } from '../services/webAccess.js';
-import { issueWebSession, readWebSession, revokeWebSession, hashWebPassword, verifyWebPassword, tokenHash } from '../services/webSessions.js';
+import { issueWebSession, readWebSession, revokeWebSession, hashWebPassword, verifyWebPassword, tokenHash, backofficeCredential } from '../services/webSessions.js';
 import { safeActivation, issueBackofficeInvitation } from '../services/backofficeInvitation.js';
 import webAuthRoutes from '../routes/webAuth.js';
 
@@ -12,7 +12,7 @@ function database() {
   const stores = [{ id: 11, partnerId: 1, slug: 'central', posPinHash: 'pin-a', posCredentialsEnabled: true }, { id: 12, partnerId: 1, slug: 'second', posPinHash: 'pin-second', posCredentialsEnabled: true }, { id: 21, partnerId: 2, slug: 'central', posPinHash: 'pin-b' }];
   const db = { sessions, partners, stores,
     $executeRawUnsafe: async (sql, ...args) => {
-      if (sql.startsWith('INSERT INTO WebSession')) { const [hash, role, partnerId, storeId, credentialHash, expiresAt] = args; sessions.set(hash, { role, partnerId, storeId, credentialHash, expiresAt }); }
+      if (sql.startsWith('INSERT INTO WebSession')) { const [hash, role, partnerId, storeId, credentialHash, expiresAt] = args; sessions.set(hash, { role, partnerId, storeId, credentialHash, expiresAt, createdAt: new Date() }); }
       if (sql.startsWith('DELETE FROM WebSession')) sessions.delete(args[0]);
       return 1;
     },
@@ -84,6 +84,10 @@ test('HTTP boundary denies anonymous, foreign ownership, role escalation and unk
   assert.equal((await request('/api/stores/11', bo, 'PATCH', { partnerId: 2 })).status, 403);
   assert.equal((await request('/api/sms-credits/1/recharge', bo, 'POST', { amount: 100 })).status, 403);
   assert.equal((await request('/api/onboarding/requests')).status, 403);
+  assert.equal((await request('/api/partners/backoffice-password/change', null, 'POST', {})).status, 401);
+  assert.equal((await request('/api/partners/backoffice-password/change', pos, 'POST', {})).status, 403);
+  assert.equal((await request('/api/partners/backoffice-password/change', bo, 'POST', { partnerId: 2 })).status, 403);
+  assert.equal((await request('/api/partners/backoffice-password/change', bo, 'POST', {})).status, 200);
   assert.equal((await request('/a-new-private-route')).status, 403);
   const ownList = await (await request('/api/myorders/pending')).json();
   assert.equal(ownList.query.partnerId, '1');
@@ -137,4 +141,15 @@ test('public methods are explicit; sensitive collections and credential endpoint
   assert.equal(isPublicWebRoute('GET', '/myorders/repeat/recent'), false);
   assert.equal(isPublicWebRoute('GET', '/onboarding/requests'), false);
   assert.equal(isPublicWebRoute('POST', '/onboarding/requests'), true);
+});
+
+test('remembered default access lasts 90 days and changing password invalidates it', async () => {
+  const db = database(); db.partners[0].backofficePasswordHash = null;
+  const session = await issueWebSession(db, { role: 'backoffice', partnerId: 1, rememberDevice: true }, backofficeCredential(db.partners[0]));
+  assert.ok(Math.abs(new Date(session.expiresAt) - Date.now() - 90 * 86400000) < 1000);
+  assert.equal((await readWebSession(db, 'Bearer ' + session.sessionToken)).rememberDevice, true);
+  db.partners[0].backofficePasswordHash = hashWebPassword('abc');
+  assert.equal(await readWebSession(db, 'Bearer ' + session.sessionToken), null);
+  const temporary = await issueWebSession(db, { role: 'backoffice', partnerId: 1, rememberDevice: false }, db.partners[0].backofficePasswordHash);
+  assert.ok(Math.abs(new Date(temporary.expiresAt) - Date.now() - 86400000) < 1000);
 });

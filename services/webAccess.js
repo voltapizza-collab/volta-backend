@@ -91,6 +91,7 @@ export function multipartWebScope(db) {
 export async function authorizeBackoffice(db, req, path) {
   const s = req.webSession;
   await assertWebInput(req, db);
+  if (req.method === 'POST' && path === '/partners/backoffice-password/change') return;
   const read = ['GET', 'HEAD'].includes(req.method);
   let match;
   if ((match = /^\/partners\/by-id\/(\d+)(?:\/(?:policy|policies|price-adjustments|storefront-buttons|tracking-notifications|branding|logo)(?:\/[^/]+)?)?$/.exec(path)) ||

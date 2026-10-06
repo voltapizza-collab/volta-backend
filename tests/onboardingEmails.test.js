@@ -53,5 +53,7 @@ test('welcome uses scoped links, distinguishes preparation and safely omits unav
     invitationUrl: 'https://example.invalid/backoffice/local-test?reset=test' });
   assert.match(mail.text, /\/backoffice\/local-test/); assert.match(mail.text, /\/pos\/local-test\/central/);
   assert.match(mail.text, /recepción de pedidos sigue cerrada/); assert.match(mail.text, /no confirma la entrega física/);
+  assert.match(mail.text, /Contraseña inicial: local-test/); assert.match(mail.text, /Cuenta y contraseña/);
+  assert.doesNotMatch(mail.text + mail.html, /reset=|Crear mi contraseña|24 horas/);
   assert.match(mail.text, /Consulta o regenera el PIN/); assert.doesNotMatch(mail.text, /undefined|PIN POS: null/);
 });

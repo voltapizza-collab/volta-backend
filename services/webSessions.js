@@ -2,6 +2,7 @@ import crypto from 'node:crypto';
 
 const schemas = new WeakMap();
 export const tokenHash = value => crypto.createHash('sha256').update(String(value)).digest('hex');
+export const backofficeCredential = partner => partner.backofficePasswordHash || `initial:${partner.slug}`;
 export function hashWebPassword(password) {
   const salt = crypto.randomBytes(16).toString('hex');
   return `scrypt:${salt}:${crypto.scryptSync(String(password), salt, 64).toString('hex')}`;
@@ -28,7 +29,8 @@ export async function ensureWebSessions(db) {
 export async function issueWebSession(db, identity, credential) {
   await ensureWebSessions(db);
   const sessionToken = crypto.randomBytes(32).toString('hex');
-  const expiresAt = new Date(Date.now() + (identity.role === 'pos' ? 7 : 1) * 86400000);
+  const days = identity.role === 'backoffice' && identity.rememberDevice ? 90 : identity.role === 'pos' ? 7 : 1;
+  const expiresAt = new Date(Date.now() + days * 86400000);
   await db.$executeRawUnsafe(`INSERT INTO WebSession
     (tokenHash, role, partnerId, storeId, credentialHash, expiresAt) VALUES (?, ?, ?, ?, ?, ?)`,
   tokenHash(sessionToken), identity.role, identity.partnerId || null, identity.storeId || null, tokenHash(credential), expiresAt);
@@ -51,10 +53,11 @@ export async function readWebSession(db, authorization) {
   if (!partner || !partner.active) return null;
   const store = row.storeId ? await db.store.findFirst({ where: { id: Number(row.storeId), partnerId: Number(partner.id) } }) : null;
   if (row.role === 'pos' && (!store || store.posCredentialsEnabled === false || store.posCredentialsEnabled === 0)) return null;
-  const credential = row.role === 'pos' ? store.posPinHash : partner.backofficePasswordHash;
+  const credential = row.role === 'pos' ? store.posPinHash : backofficeCredential(partner);
   if (!credential || tokenHash(credential) !== row.credentialHash) return null;
   return { role: row.role, partnerId: Number(partner.id), partnerSlug: partner.slug, partnerName: partner.name,
     storeId: store?.id || null, storeSlug: store?.slug || null, storeName: store?.storeName || null,
+    rememberDevice: row.role === 'backoffice' && new Date(row.expiresAt) - new Date(row.createdAt) > 30 * 86400000,
     expiresAt: row.expiresAt, isDemo: partner.slug === 'volta-demo' };
 }
 
