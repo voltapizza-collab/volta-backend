@@ -542,6 +542,19 @@ export const clearanceTopDealAnnouncementDraft = {
   },
 };
 // Draft: publish only after the coordinated web-auth migration and recovery checks.
+// Keep outside the feed until APK 0.3.21 is installed and validated on a terminal.
+export const posStartupDiagnosticsAnnouncementDraft = {
+  id: 'pos-startup-diagnostics-2026-10', revision: 1, category: 'improvement', severity: 'info',
+  title: 'Mensajes de inicio del POS más claros',
+  message: 'El POS distingue los errores de registro, autorización y conexión al iniciar. Si no puede entrar, muestra un código para facilitar la revisión del terminal.',
+  translations: {
+    en: { title: 'Clearer POS startup messages', message: 'The POS distinguishes registration, authorization and connection errors at startup. If it cannot start, it shows a code to help diagnose the terminal.' },
+    it: { title: 'Messaggi di avvio POS più chiari', message: 'Il POS distingue gli errori di registrazione, autorizzazione e connessione all’avvio. Se non può avviarsi, mostra un codice per facilitare la verifica del terminale.' },
+    fr: { title: 'Des messages de démarrage POS plus clairs', message: 'Le POS distingue les erreurs d’enregistrement, d’autorisation et de connexion au démarrage. En cas d’échec, un code facilite la vérification du terminal.' },
+    pt: { title: 'Mensagens de arranque do POS mais claras', message: 'O POS distingue erros de registo, autorização e ligação ao iniciar. Se não conseguir iniciar, apresenta um código para facilitar a verificação do terminal.' },
+  },
+};
+
 export const simpleStoreListAnnouncementDraft = {
   id: 'store-list-simple-2026-10', revision: 1, category: 'improvement', severity: 'info',
   title: 'Tus tiendas, de un vistazo',
