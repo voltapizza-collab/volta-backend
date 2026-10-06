@@ -659,7 +659,7 @@ export const onboardingRentalTermAnnouncementDraft = {
 };
 
 backofficeAnnouncements.push(...[
-  businessAccessAnnouncementDraft, storeReceptionAnnouncementDraft,
+  { ...simpleBackofficeAccessAnnouncementDraft, publishedAt: '2026-10-06T10:35:24.201Z' }, storeReceptionAnnouncementDraft,
   { ...onboardingRentalTermAnnouncementDraft, publishedAt: '2026-10-06T10:05:47.000Z' }, { ...onboardingSignatureFirstAnnouncementDraft, publishedAt: '2026-10-06T09:54:15.000Z' },
   { ...onboardingEmailsAnnouncementDraft, publishedAt: '2026-10-06T09:54:15.000Z' },
 ].map(announcement => ({ ...announcement,

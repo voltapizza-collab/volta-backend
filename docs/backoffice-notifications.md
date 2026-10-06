@@ -1,3 +1,7 @@
+# Acceso sencillo — publicación del 6 de octubre de 2026
+
+La revisión 2 de `business-access-2026-10` está disponible tras verificar backend `45a4f61` y storefront `d9ad0b8` en producción. Acceso inicial MyCrushPizza, restauración a 90 días y aislamiento entre negocios comprobados; la sesión de prueba se revocó. Cambio voluntario y recuperación con contraseñas cortas cubiertos por pruebas locales. [Detalles](backoffice-simple-access.md).
+
 # Avisos del backoffice
 
 ## Renting con plazo elegido — publicación del 6 de octubre de 2026
