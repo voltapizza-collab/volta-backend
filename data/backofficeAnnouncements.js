@@ -542,6 +542,18 @@ export const clearanceTopDealAnnouncementDraft = {
   },
 };
 // Draft: publish only after the coordinated web-auth migration and recovery checks.
+export const simpleStoreListAnnouncementDraft = {
+  id: 'store-list-simple-2026-10', revision: 1, category: 'improvement', severity: 'info',
+  title: 'Tus tiendas, de un vistazo',
+  message: 'La lista de tiendas muestra un único estado de pedidos online junto a su ubicación y métodos de entrega. En Gestionar encontrarás apertura y cierre de pedidos, edición, menú, horarios, acceso POS, reportes y reservas. También se corrige el aviso de carga al entrar con la cuenta del partner.',
+  translations: {
+    en: { title: 'Your stores at a glance', message: 'The store list shows one online-order status alongside location and fulfillment methods. Manage groups order reception, editing, menu, hours, POS access, reports and reservations. The loading error when using a partner account is also fixed.' },
+    it: { title: 'I tuoi negozi a colpo d’occhio', message: 'L’elenco mostra un solo stato degli ordini online con posizione e modalità di consegna. Gestisci riunisce apertura e chiusura ordini, modifica, menu, orari, accesso POS, report e prenotazioni. È corretto anche l’errore di caricamento con l’account partner.' },
+    fr: { title: 'Vos boutiques en un coup d’œil', message: 'La liste affiche un seul état des commandes en ligne avec l’adresse et les modes de livraison. Gérer regroupe ouverture et fermeture des commandes, modification, menu, horaires, accès POS, rapports et réservations. L’erreur de chargement avec le compte partner est également corrigée.' },
+    pt: { title: 'As suas lojas num relance', message: 'A lista apresenta um único estado dos pedidos online junto à localização e métodos de entrega. Gerir reúne abertura e fecho de pedidos, edição, menu, horários, acesso POS, relatórios e reservas. Foi corrigido o erro de carregamento ao entrar com a conta do partner.' },
+  },
+};
+
 export const simpleBackofficeAccessAnnouncementDraft = {
   id: 'business-access-2026-10', revision: 2, category: 'improvement', severity: 'info',
   title: 'Acceso sencillo y contraseña opcional',
@@ -669,3 +681,5 @@ backofficeAnnouncements.push(...[
 backofficeAnnouncements.push({ ...onboardingDefaultsAnnouncementDraft,
   publishedAt: '2026-10-05T11:18:00.000Z', expiresAt: '2027-01-05T11:18:00.000Z',
 });
+
+backofficeAnnouncements.push({ ...simpleStoreListAnnouncementDraft, publishedAt: '2026-10-06T10:42:00.344Z', expiresAt: '2027-01-06T23:59:59.000Z' });
