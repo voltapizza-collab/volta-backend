@@ -632,7 +632,7 @@ export const onboardingSignatureFirstAnnouncementDraft = {
   },
 };
 
-// Activate after both services and the customer-selected rental tariff are verified.
+// Published after both services and the customer-selected rental tariff were verified.
 export const onboardingRentalTermAnnouncementDraft = {
   id: 'onboarding-commercial-2026-10', revision: 2, category: 'improvement', severity: 'info',
   title: 'Elige el plazo de tu renting, hasta 36 meses',
@@ -648,7 +648,7 @@ export const onboardingRentalTermAnnouncementDraft = {
 
 backofficeAnnouncements.push(...[
   businessAccessAnnouncementDraft, storeReceptionAnnouncementDraft,
-  onboardingCommercialAnnouncementDraft, { ...onboardingSignatureFirstAnnouncementDraft, publishedAt: '2026-10-06T09:54:15.000Z' },
+  { ...onboardingRentalTermAnnouncementDraft, publishedAt: '2026-10-06T10:05:47.000Z' }, { ...onboardingSignatureFirstAnnouncementDraft, publishedAt: '2026-10-06T09:54:15.000Z' },
   { ...onboardingEmailsAnnouncementDraft, publishedAt: '2026-10-06T09:54:15.000Z' },
 ].map(announcement => ({ ...announcement,
   publishedAt: announcement.publishedAt || '2026-10-05T09:50:00.000Z', expiresAt: '2027-01-05T09:50:00.000Z',

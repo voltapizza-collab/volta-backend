@@ -1,5 +1,7 @@
 # Simplificación de ofertas y primer correo
 
+**Actualización del 6 de octubre:** la tarifa activa es `CUSTOMER_TERM`: cada cliente elige de 1 a 36 meses y la cuota se calcula como precio del POS dividido entre ese plazo, redondeada a céntimos. Esto sustituye la duración obligatoria y la decisión pendiente descritas en el historial siguiente. [Publicación y pruebas](onboarding-rental-terms.md). La revisión administrativa utiliza el contrato generado y el botón «Enviar correo de pago»; firma antes del pago y alta tras confirmarlo.
+
 5 de octubre de 2026. El primer correo incorpora tres bloques visibles: contado, compra a plazos y renting de 36 meses; usa el catálogo congelado de la solicitud y explica tarjeta por Stripe y efectivo para contado. No se reenvían los correos anteriores.
 
 Global Manager → Onboarding → «Tarifas vigentes del POS y SMS · condiciones generales» reúne ambos precios editables. La tarifa SMS admite hasta cuatro decimales de euro por parte; el valor inicial sigue siendo 0,075 €. Se guarda en `OnboardingPricing.defaults.smsUnitPriceEur` con control de revisión. Las pantallas de SMS, presupuestos y nuevas recargas usan la misma tarifa; 10 € equivalen actualmente a 133 partes. Un mensaje puede consumir varias partes según longitud y caracteres.

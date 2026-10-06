@@ -12,6 +12,12 @@ El orden sigue siendo revisión de Volta → correo → firma → pago inicial c
 
 ## Publicación y verificación
 
+**Publicado y activado el 6 de octubre:** backend `88de3b8` (despliegue `1b914285-d720-468d-a390-147b16876ceb`) y storefront `2c7703d` (despliegue `c414a85c-1b54-4dd4-bd8f-4d57d2b75978`) confirmados SUCCESS. Bundle de producción `main.9ff4236d.js`. Tarifa `CUSTOMER_TERM` guardada y releída, revisión 4; POS 250 € y SMS 0,075 €/parte conservados. Se comprobó que las solicitudes existentes no cambiaron durante el ajuste. No se realizaron cobros ni envíos externos.
+
+Pruebas aprobadas: 41 específicas de backend, 16 de interfaz, 5 de selección y persistencia HTTP después de ampliar ese ensayo, 8 del catálogo de avisos y suite general con 328 aprobadas, 1 omitida. Compilaciones local y remota correctas. En navegador local se comprobó el selector, cuota/total, guardado y reanudación y contrato de 12 meses. Las comprobaciones externas de SMTP, Stripe, documentos y primer pedido/impresión siguen pendientes; el webhook probado en producción fue una sonda firmada sin pago.
+
+Informes locales: `../../output/onboarding-production/rental-terms-configuration.json`, `../../output/onboarding-production/sign-first-verification.json`. Captura: `../../output/onboarding-rental/selector-12-meses.png`.
+
 Desplegar backend y storefront antes de seleccionar `CUSTOMER_TERM` en la tarifa general; la versión anterior del backend no reconoce ese valor. No necesita migración SQL. Activar la novedad del renting solo después de comprobar ambos servicios y la configuración. Usar una solicitud nueva para revisar el selector.
 
 Pruebas: los 36 plazos y entradas inválidas; importes enviados por el cliente; guardado/reanudación y envío HTTP; contrato y primer cobro de 12 meses; firma y alta única con webhook repetido; correos con duración elegida; conservación de catálogos anteriores. Los ensayos capturan correos y simulan Stripe, sin cobros ni correos externos.

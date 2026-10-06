@@ -1,5 +1,9 @@
 # Avisos del backoffice
 
+## Renting con plazo elegido — publicación del 6 de octubre de 2026
+
+La revisión 2 de `onboarding-commercial-2026-10` sustituye el aviso anterior tras verificar backend `88de3b8`, storefront `2c7703d` y tarifa `CUSTOMER_TERM` (revisión 4) en producción. Explica la elección de hasta 36 mensualidades, cuota y total visibles, conservación del plazo en contrato y pago inicial y transmisión final. Traducciones ES/EN/IT/FR/PT. [Comprobaciones y límites](onboarding-rental-terms.md).
+
 ## Firma antes del pago — publicación del 6 de octubre de 2026
 
 La revisión 2 de `onboarding-payment-signature-2026-10` sustituye el recorrido anterior: revisión administrativa, correo enviado por Volta, firma, pago confirmado y alta automática con bienvenida y QR. Backend y storefront del recorrido ya están verificados en producción; esta entrega actualiza el catálogo de avisos. Se corrigen también los textos de los tres correos y de tarifas. Las pruebas de recepción externa, cobro y POS siguen pendientes. [Detalles y comprobaciones](onboarding-sign-before-payment.md).
