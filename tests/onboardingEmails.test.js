@@ -2,6 +2,23 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { buildOnboardingEmail, buildClosureEmail, buildCredentialsEmail } from '../routes/onboarding.js';
 import { onboardingCommercialCatalog } from '../services/onboardingCommercial.js';
+import { newOnboardingCatalog } from '../services/onboardingPricing.js';
+
+test('new invitation describes a maximum; closure email uses the chosen rental term', async () => {
+  const commercialCatalog = await newOnboardingCatalog({ onboardingPricing: { findUnique: async () => ({ posTotalCents: 25000, revision: 4, defaults: { rentMode: 'CUSTOMER_TERM' } }) } });
+  const mail = buildOnboardingEmail({ name: 'Test', businessName: 'Shop', formalData: { commercialCatalog } }, 'https://example.invalid/test');
+  for (const text of [mail.text, mail.html]) {
+    assert.match(text, /hasta 36 meses/); assert.match(text, /Elige el número de mensualidades/);
+    assert.doesNotMatch(text, /completar las 36 mensualidades/);
+  }
+  const row = { name: 'Test', formalData: { closure: { offer: { workflow: 'SIGN_PAY_ACTIVATE', revision: 1, totalCents: 2083,
+    lines: [{ label: 'POS', amountCents: 2083 }], pos: { mode: 'RENT_QUOTE', durationMonths: 12, firstCents: 2083, totalCents: 24996 } } } } };
+  const closure = buildClosureEmail(row, 'https://example.invalid/test');
+  for (const text of [closure.text, closure.html]) {
+    assert.match(text, /Renting de 12 meses/); assert.match(text, /20,83/); assert.match(text, /249,96/);
+    assert.match(text, /completar las 12 mensualidades/); assert.doesNotMatch(text, /36 mensualidades|Renting de 36/);
+  }
+});
 
 test('invitation explains selection, stock and absence of payment or signature', () => {
   const email = buildOnboardingEmail({ name: '<script>test</script>', businessName: 'Test & Shop' }, 'https://example.invalid/onboarding/test');

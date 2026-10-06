@@ -1,5 +1,5 @@
 import { SMS_SELL_PRICE_EUR, smsPricingInfo } from './smsCredits.js';
-const VERSION = 'pos-2026-10-v3';
+const VERSION = 'pos-2026-10-v4';
 // Add explanatory tariff metadata to older invitations without changing their POS prices or saved offers.
 export const withOnboardingSmsTariff = catalog => ({ ...catalog,
   sms: { optional: true, unitPriceEur: SMS_SELL_PRICE_EUR, ...catalog.sms } });
@@ -22,21 +22,29 @@ export function buildCommercialSelection(body, { draft = false, catalog = onboar
   const posChoice = ['PURCHASE', 'INSTALLMENTS', 'RENT_QUOTE'].includes(body.posChoice) ? body.posChoice : '';
   const count = Number(body.posInstallments);
   const posInstallments = posChoice === 'INSTALLMENTS' && Number.isInteger(count) && count >= 2 && count <= 6 ? count : null;
+  const flexibleRental = catalog.rental.calculation === 'PRICE_BY_TERM';
+  const rentalInput = body.posRentalMonths;
+  const rentalCount = (typeof rentalInput === 'number' || typeof rentalInput === 'string' && /^\d+$/.test(rentalInput)) ? Number(rentalInput) : NaN;
+  const rentalPlan = flexibleRental ? catalog.rental.termOptions.find(plan => plan.months === rentalCount) : null;
+  const posRentalMonths = posChoice === 'RENT_QUOTE' ? (flexibleRental ? rentalPlan?.months ?? null : catalog.rental.durationMonths ?? 36) : null;
+  const monthlyRentCents = flexibleRental ? rentalPlan?.monthlyCents ?? null : catalog.rental.monthlyCents;
   const commercialAcknowledged = body.commercialAcknowledged === true || body.commercialAcknowledged === 'true';
   const missing = [];
   if (!posChoice) missing.push('posChoice');
   if (posChoice === 'INSTALLMENTS' && !posInstallments) missing.push('posInstallments');
+  if (posChoice === 'RENT_QUOTE' && flexibleRental && !rentalPlan) missing.push('posRentalMonths');
   if (!commercialAcknowledged) missing.push('commercialAcknowledged');
   if (!draft && body.commercialVersion !== catalog.version) missing.push('commercialVersion');
   const payments = posChoice === 'PURCHASE' ? [catalog.posTotalCents]
     : posChoice === 'INSTALLMENTS' && posInstallments ? installmentAmounts(posInstallments, catalog.posTotalCents) : null;
-  return { missing, fields: { posChoice, posInstallments, commercialAcknowledged, commercialVersion: catalog.version },
+  return { missing, fields: { posChoice, posInstallments, posRentalMonths, commercialAcknowledged, commercialVersion: catalog.version },
     selection: { schemaVersion: 2, catalogVersion: catalog.version, status: draft ? 'DRAFT' : 'PENDING_REVIEW',
       currency: 'EUR', vatIncluded: true, pos: { mode: posChoice, totalCents: payments ? catalog.posTotalCents : null,
         installmentCents: payments, installmentCount: payments?.length || null, interestPercent: payments ? 0 : null,
-        firstPaymentCents: payments?.[0] ?? (posChoice === 'RENT_QUOTE' ? catalog.rental.monthlyCents : null), interval: posChoice === 'INSTALLMENTS' ? 'MONTHLY' : null,
-        monthlyRentCents: posChoice === 'RENT_QUOTE' ? catalog.rental.monthlyCents : null, depositCents: posChoice === 'RENT_QUOTE' ? catalog.rental.depositCents : null,
-        durationMonths: posChoice === 'RENT_QUOTE' ? 36 : null,
+        firstPaymentCents: payments?.[0] ?? (posChoice === 'RENT_QUOTE' ? monthlyRentCents : null), interval: posChoice === 'INSTALLMENTS' ? 'MONTHLY' : null,
+        monthlyRentCents: posChoice === 'RENT_QUOTE' ? monthlyRentCents : null, depositCents: posChoice === 'RENT_QUOTE' ? catalog.rental.depositCents : null,
+        durationMonths: posRentalMonths,
+        ...(posChoice === 'RENT_QUOTE' && flexibleRental ? { calculation: 'PRICE_BY_TERM', rentalTotalCents: rentalPlan?.totalCents ?? null } : {}),
         ownership: posChoice === 'RENT_QUOTE' ? 'VOLTA' : 'PURCHASE_TERMS_PENDING',
         rentalTermsStatus: posChoice === 'RENT_QUOTE' ? 'QUOTE_REQUIRED' : null },
       sms: { ...withOnboardingSmsTariff(catalog).sms, initialRecharge: 'SEPARATE', initialCents: 0, credits: 0 },

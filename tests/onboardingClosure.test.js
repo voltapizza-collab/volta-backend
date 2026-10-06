@@ -12,6 +12,26 @@ import { isPublicWebRoute } from '../services/webAccess.js';
 import { normalizeOnboardingDefaults, offerDefaults } from '../services/onboardingDefaults.js';
 import { reviewContract } from '../services/onboardingReview.js';
 
+test('selected rental term drives the contract and first payment and survives later tariff changes', async () => {
+  const catalog = await newOnboardingCatalog({ onboardingPricing: { findUnique: async () => ({ posTotalCents: 25000, revision: 4, defaults: { rentMode: 'CUSTOMER_TERM' } }) } });
+  for (const months of [1, 12, 24, 36]) {
+    const row = request('RENT_QUOTE'); row.formalData.commercialCatalog = catalog;
+    row.formalData.commercialSelection = buildCommercialSelection({ posChoice: 'RENT_QUOTE', posRentalMonths: months,
+      commercialAcknowledged: true, commercialVersion: catalog.version }, { catalog }).selection;
+    const review = reviewContract(row, { posTotalCents: 90000, defaults: { rentMode: 'FIXED', rentCents: 9999 } }, input().generalTerms);
+    const amount = Math.round(25000 / months);
+    assert.equal(review.offer.pos.durationMonths, months); assert.equal(review.offer.pos.payments.length, months);
+    assert.equal(review.offer.totalCents, amount); assert.equal(review.offer.pos.totalCents, amount * months);
+    assert.match(review.offer.documentText, new RegExp(`Duración de ${months} meses`));
+    assert.match(review.offer.documentText, new RegExp(`sin precio residual ni mensualidad ${months + 1}`));
+    assert.doesNotMatch(review.offer.documentText, /No hay transmisión a los 24 meses/);
+    verifyOffer(review.offer);
+    assert.throws(() => buildClosureOffer(row, { ...review.input, rentCents: 1 }), /rental_selection_changed/);
+    row.formalData.commercialSelection.pos.durationMonths = 37;
+    assert.throws(() => reviewContract(row, { posTotalCents: 25000 }, input().generalTerms), /invalid_rental_months/);
+  }
+});
+
 test('review creates a sign-first contract without manual supplementary terms and freezes selected amounts', () => {
   const row = request('INSTALLMENTS'); row.formalData.commercialSelection.sms.initialRecharge = 'SEPARATE';
   const review = reviewContract(row, { posTotalCents: 90000, defaults: {} }, input().generalTerms);
@@ -65,7 +85,13 @@ for (const mode of ['PURCHASE','INSTALLMENTS','RENT_QUOTE']) test(`signature bef
   process.env.STRIPE_ONBOARDING_WEBHOOK_SECRET = 'whsec_local_test';
   t.after(() => { if (previousSecret === undefined) delete process.env.STRIPE_ONBOARDING_WEBHOOK_SECRET; else process.env.STRIPE_ONBOARDING_WEBHOOK_SECRET = previousSecret; });
   const f = fixture(mode); f.row().formalData.commercialSelection.sms.initialRecharge = 'SEPARATE';
-  const hash = await offered(f, { workflow: 'SIGN_PAY_ACTIVATE' });
+  if (mode === 'RENT_QUOTE') {
+    const catalog = await newOnboardingCatalog({ onboardingPricing: { findUnique: async () => ({ posTotalCents: 25000, revision: 4, defaults: { rentMode: 'CUSTOMER_TERM' } }) } });
+    f.row().formalData.commercialCatalog = catalog;
+    f.row().formalData.commercialSelection = buildCommercialSelection({ posChoice: mode, posRentalMonths: 12,
+      commercialAcknowledged: true, commercialVersion: catalog.version }, { catalog }).selection;
+  }
+  const hash = await offered(f, { workflow: 'SIGN_PAY_ACTIVATE', ...(mode === 'RENT_QUOTE' ? { rentCents: 2083 } : {}) });
   let partners = 0, stores = 0, emails = [], failMail = true;
   f.db.$executeRawUnsafe = async () => 1;
   f.db.partner = { findUnique: async () => null, create: async ({ data }) => { partners++; return { id: 10, ...data }; } };
@@ -93,6 +119,11 @@ for (const mode of ['PURCHASE','INSTALLMENTS','RENT_QUOTE']) test(`signature bef
   await f.service.checkout(1, hash, 'https://example.invalid');
   await post('/form/test-only/closure/refresh', {}); assert.equal(partners, 0);
   const session = [...f.sessions.values()][0];
+  if (mode === 'RENT_QUOTE') {
+    assert.equal(session.amount_total, 2083);
+    assert.equal(f.row().formalData.closure.offer.pos.durationMonths, 12);
+    assert.equal(f.row().formalData.signedContract.offerHash, hash);
+  }
   const event = { type: 'checkout.session.completed', data: { object: session } };
   const webhook = () => {
     const raw = JSON.stringify(event), time = Math.floor(Date.now() / 1000);

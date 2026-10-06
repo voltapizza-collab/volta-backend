@@ -4,6 +4,26 @@ import express from 'express';
 import onboardingRoutes from '../routes/onboarding.js';
 import { buildCommercialSelection, installmentAmounts, onboardingCommercialCatalog } from '../services/onboardingCommercial.js';
 import { isPublicWebRoute } from '../services/webAccess.js';
+import { newOnboardingCatalog } from '../services/onboardingPricing.js';
+
+test('customer selects 1–36 rental months from the frozen catalog; client prices and invalid terms cannot change it', async () => {
+  const catalog = await newOnboardingCatalog({ onboardingPricing: { findUnique: async () => ({ posTotalCents: 25000, revision: 4, defaults: { rentMode: 'CUSTOMER_TERM' } }) } });
+  assert.equal(catalog.rental.termOptions.length, 36);
+  for (let months = 1; months <= 36; months++) {
+    const result = buildCommercialSelection({ posChoice: 'RENT_QUOTE', posRentalMonths: String(months), commercialAcknowledged: true,
+      commercialVersion: catalog.version, monthlyRentCents: 1, durationMonths: 99, rentalTotalCents: 1 }, { catalog });
+    assert.deepEqual(result.missing, []);
+    assert.equal(result.fields.posRentalMonths, months);
+    assert.equal(result.selection.pos.durationMonths, months);
+    assert.equal(result.selection.pos.monthlyRentCents, Math.round(25000 / months));
+    assert.equal(result.selection.pos.rentalTotalCents, Math.round(25000 / months) * months);
+  }
+  for (const value of ['', 0, -1, 37, 12.5, 'bad', true, [12], {}, null]) {
+    assert.ok(buildCommercialSelection({ posChoice: 'RENT_QUOTE', posRentalMonths: value }, { catalog }).missing.includes('posRentalMonths'));
+  }
+  const legacy = buildCommercialSelection({ posChoice: 'RENT_QUOTE', posRentalMonths: 12 });
+  assert.equal(legacy.selection.pos.durationMonths, 36);
+});
 
 const version = onboardingCommercialCatalog().version;
 test('all installment plans sum to 250 euros and ignore client price/ownership injection', () => {
@@ -91,4 +111,19 @@ test('HTTP saves partial drafts, resumes, validates submission, freezes selectio
   row.status = 'CONTRACT_SENT'; // Even manual status updates cannot bypass the legacy signature guard.
   response = await post('/form/test-token/sign-contract', { acceptedContract: true });
   assert.equal(response.status, 409); assert.equal((await response.json()).error, 'commercial_closure_pending');
+
+  const rentalCatalog = await newOnboardingCatalog({ onboardingPricing: { findUnique: async () => ({ posTotalCents: 25000, revision: 4, defaults: { rentMode: 'CUSTOMER_TERM' } }) } });
+  row = { ...row, status: 'EMAIL_SENT', submittedAt: null, formalData: { commercialCatalog: rentalCatalog, supportingDocuments: [{ type: 'IDENTITY' }, { type: 'FISCAL' }] } };
+  assert.equal((await post('/form/test-token/draft', { posChoice: 'RENT_QUOTE', posRentalMonths: 12 })).status, 200);
+  const resumed = (await (await fetch(url + '/form/test-token')).json()).request;
+  assert.equal(resumed.formalData.onboardingDraft.posRentalMonths, 12);
+  assert.equal(resumed.formalData.onboardingDraft.commercialSelection.pos.monthlyRentCents, 2083);
+  const rentalFields = { ...fields, posChoice: 'RENT_QUOTE', commercialVersion: rentalCatalog.version, posRentalMonths: 37 };
+  response = await post('/form/test-token', rentalFields);
+  assert.equal(response.status, 400); assert.ok((await response.json()).missing.includes('posRentalMonths'));
+  assert.equal((await post('/form/test-token', { ...rentalFields, posRentalMonths: 12, monthlyRentCents: 1 })).status, 200);
+  assert.equal(row.formalData.posRentalMonths, 12);
+  assert.equal(row.formalData.commercialSelection.pos.monthlyRentCents, 2083);
+  assert.equal(row.formalData.commercialSelection.pos.durationMonths, 12);
+  assert.equal(row.formalData.commercialSelection.pos.rentalTotalCents, 24996);
 });

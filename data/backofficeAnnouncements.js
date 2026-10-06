@@ -581,14 +581,14 @@ export const onboardingCommercialAnnouncementDraft = {
 };
 // Draft: activate only after the coordinated onboarding closure release.
 export const onboardingEmailsAnnouncementDraft = {
-  id: 'onboarding-three-emails-2026-10', revision: 1, category: 'improvement', severity: 'info',
+  id: 'onboarding-three-emails-2026-10', revision: 2, category: 'improvement', severity: 'info',
   title: 'La incorporación en tres correos',
-  message: 'Recibirás la solicitud, la oferta para pagar y firmar, y la bienvenida con el acceso de tu negocio. Si falla la bienvenida, Volta puede reenviarla sin repetir el alta ni el pago. La recepción de pedidos se abre después de preparar la tienda.',
+  message: 'Recibirás la solicitud, el contrato para firmar y pagar, y la bienvenida con el acceso de tu negocio. Si falla la bienvenida, Volta puede reenviarla sin repetir el alta ni el pago. La recepción de pedidos se abre después de preparar la tienda.',
   translations: {
-    en: { title: 'Onboarding in three emails', message: 'You receive the application, the offer to pay and sign, and a welcome email with access to your business. If the welcome email fails, Volta can resend it without repeating activation or payment. Order reception opens after the store is ready.' },
-    it: { title: 'L’adesione in tre email', message: 'Riceverai la richiesta, l’offerta da pagare e firmare e il benvenuto con l’accesso alla tua attività. Se l’email di benvenuto non viene inviata, Volta può reinviarla senza ripetere l’attivazione o il pagamento. La ricezione degli ordini si apre dopo aver preparato il negozio.' },
-    fr: { title: 'L’inscription en trois emails', message: 'Vous recevez la demande, l’offre à payer et à signer, puis un email de bienvenue avec l’accès à votre établissement. En cas d’échec de l’envoi, Volta peut renvoyer le message de bienvenue sans répéter l’activation ni le paiement. La réception des commandes s’ouvre après la préparation de la boutique.' },
-    pt: { title: 'A adesão em três emails', message: 'Receberá a candidatura, a oferta para pagar e assinar e as boas-vindas com o acesso ao seu negócio. Se o envio das boas-vindas falhar, a Volta pode reenviá-las sem repetir a ativação nem o pagamento. A receção de pedidos abre depois de preparar a loja.' },
+    en: { title: 'Onboarding in three emails', message: 'You receive the application, the contract to sign and pay, and a welcome email with access to your business. If the welcome email fails, Volta can resend it without repeating activation or payment. Order reception opens after the store is ready.' },
+    it: { title: 'L’adesione in tre email', message: 'Riceverai la richiesta, il contratto da firmare e pagare e il benvenuto con l’accesso alla tua attività. Se l’email di benvenuto non viene inviata, Volta può reinviarla senza ripetere l’attivazione o il pagamento. La ricezione degli ordini si apre dopo aver preparato il negozio.' },
+    fr: { title: 'L’inscription en trois emails', message: 'Vous recevez la demande, le contrat à signer avant de payer, puis un email de bienvenue avec l’accès à votre établissement. En cas d’échec de l’envoi, Volta peut renvoyer le message de bienvenue sans répéter l’activation ni le paiement. La réception des commandes s’ouvre après la préparation de la boutique.' },
+    pt: { title: 'A adesão em três emails', message: 'Receberá a candidatura, o contrato para assinar e pagar e as boas-vindas com o acesso ao seu negócio. Se o envio das boas-vindas falhar, a Volta pode reenviá-las sem repetir a ativação nem o pagamento. A receção de pedidos abre depois de preparar a loja.' },
   },
 };
 
@@ -609,12 +609,12 @@ export const onboardingClosureAnnouncementDraft = {
 export const onboardingDefaultsAnnouncementDraft = {
   id: 'onboarding-shared-defaults-2026-10', revision: 1, category: 'improvement', severity: 'info',
   title: 'Tarifas y ofertas de incorporación más claras',
-  message: 'Configura las tarifas vigentes del POS y SMS y las condiciones comunes desde Onboarding. El primer correo presenta las tres modalidades del POS. Los SMS son una herramienta disponible de uso opcional, con recargas por separado: el proceso explica la tarifa vigente y los paquetes, sin casilla de contratación ni recarga obligatoria. El contrato describe el servicio sin fijar un precio permanente.',
+  message: 'Configura las tarifas vigentes del POS y SMS desde Onboarding. El contrato se genera con los datos y la elección del comercio. El primer correo presenta las tres modalidades del POS. Los SMS son una herramienta disponible de uso opcional, con recargas por separado: el proceso explica la tarifa vigente y los paquetes, sin casilla de contratación ni recarga obligatoria. El contrato describe el servicio sin fijar un precio permanente.',
   translations: {
-    en: { title: 'Clearer onboarding prices and offers', message: 'Set current POS and SMS prices and common terms in Onboarding. The first email presents the three POS options. SMS is an available tool with optional usage and separate top-ups: onboarding explains current prices and packages, without an activation checkbox or mandatory top-up. The contract describes the service without fixing a permanent price.' },
-    it: { title: 'Tariffe e offerte di adesione più chiare', message: 'Configura tariffe vigenti di POS e SMS e condizioni comuni in Onboarding. La prima email presenta le tre opzioni del POS. Gli SMS sono uno strumento disponibile di uso facoltativo, con ricariche separate: il processo spiega tariffe e pacchetti vigenti, senza casella di attivazione né ricarica obbligatoria. Il contratto descrive il servizio senza fissare un prezzo permanente.' },
-    fr: { title: 'Des tarifs et offres d’inscription plus clairs', message: 'Configurez les tarifs actuels du POS et des SMS et les conditions communes dans Onboarding. Le premier email présente les trois options du POS. Les SMS sont un outil disponible à usage facultatif, avec des recharges séparées : le parcours explique les tarifs et forfaits actuels, sans case d’activation ni recharge obligatoire. Le contrat décrit le service sans fixer de prix permanent.' },
-    pt: { title: 'Tarifas e propostas de adesão mais claras', message: 'Configure as tarifas vigentes do POS e SMS e as condições comuns em Onboarding. O primeiro email apresenta as três modalidades do POS. Os SMS são uma ferramenta disponível de uso opcional, com recargas separadas: o processo explica as tarifas e os pacotes vigentes, sem caixa de ativação nem recarga obrigatória. O contrato descreve o serviço sem fixar um preço permanente.' },
+    en: { title: 'Clearer onboarding prices and offers', message: 'Set current POS and SMS prices in Onboarding. The contract is generated from the merchant’s details and selection. The first email presents the three POS options. SMS is an available tool with optional usage and separate top-ups: onboarding explains current prices and packages, without an activation checkbox or mandatory top-up. The contract describes the service without fixing a permanent price.' },
+    it: { title: 'Tariffe e offerte di adesione più chiare', message: 'Configura tariffe vigenti di POS e SMS in Onboarding. Il contratto viene generato dai dati e dalla scelta del commerciante. La prima email presenta le tre opzioni del POS. Gli SMS sono uno strumento disponibile di uso facoltativo, con ricariche separate: il processo spiega tariffe e pacchetti vigenti, senza casella di attivazione né ricarica obbligatoria. Il contratto descrive il servizio senza fissare un prezzo permanente.' },
+    fr: { title: 'Des tarifs et offres d’inscription plus clairs', message: 'Configurez les tarifs actuels du POS et des SMS dans Onboarding. Le contrat est généré à partir des données et du choix du commerçant. Le premier email présente les trois options du POS. Les SMS sont un outil disponible à usage facultatif, avec des recharges séparées : le parcours explique les tarifs et forfaits actuels, sans case d’activation ni recharge obligatoire. Le contrat décrit le service sans fixer de prix permanent.' },
+    pt: { title: 'Tarifas e propostas de adesão mais claras', message: 'Configure as tarifas vigentes do POS e SMS em Onboarding. O contrato é gerado a partir dos dados e da escolha do comerciante. O primeiro email apresenta as três modalidades do POS. Os SMS são uma ferramenta disponível de uso opcional, com recargas separadas: o processo explica as tarifas e os pacotes vigentes, sem caixa de ativação nem recarga obrigatória. O contrato descreve o serviço sem fixar um preço permanente.' },
   },
 };
 
@@ -632,12 +632,26 @@ export const onboardingSignatureFirstAnnouncementDraft = {
   },
 };
 
+// Activate after both services and the customer-selected rental tariff are verified.
+export const onboardingRentalTermAnnouncementDraft = {
+  id: 'onboarding-commercial-2026-10', revision: 2, category: 'improvement', severity: 'info',
+  title: 'Elige el plazo de tu renting, hasta 36 meses',
+  message: 'En las nuevas solicitudes puedes elegir el número de mensualidades del renting. La cuota se calcula con el precio del POS y el plazo elegido; verás la cuota y el total antes de enviar. El contrato y el primer pago conservan tu elección.',
+  detail: 'El plazo empieza con la entrega operativa. El POS pasa a ser tuyo al finalizar el plazo elegido y completar todos los pagos, sin pago residual. Las solicitudes y contratos anteriores conservan sus condiciones.',
+  translations: {
+    en: { title: 'Choose your rental term, up to 36 months', message: 'New applications let you choose the number of monthly rental payments. The installment is calculated from the POS price and selected term; you can review it and the total before submitting. The contract and first payment keep your selection.', detail: 'The term starts when the POS is delivered ready for use. Ownership transfers after the selected term and all payments are complete, with no residual payment. Existing applications and contracts retain their terms.' },
+    it: { title: 'Scegli la durata del noleggio, fino a 36 mesi', message: 'Nelle nuove richieste puoi scegliere il numero di rate mensili del noleggio. La rata si calcola dal prezzo del POS e dalla durata scelta; vedrai rata e totale prima dell’invio. Il contratto e il primo pagamento rispettano la tua scelta.', detail: 'Il periodo inizia dalla consegna operativa. Il POS diventa tuo al termine del periodo scelto e dopo tutti i pagamenti, senza importo residuo. Le richieste e i contratti precedenti conservano le proprie condizioni.' },
+    fr: { title: 'Choisissez votre durée de location, jusqu’à 36 mois', message: 'Les nouvelles demandes permettent de choisir le nombre de mensualités. Le montant est calculé selon le prix du POS et la durée choisie ; vous voyez la mensualité et le total avant l’envoi. Le contrat et le premier paiement conservent votre choix.', detail: 'La durée commence à la livraison opérationnelle. Le POS vous appartient à la fin de la durée choisie et après tous les paiements, sans montant résiduel. Les demandes et contrats précédents conservent leurs conditions.' },
+    pt: { title: 'Escolha o prazo do renting, até 36 meses', message: 'Nas novas candidaturas pode escolher o número de mensalidades do renting. A prestação é calculada com o preço do POS e o prazo escolhido; verá a prestação e o total antes de enviar. O contrato e o primeiro pagamento mantêm a sua escolha.', detail: 'O prazo começa na entrega operacional. O POS passa a ser seu no fim do prazo escolhido e após todos os pagamentos, sem valor residual. As candidaturas e contratos anteriores mantêm as suas condições.' },
+  },
+};
+
 backofficeAnnouncements.push(...[
   businessAccessAnnouncementDraft, storeReceptionAnnouncementDraft,
-  onboardingCommercialAnnouncementDraft, onboardingClosureAnnouncementDraft,
-  onboardingEmailsAnnouncementDraft,
+  onboardingCommercialAnnouncementDraft, { ...onboardingSignatureFirstAnnouncementDraft, publishedAt: '2026-10-06T09:54:15.000Z' },
+  { ...onboardingEmailsAnnouncementDraft, publishedAt: '2026-10-06T09:54:15.000Z' },
 ].map(announcement => ({ ...announcement,
-  publishedAt: '2026-10-05T09:50:00.000Z', expiresAt: '2027-01-05T09:50:00.000Z',
+  publishedAt: announcement.publishedAt || '2026-10-05T09:50:00.000Z', expiresAt: '2027-01-05T09:50:00.000Z',
 })));
 
 backofficeAnnouncements.push({ ...onboardingDefaultsAnnouncementDraft,

@@ -1,5 +1,19 @@
 # Punto 5: verificación local y prueba final de Luigi
 
+**Actualización del 6 de octubre de 2026:** el recorrido aprobado para nuevas revisiones es **revisión → correo → firma → pago confirmado → alta y bienvenida automática**. Backend `20c7563` y storefront `e797728` están publicados. El recorrido y la lista de comprobaciones de abajo describen la versión anterior; para solicitudes nuevas seguir la sección actual siguiente y [firma antes del pago](onboarding-sign-before-payment.md). No aplicar las instrucciones históricas de pagar antes de firmar a una solicitud nueva.
+
+## Comprobación pendiente del recorrido actual
+
+1. Crear una solicitud nueva con un correo de prueba autorizado, comprobar el primer correo, completar datos y documentos y elegir contado, plazos o renting. Los SMS no tienen casilla ni recarga obligatoria. Con la nueva tarifa `CUSTOMER_TERM`, el cliente elige el plazo de renting hasta un máximo de 36 meses y ve su cuota y total; comprobar el guardado y reanudación de esa elección. Ver [publicación del renting](onboarding-rental-terms.md).
+2. En Global Manager, revisar datos, documentos y contrato generado. Los importes proceden de lo elegido por el comercio. Confirmar la revisión y el suministro del POS; pulsar **Enviar correo de pago** y comprobar la recepción del segundo correo.
+3. Abrir el enlace, leer y firmar el contrato. Debe quedar pendiente de pago, sin negocio activado ni accesos. Volver al mismo enlace debe permitir continuar sin repetir la firma.
+4. Completar el pago inicial y comprobar que su confirmación crea el alta una sola vez y envía la bienvenida con contrato, invitación de contraseña, QR y enlaces del negocio. **Stripe de producción está en modo LIVE: esta operación cobra dinero real.** Usar un entorno Stripe de prueba si se quiere ensayar sin dinero real. No cambiar las claves de producción para una prueba.
+5. Crear la contraseña, abrir el negocio correcto, completar carta, horarios, ubicación y servicio. La recepción seguirá cerrada hasta abrirla explícitamente. Realizar un pedido y comprobar su recepción e impresión en el POS físico.
+
+La verificación del 6 de octubre comprobó servicios, autenticación, tarifas, bundle y una sonda de webhook sin pago. No envió correos ni creó solicitudes. La prueba de vista previa de un contrato en producción quedó sin ejecutar porque no había una solicitud pendiente con selección comercial adecuada. El envío externo, documentos, pago y POS continúan pendientes.
+
+## Historial de la versión anterior
+
 5 de octubre de 2026. **Publicado en producción y comprobado el acceso y la recepción del webhook.** Backend `1a25491`, storefront `cbc372b`; ambos despliegues confirmados SUCCESS en Railway. Las dos migraciones se aplicaron correctamente. Se conservaron usuario y contraseña de Global Manager, con validación en el servidor. La variable del webhook y la clave estable de acciones están configuradas. Luigi realizará las pruebas externas de correo, pago real y puesta en marcha. No se han enviado correos, cobrado pagos ni modificado comercios durante la verificación de publicación. Las instrucciones de preparación siguientes se conservan como referencia para otros entornos.
 
 ## Cambios terminados

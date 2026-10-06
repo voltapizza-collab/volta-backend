@@ -5,7 +5,7 @@ export function normalizeOnboardingDefaults(input = {}) {
   if (!input || typeof input !== 'object' || Array.isArray(input)) fail();
   const result = { rentMode: input.rentMode || 'FIXED' };
   if (input.smsUnitPriceEur !== undefined) result.smsUnitPriceEur = normalizeSmsPrice(input.smsUnitPriceEur);
-  if (!['FIXED', 'PRICE_24', 'PRICE_36'].includes(result.rentMode)) fail();
+  if (!['FIXED', 'PRICE_24', 'PRICE_36', 'CUSTOMER_TERM'].includes(result.rentMode)) fail();
   for (const [key, min, max] of [['rentCents',1,1000000],['depositCents',0,1000000],['smsCents',1,1000000],['signatureDays',1,60],['refundDays',1,30]]) {
     const value = input[key];
     if (value == null || value === '') { result[key] = null; continue; }

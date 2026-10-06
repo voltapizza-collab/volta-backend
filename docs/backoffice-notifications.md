@@ -1,5 +1,9 @@
 # Avisos del backoffice
 
+## Firma antes del pago — publicación del 6 de octubre de 2026
+
+La revisión 2 de `onboarding-payment-signature-2026-10` sustituye el recorrido anterior: revisión administrativa, correo enviado por Volta, firma, pago confirmado y alta automática con bienvenida y QR. Backend y storefront del recorrido ya están verificados en producción; esta entrega actualiza el catálogo de avisos. Se corrigen también los textos de los tres correos y de tarifas. Las pruebas de recepción externa, cobro y POS siguen pendientes. [Detalles y comprobaciones](onboarding-sign-before-payment.md).
+
 ## Oferta simplificada y tarifa SMS vigente — publicado el 5 de octubre de 2026
 
 `onboardingDefaultsAnnouncementDraft` incluye ES/EN/IT/FR/PT y entra en el feed tras verificar ambos servicios y la migración. Explica la configuración común, la tarifa SMS editable, el servicio de uso opcional sin casilla y la información económica durante el onboarding. [Detalle](onboarding-shared-defaults.md).

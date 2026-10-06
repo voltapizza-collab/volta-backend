@@ -268,7 +268,9 @@ export const buildOnboardingEmail = (request, formalUrl) => {
   const choices = [
     ['Al contado', `${money(catalog.posTotalCents)} IVA incluido. Un solo pago.`],
     ['Compra a plazos', `De 2 a 6 cuotas mensuales sin intereses. Total: ${money(catalog.posTotalCents)}. En 6 cuotas: 5 de ${money(lastPlan[0])} y la última de ${money(lastPlan[5])}.`],
-    ['Renting de 36 meses', catalog.rental.monthlyCents
+    [catalog.rental.calculation === 'PRICE_BY_TERM' ? 'Renting hasta 36 meses' : 'Renting de 36 meses', catalog.rental.calculation === 'PRICE_BY_TERM'
+      ? 'Elige el número de mensualidades en el formulario, hasta un máximo de 36. La cuota se calcula dividiendo el precio del POS entre el plazo elegido, redondeada a céntimos. Verás cuota y total antes de enviar. El POS pasa a ser tuyo al terminar ese plazo y completar sus pagos, sin pago residual.'
+      : catalog.rental.monthlyCents
       ? `${money(catalog.rental.monthlyCents)}/mes IVA incluido. Total: ${money(catalog.rental.monthlyCents * 36)}. El POS pasa a ser tuyo al finalizar el plazo y completar las 36 mensualidades.`
       : 'La cuota se confirmará antes de firmar y pagar. El POS pasa a ser tuyo al finalizar el plazo y completar las 36 mensualidades.'],
   ];
@@ -278,7 +280,7 @@ export const buildOnboardingEmail = (request, formalUrl) => {
     `Hemos recibido la solicitud de ${request.businessName} en Volta Pizza.`,
     "Tu proceso entra ahora en la fase 2: validacion basica de datos legales y operativos.",
     "Necesitamos que completes el formulario con CIF/NIF/NIE, datos del responsable y documentacion basica para validar el alta.",
-    "Elige también cómo incorporar tu POS: contado, compra a plazos o renting de 36 meses, y revisa las notificaciones SMS. En esta fase no se cobra ni se firma. Confirmaremos precio, stock y entrega antes del pago.",
+    `Elige también cómo incorporar tu POS: contado, compra a plazos o renting ${catalog.rental.calculation === 'PRICE_BY_TERM' ? 'hasta' : 'de'} 36 meses, y revisa las notificaciones SMS. En esta fase no se cobra ni se firma. Confirmaremos precio, stock y entrega antes del pago.`,
     ...choices.map(([title, description]) => `${title}: ${description}`),
     smsNotice,
     'Podrás pagar por tarjeta mediante Stripe. En la compra al contado también se admite efectivo confirmado por Volta. Las tres modalidades están sujetas a stock; el contado pagado tiene prioridad entre asignaciones pendientes, respetando compromisos previos.',
@@ -457,8 +459,8 @@ export const buildClosureEmail = (request, contractUrl) => {
   const money = cents => new Intl.NumberFormat('es-ES', { style: 'currency', currency: 'EUR' }).format(cents / 100);
   const pos = offer.pos;
   const mode = pos.mode === 'RENT_QUOTE'
-    ? pos.durationMonths === 36
-      ? `Renting de 36 meses: ${money(pos.firstCents)}/mes; total ${money(pos.totalCents)}. Propiedad de Volta durante el plazo y transmisión al finalizarlo y completar las 36 mensualidades, sin pago residual.`
+    ? Number.isInteger(pos.durationMonths) && pos.durationMonths >= 1 && pos.durationMonths <= 36
+      ? `Renting de ${pos.durationMonths} meses: ${money(pos.firstCents)}/mes; total ${money(pos.totalCents)}. Propiedad de Volta durante el plazo y transmisión al finalizarlo y completar las ${pos.durationMonths} mensualidades, sin pago residual.`
       : `Alquiler: ${money(pos.firstCents)}/mes. Consulta la propiedad, duración y devolución en las condiciones de esta versión.`
     : `${pos.mode === 'INSTALLMENTS' ? `Compra en ${pos.payments.length} cuotas` : 'Compra al contado'}: ${money(pos.totalCents)} IVA incluido.`;
   const supply = pos.delivery ? `Disponibilidad: ${pos.delivery.status === 'IN_STOCK' ? 'stock confirmado' : 'reposición con fecha comprometida'}. Entrega prevista: ${pos.delivery.expected}; fecha límite: ${pos.delivery.latest}.` : '';

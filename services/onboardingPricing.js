@@ -12,6 +12,14 @@ export async function newOnboardingCatalog(db) {
   const settings = price.defaults || {};
   const monthlyCents = rentalMonthlyCents(price.posTotalCents, settings);
   if (monthlyCents) catalog.rental = { ...catalog.rental, status: 'PROPOSED', monthlyCents, totalCents: monthlyCents * 36, depositCents: settings.depositCents ?? null };
+  if (settings.rentMode === 'CUSTOMER_TERM') {
+    catalog.rental = { ...catalog.rental, status: 'PROPOSED', calculation: 'PRICE_BY_TERM',
+      monthlyCents: null, totalCents: null, durationMonths: null, depositCents: settings.depositCents ?? 0,
+      termOptions: Array.from({ length: 36 }, (_, i) => {
+        const months = i + 1, amount = Math.round(price.posTotalCents / months);
+        return { months, monthlyCents: amount, totalCents: amount * months };
+      }) };
+  }
   catalog.sms = { ...catalog.sms, ...smsPricingInfo(settings.smsUnitPriceEur || SMS_SELL_PRICE_EUR) };
   return catalog;
 }
