@@ -1,5 +1,11 @@
 # Distribución permanente de Volta POS
 
+## Corrección de impresión — 7 de octubre de 2026
+
+0.3.23/código 26 publicada y asignada únicamente al SUNMI V3 002 de VigoCity. Incluye ajuste del ancho del ticket, resultado de impresión en la página sin modal, prevención de doble envío pendiente y número corto `WEB-<Sale.id>` para referencias web largas. Los códigos de seguimiento originales se conservan. APK y metadatos verificados por la CLI; SHA256 `c67c0c989d3c64ffcfbc823023d0e0cc3b7227b0415ea504f0850a83fba49bc0`.
+
+El reporte observado después de asignar sigue en código 23/0.3.20. Pendiente aceptación e instalación y prueba física. Las versiones 0.3.21/0.3.22 previas quedaron locales y no llegaron por el canal. El aviso `posPrintLayoutAnnouncementDraft` sigue fuera del feed. Véase `../../volta-storefront/docs/pos/impresion-vigocity-2026-10-07.md` y metadatos en `../../output/pos-print-2026-10-07/release.json`.
+
 ## Entrega del 3 de octubre de 2026
 
 ### Consulta diaria y decisiones con cierre inmediato — 0.3.20

@@ -1,14 +1,14 @@
 // Add a user-facing note in the same change that delivers a feature.
-// Draft: publish only after POS 0.3.22 is installed and printing is verified on SUNMI.
+// Draft: publish only after POS 0.3.23 is installed and printing is verified on SUNMI.
 export const posPrintLayoutAnnouncementDraft = {
   id: "pos-print-layout-2026-10", revision: 1, category: "improvement", severity: "info",
   title: "Impresión sin interrumpir el ticket",
-  message: "El POS muestra el resultado de la impresión junto al ticket, sin abrir una ventana. Los códigos largos se ajustan al ancho de pantalla. Mientras imprime, el botón evita enviar el mismo trabajo dos veces; si no hay confirmación, comprueba el papel antes de repetir.",
+  message: "El POS muestra el resultado de impresión junto al ticket, sin abrir una ventana. Los pedidos web tienen un número corto en pantalla y en papel. Mientras imprime, el botón evita enviar el mismo trabajo dos veces; si no hay confirmación, comprueba el papel antes de repetir.",
   translations: {
-    en: { title: "Printing without interrupting the ticket", message: "The POS shows the print result next to the ticket without opening a dialog. Long codes fit the screen width. While printing, the button prevents duplicate jobs; if printing is unconfirmed, check the paper before retrying." },
-    it: { title: "Stampa senza interrompere il ticket", message: "Il POS mostra il risultato della stampa accanto al ticket senza aprire una finestra. I codici lunghi si adattano allo schermo. Durante la stampa il pulsante evita invii duplicati; se manca la conferma, controlla la carta prima di riprovare." },
-    fr: { title: "Imprimer sans interrompre le ticket", message: "Le POS affiche le résultat de l’impression à côté du ticket sans ouvrir de fenêtre. Les codes longs s’adaptent à l’écran. Pendant l’impression, le bouton évite les envois en double ; sans confirmation, vérifiez le papier avant de réessayer." },
-    pt: { title: "Impressão sem interromper o ticket", message: "O POS mostra o resultado da impressão junto ao ticket sem abrir uma janela. Os códigos longos adaptam-se ao ecrã. Durante a impressão, o botão evita envios duplicados; sem confirmação, verifica o papel antes de repetir." },
+    en: { title: "Printing without interrupting the ticket", message: "The POS shows the print result next to the ticket without opening a dialog. Web orders have a short number on screen and paper. While printing, the button prevents duplicate jobs; if printing is unconfirmed, check the paper before retrying." },
+    it: { title: "Stampa senza interrompere il ticket", message: "Il POS mostra il risultato della stampa accanto al ticket senza aprire una finestra. Gli ordini web hanno un numero breve sullo schermo e sulla carta. Durante la stampa il pulsante evita invii duplicati; se manca la conferma, controlla la carta prima di riprovare." },
+    fr: { title: "Imprimer sans interrompre le ticket", message: "Le POS affiche le résultat de l’impression à côté du ticket sans ouvrir de fenêtre. Les commandes web ont un numéro court à l’écran et sur papier. Pendant l’impression, le bouton évite les envois en double ; sans confirmation, vérifiez le papier avant de réessayer." },
+    pt: { title: "Impressão sem interromper o ticket", message: "O POS mostra o resultado da impressão junto ao ticket sem abrir uma janela. Os pedidos web têm um número curto no ecrã e no papel. Durante a impressão, o botão evita envios duplicados; sem confirmação, verifica o papel antes de repetir." },
   },
 };
 // Draft until 0.3.20 reaches the intended terminals.
