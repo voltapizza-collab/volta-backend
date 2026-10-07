@@ -31,11 +31,13 @@ test('first email shows only payment method buttons; prices and details remain i
   commercialCatalog.rental.monthlyCents = 1250;
   const mail = buildOnboardingEmail({ name: 'Test', businessName: 'Test', formalData: { commercialCatalog } }, 'https://example.invalid/test');
   for (const body of [mail.html, mail.text]) {
+    assert.match(body, /Continuar a la fase 2/);
     assert.match(body, /Al contado/); assert.match(body, /Compra a plazos/); assert.match(body, /Renting de 36 meses/);
     assert.doesNotMatch(body, /299,99|12,50|450,00|250,00|5 de 50,00|49,99|0,075|Stripe|prioridad/);
     assert.match(body, /notificaciones SMS son opcionales/);
     for (const mode of ['PURCHASE', 'INSTALLMENTS', 'RENT_QUOTE']) assert.match(body, new RegExp(`posChoice=${mode}`));
   }
+  assert.match(mail.html, /href="https:\/\/example.invalid\/test"[^>]*>Continuar a la fase 2/);
 });
 test('closure email contains itemized initial payment, rental ownership, delivery and resume instructions', () => {
   const row = { name: 'Test', businessName: 'Shop', formalData: { closure: { offer: { revision: 3, signatureDays: 7, totalCents: 2100,

@@ -1,4 +1,17 @@
 // Add a user-facing note in the same change that delivers a feature.
+// Publish once the email, contract display and card checkout are deployed together.
+export const onboardingPresentationAnnouncementDraft = {
+  id: 'onboarding-presentation-card-2026-10', revision: 1, category: 'improvement', severity: 'info',
+  title: 'Alta más clara y pago directo con tarjeta',
+  message: 'El correo distingue las modalidades por color e incluye Continuar a la fase 2. Los nuevos contratos muestran un número de referencia en el documento, el correo y la descarga. El pago inicial abre tarjeta sin iniciar sesión en Link; vuelve al alta y pulsa Pagar para renovar un enlace pendiente anterior.',
+  detail: 'Los contratos firmados conservan su documento original. Los pagos confirmados o en procesamiento no se sustituyen.',
+  translations: {
+    en: { title: 'Clearer onboarding and direct card payment', message: 'The email uses different colors for payment options and includes Continue to phase 2. New contracts show a reference number in the document, email and download. Initial payment opens card checkout without a Link login; return to onboarding and click Pay to refresh an older pending link.', detail: 'Signed contracts retain their original document. Confirmed or processing payments are not replaced.' },
+    it: { title: 'Adesione più chiara e pagamento diretto con carta', message: 'L’email distingue le modalità con colori diversi e include Continua alla fase 2. I nuovi contratti mostrano un numero di riferimento nel documento, nell’email e nel download. Il pagamento iniziale apre la carta senza accesso a Link; torna alla richiesta e premi Paga per rinnovare un vecchio link in sospeso.', detail: 'I contratti firmati conservano il documento originale. I pagamenti confermati o in elaborazione non vengono sostituiti.' },
+    fr: { title: 'Inscription plus claire et paiement direct par carte', message: 'L’e-mail distingue les modes de paiement par couleur et inclut Continuer vers la phase 2. Les nouveaux contrats affichent un numéro de référence dans le document, l’e-mail et le téléchargement. Le paiement initial ouvre la carte sans connexion à Link ; revenez à l’inscription et cliquez sur Payer pour renouveler un ancien lien en attente.', detail: 'Les contrats signés conservent leur document original. Les paiements confirmés ou en cours ne sont pas remplacés.' },
+    pt: { title: 'Adesão mais clara e pagamento direto por cartão', message: 'O email distingue as modalidades por cor e inclui Continuar para a fase 2. Os novos contratos mostram uma referência no documento, no email e na descarga. O pagamento inicial abre o cartão sem iniciar sessão no Link; volte à adesão e prima Pagar para renovar um link antigo pendente.', detail: 'Os contratos assinados conservam o documento original. Os pagamentos confirmados ou em processamento não são substituídos.' },
+  },
+};
 // Both services and production tariff revision 5 verified on 7 October 2026.
 export const onboardingFinancedRentalAnnouncementDraft = {
   id: 'onboarding-commercial-2026-10', revision: 3, category: 'improvement', severity: 'info',

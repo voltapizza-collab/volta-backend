@@ -12,7 +12,7 @@ import { SMS_SELL_PRICE_EUR, readSmsPrice, smsPricingInfo } from '../services/sm
 import { reviewContract } from '../services/onboardingReview.js';
 import { newOnboardingCatalog, readOnboardingPricing } from '../services/onboardingPricing.js';
 import onboardingClosureRoutes from './onboardingClosure.js';
-import { closureView, createClosureService, hasClosure, lockedClosure, verifyOffer, signsBeforePayment } from '../services/onboardingClosure.js';
+import { closureView, createClosureService, hasClosure, lockedClosure, verifyOffer, signsBeforePayment, contractReference } from '../services/onboardingClosure.js';
 import * as stripe from '../services/stripe.js';
 
 const MAX_DOCUMENTS = 8;
@@ -264,13 +264,13 @@ export const buildOnboardingEmail = (request, formalUrl) => {
   const catalog = request.formalData?.commercialCatalog || onboardingCommercialCatalog();
   const rentalMonths = Math.max(...(catalog.rental?.termOptions || []).map(plan => plan.months), catalog.rental?.durationMonths || 0) || 36;
   const choices = [
-    ['Al contado', 'PURCHASE'],
-    ['Compra a plazos', 'INSTALLMENTS'],
-    [`Renting ${['PRICE_BY_TERM', 'AMORTIZED_RENTAL'].includes(catalog.rental?.calculation) ? 'hasta' : 'de'} ${rentalMonths} meses`, 'RENT_QUOTE'],
-  ].map(([title, mode]) => {
+    ['Al contado', 'PURCHASE', '#ffbd19', '#291048'],
+    ['Compra a plazos', 'INSTALLMENTS', '#ede5ff', '#3b008b'],
+    [`Renting ${['PRICE_BY_TERM', 'AMORTIZED_RENTAL'].includes(catalog.rental?.calculation) ? 'hasta' : 'de'} ${rentalMonths} meses`, 'RENT_QUOTE', '#daf2ed', '#164e45'],
+  ].map(([title, mode, background, color]) => {
     const url = new URL(formalUrl);
     url.searchParams.set('posChoice', mode);
-    return { title, url: url.toString() };
+    return { title, url: url.toString(), background, color };
   });
   const smsNotice = 'Las notificaciones SMS son opcionales y funcionan con saldo recargable.';
   const text = [
@@ -284,7 +284,7 @@ export const buildOnboardingEmail = (request, formalUrl) => {
     smsNotice,
     'En esta fase no se cobra ni se firma. Confirmaremos los importes, el stock y la entrega antes del pago.',
     "",
-    `Sube la informacion aqui: ${formalUrl}`,
+    `Continuar a la fase 2: ${formalUrl}`,
     "",
     "Gracias,",
     "Equipo Volta Pizza",
@@ -299,8 +299,9 @@ export const buildOnboardingEmail = (request, formalUrl) => {
       <p>Completa los datos del negocio y del responsable, y adjunta la identificación y el documento fiscal. Después de nuestra revisión recibirás el correo para firmar el contrato y pagar.</p>
       <div style="margin:20px 0 10px;color:#3b008b;font-size:18px;font-weight:900">Elige cómo pagar tu POS</div>
       <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="border-collapse:separate;border-spacing:0 8px">
-        ${choices.map(({ title, url }) => `<tr><td align="center" style="background:#3b008b;border-radius:14px;border:1px solid #6a3df0"><a href="${escapeHtml(url)}" style="display:block;padding:18px 22px;color:#ffffff;font-size:16px;font-weight:800;text-decoration:none;text-align:center;border-radius:14px">${escapeHtml(title)}</a></td></tr>`).join('')}
+        ${choices.map(({ title, url, background, color }) => `<tr><td align="center" bgcolor="${background}" style="background:${background};border-radius:12px;border:1px solid ${background}"><a href="${escapeHtml(url)}" style="display:block;padding:16px 22px;color:${color};font-size:16px;font-weight:800;text-decoration:none;text-align:center;border-radius:12px">${escapeHtml(title)}</a></td></tr>`).join('')}
       </table>
+      <p style="margin:22px 0 8px;text-align:center"><a href="${safeFormalUrl}" style="display:block;background:#3b008b;color:#ffffff;padding:18px 22px;border-radius:12px;text-decoration:none;font-size:17px;font-weight:800">Continuar a la fase 2 &#8594;</a></p>
       <p>${escapeHtml(smsNotice)}</p>
       <p>En esta fase no se cobra ni se firma. Confirmaremos los importes, el stock y la entrega antes del pago.</p>
       <div style="background:#fff8e7;border-left:5px solid #ffb61c;padding:12px 14px;margin:0 0 20px;color:#3b2c4a;font-size:13px">
@@ -465,10 +466,10 @@ export const buildClosureEmail = (request, contractUrl) => {
     first ? 'Revisa y firma tu contrato. Después, realiza el pago inicial desde el mismo enlace. Si ya pagaste, puedes consultar el estado sin volver a pagar.' : 'Revisa el contrato completo, acepta las condiciones del pago previo, paga y firma cuando se confirme el cobro. Si ya pagaste, reanuda desde el mismo enlace sin volver a pagar.',
     first ? 'Al confirmarse el pago, recibirás automáticamente el acceso a tu negocio, el QR y las instrucciones de inicio y entrega del POS. La tienda seguirá cerrada a pedidos hasta terminar su preparación.' : `Después del pago dispones de ${offer.signatureDays} días para firmar. Consulta las condiciones de cancelación y devolución en el documento. La tienda seguirá cerrada a pedidos hasta terminar su preparación.`].filter(Boolean);
   return {
-    text: [`Hola ${request.name},`, `Hemos revisado los datos de ${request.businessName}.`, `Contrato, versión ${offer.revision}.`, ...summary,
+    text: [`Hola ${request.name},`, `Hemos revisado los datos de ${request.businessName}.`, `Contrato n.º ${contractReference(request, offer)}.`, ...summary,
       `Revisar condiciones y completar el alta: ${contractUrl}`].join('\n\n'),
     html: buildEmailShell({ title: 'Tu contrato y pago inicial', preheader: first ? 'Firma tu contrato y completa el pago inicial.' : 'Revisa tu oferta, completa el pago inicial y firma para preparar tu tienda.',
-      bodyHtml: `<p>Hola <strong>${escapeHtml(request.name)}</strong>. Hemos revisado los datos de <strong>${escapeHtml(request.businessName)}</strong>.</p><p>Contrato, versión ${offer.revision}.</p>${summary.map(line => `<p>${escapeHtml(line)}</p>`).join('')}<p><a href="${escapeHtml(contractUrl)}" style="display:inline-block;background:#3b008b;color:#fff;padding:15px 20px;border-radius:12px;text-decoration:none">${first ? 'Firmar contrato y pagar' : 'Revisar condiciones y completar el alta'}</a></p>${buildVoltaSignature()}` }),
+      bodyHtml: `<p>Hola <strong>${escapeHtml(request.name)}</strong>. Hemos revisado los datos de <strong>${escapeHtml(request.businessName)}</strong>.</p><p>Contrato n.º <strong>${escapeHtml(contractReference(request, offer))}</strong>.</p>${summary.map(line => `<p>${escapeHtml(line)}</p>`).join('')}<p><a href="${escapeHtml(contractUrl)}" style="display:inline-block;background:#3b008b;color:#fff;padding:15px 20px;border-radius:12px;text-decoration:none">${first ? 'Firmar contrato y pagar' : 'Revisar condiciones y completar el alta'}</a></p>${buildVoltaSignature()}` }),
   };
 };
 

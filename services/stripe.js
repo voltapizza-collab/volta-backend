@@ -88,7 +88,11 @@ export const createOnboardingCheckout = ({ request, offer, payment, returnUrl })
     client_reference_id: `onboarding:${request.id}:${offer.id}`, customer_email: request.formalData.businessEmail || request.email,
     expires_at: String(Math.floor(new Date(payment.createdAt).getTime() / 1000) + 3600), locale: 'es',
   });
-  // Uses payment methods enabled for this Stripe account. Deferred methods stay pending.
+  // Preserve parameters for uncertain pre-release operations sharing an idempotency key.
+  if (payment.checkoutUi !== 'LEGACY_AUTO') {
+    params.set('payment_method_types[0]', 'card');
+    params.set('wallet_options[link][display]', 'never');
+  }
   offer.lines.forEach((line, i) => {
     params.set(`line_items[${i}][quantity]`, '1');
     params.set(`line_items[${i}][price_data][currency]`, 'eur');

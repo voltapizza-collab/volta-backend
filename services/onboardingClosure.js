@@ -30,8 +30,11 @@ export const commercialRequest = request => Boolean(request?.formalData?.commerc
 const getClosure = request => request.formalData?.closure;
 const editable = request => requireValue(!['ACTIVATED', 'APPROVED', 'REJECTED'].includes(request.status), 'onboarding_request_closed');
 const documentKeys = ['id','revision','currency','vatIncluded','pos','sms','lines','totalCents','signatureDays','refundDays','documentText','publishedAt'];
+export const contractReference = (request, offer) => offer.contractNumber ||
+  `VLT-${new Intl.DateTimeFormat('en', { year: 'numeric', timeZone: 'Europe/Madrid' }).format(new Date(offer.publishedAt || request.createdAt || iso()))}-${String(request.id).padStart(6, '0')}-${String(offer.revision).padStart(2, '0')}`;
 const offerHash = offer => {
   const data = Object.fromEntries(documentKeys.map(key => [key, offer[key]]));
+  if (offer.contractNumber) data.contractNumber = offer.contractNumber;
   if (offer.workflow) data.workflow = offer.workflow;
   if (offer.hashAlgorithm === 'sha256-canonical-json-v1') return digest(canonical({ ...data, hashAlgorithm: offer.hashAlgorithm }));
   requireValue(!offer.hashAlgorithm, 'offer_integrity_failed');
@@ -90,8 +93,10 @@ export function buildClosureOffer(request, input, revision = 1) {
     ...(pos.depositCents ? [{ code: 'DEPOSIT', label: 'Fianza reembolsable del POS', amountCents: pos.depositCents }] : []),
     ...(smsRequested ? [{ code: 'SMS', label: `Recarga inicial: ${sms.credits} partes de SMS`, amountCents: sms.amountCents }] : [])];
   const f = request.formalData;
+  const publishedAt = iso();
+  const contractNumber = contractReference(request, { publishedAt, revision });
   const content = [
-    `CONTRATO VOLTA — VERSIÓN ${revision}`,
+    `CONTRATO DE ADHESIÓN COMERCIAL VOLTA\nN.º ${contractNumber}`,
     `Comerciante: ${f.legalName}. NIF: ${f.taxId}. Negocio: ${f.commercialName}.`,
     `Representante: ${f.legalRepresentative}, ${f.representativeRole}. Correo: ${f.businessEmail}.`,
     `Domicilio: ${f.businessAddress}, ${f.postalCode}, ${f.city}, ${f.country}.`,
@@ -124,9 +129,9 @@ export function buildClosureOffer(request, input, revision = 1) {
     .replace('Primera cuota antes de firmar', 'Primera cuota después de firmar')
     .replace('Pago completo antes de la firma.', 'Pago completo después de la firma.')
     .replace(/PAGO PREVIO Y FINALIZACIÓN[\s\S]*$/, `FIRMA, PAGO Y ALTA\n\nEl comercio firma este contrato antes de abonar el pago inicial de ${money(lines.reduce((sum, line) => sum + line.amountCents, 0))}. La firma sin pago deja el expediente pendiente de pago. Una vez confirmado el cobro, Volta prepara el alta y envía automáticamente el acceso, el QR y las instrucciones de inicio y entrega. La tienda debe prepararse antes de abrir pedidos. El contrato firmado y el justificante permanecen disponibles en este enlace privado.`) : content;
-  const offer = { id: crypto.randomUUID(), revision, hashAlgorithm: 'sha256-canonical-json-v1', currency: 'EUR', vatIncluded: true, pos, sms, lines,
+  const offer = { id: crypto.randomUUID(), revision, contractNumber, hashAlgorithm: 'sha256-canonical-json-v1', currency: 'EUR', vatIncluded: true, pos, sms, lines,
     totalCents: lines.reduce((sum, line) => sum + line.amountCents, 0), signatureDays: input.signatureDays,
-    refundDays: input.refundDays ?? null, documentText, publishedAt: iso(), ...(signatureFirst ? { workflow: 'SIGN_PAY_ACTIVATE', signatureDays: null } : {}) };
+    refundDays: input.refundDays ?? null, documentText, publishedAt, ...(signatureFirst ? { workflow: 'SIGN_PAY_ACTIVATE', signatureDays: null } : {}) };
   return { ...offer, hash: offerHash(offer) };
 }
 
@@ -149,7 +154,7 @@ export function closureView(request) {
   const signed = c.status === 'SIGNED' || (first && request.formalData?.contractSignature?.offerHash === c.offer.hash);
   const deadline = !first && p?.paidAt ? new Date(new Date(p.paidAt).getTime() + c.offer.signatureDays * 86400000).toISOString() : null;
   const overdue = c.status !== 'SIGNED' && deadline && Date.now() > new Date(deadline).getTime();
-  return { offer: c.offer, consented: c.consent?.offerHash === c.offer.hash, status: c.status,
+  return { offer: c.offer, contractNumber: contractReference(request, c.offer), consented: c.consent?.offerHash === c.offer.hash, status: c.status,
     payment: p ? { method: p.method, status: p.status, amountCents: p.amountCents, paidAt: p.paidAt,
       receipt: p.receipt || p.sessionId || null, refundStatus: p.refundStatus || null } : null,
     signatureDeadline: deadline, overdue: Boolean(overdue),
@@ -226,7 +231,24 @@ export function createClosureService(db, deps = stripe) {
     });
   }
   async function checkout(id, hash, returnUrl) {
-    await sync(id);
+    const current = await sync(id);
+    const currentClosure = assertCurrent(current, hash);
+    requireValue(currentClosure.consent?.offerHash === hash, 'prepayment_consent_required');
+    if (signsBeforePayment(currentClosure.offer)) requireValue(current.formalData.contractSignature?.offerHash === hash, 'contract_signature_required');
+    requireValue(!currentClosure.cancelRequestedAt && !['REFUNDED','REVERSED','CANCELLED','REFUND_PENDING'].includes(currentClosure.status), 'closure_cancelled');
+    const previous = getClosure(current)?.payment;
+    // Retire only unpaid, open legacy sessions. Stripe expiration arbitrates payment races.
+    if (previous?.method === 'STRIPE' && previous.status === 'PENDING' && previous.sessionId && previous.checkoutUi !== 'CARD_ONLY_V1') {
+      const session = await deps.retrieveCheckoutSession(previous.sessionId);
+      if (session.status === 'open' && session.payment_status === 'unpaid') {
+        try { await deps.expireOnboardingSession(previous.sessionId); }
+        catch (error) {
+          const fresh = await deps.retrieveCheckoutSession(previous.sessionId);
+          if (fresh.status === 'open') throw error;
+        }
+        await sync(id);
+      }
+    }
     const reserved = await lockedClosure(db, id, async (tx, request) => {
       const c = assertCurrent(request, hash);
       requireValue(c.consent?.offerHash === hash, 'prepayment_consent_required');
@@ -238,7 +260,7 @@ export function createClosureService(db, deps = stripe) {
       }
       available(c.offer);
       const payment = { id: crypto.randomUUID(), method: 'STRIPE', status: 'CREATING', amountCents: c.offer.totalCents,
-        createdAt: iso(), returnUrl };
+        createdAt: iso(), returnUrl, checkoutUi: 'CARD_ONLY_V1' };
       return save(tx, request, { ...c, payment, status: 'PAYMENT_PENDING', attempts: [...(c.attempts || []), ...(c.payment ? [c.payment] : [])] });
     });
     const c = getClosure(reserved), p = c.payment;
@@ -249,12 +271,14 @@ export function createClosureService(db, deps = stripe) {
     }
     // Never recreate an uncertain operation beyond Stripe's idempotency retention window.
     requireValue(Date.now() - new Date(p.createdAt).getTime() < 23 * 3600000, 'payment_reconciliation_required');
-    const session = await deps.createOnboardingCheckout({ request: reserved, offer: c.offer, payment: p, returnUrl: p.returnUrl });
+    const session = await deps.createOnboardingCheckout({ request: reserved, offer: c.offer,
+      payment: { ...p, checkoutUi: p.checkoutUi || 'LEGACY_AUTO' }, returnUrl: p.returnUrl });
     const attached = await lockedClosure(db, id, async (tx, request) => {
       const live = getClosure(request); requireValue(live.payment.id === p.id, 'payment_changed');
       return save(tx, request, { ...live, payment: { ...live.payment, sessionId: session.id, status: live.payment.status === 'CREATING' ? 'PENDING' : live.payment.status } });
     });
     requireValue(!getClosure(attached).cancelRequestedAt, 'closure_cancelled');
+    if (!p.checkoutUi) return checkout(id, hash, returnUrl);
     return { url: session.url };
   }
   async function cash(id, hash, receipt, actor) {

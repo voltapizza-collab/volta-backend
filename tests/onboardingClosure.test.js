@@ -4,7 +4,7 @@ import express from 'express';
 import crypto from 'node:crypto';
 import onboardingRoutes from '../routes/onboarding.js';
 import { constructStripeWebhookEvent, createOnboardingCheckout } from '../services/stripe.js';
-import { buildClosureOffer, closureView, createClosureService, verifyOffer } from '../services/onboardingClosure.js';
+import { buildClosureOffer, closureView, createClosureService, verifyOffer, contractReference } from '../services/onboardingClosure.js';
 import { buildCommercialSelection, onboardingCommercialCatalog } from '../services/onboardingCommercial.js';
 import { newOnboardingCatalog, updateOnboardingPricing } from '../services/onboardingPricing.js';
 import closureRoutes from '../routes/onboardingClosure.js';
@@ -470,4 +470,77 @@ test('Stripe adapter collects only the initial rental and SMS, uses integer cent
   assert.equal(calls[0].body.get('line_items[2][price_data][unit_amount]'), null);
   assert.equal(calls[0].body.get('metadata[offerHash]'), offer.hash);
   assert.equal(calls[0].body.get('payment_intent_data[metadata][paymentId]'), 'stable-test');
+  assert.equal(calls[0].body.get('payment_method_types[0]'), 'card');
+  assert.equal(calls[0].body.get('payment_method_types[1]'), null);
+  assert.equal(calls[0].body.get('wallet_options[link][display]'), 'never');
+  await createOnboardingCheckout({ ...args, payment: { ...args.payment, checkoutUi: 'LEGACY_AUTO' } });
+  assert.equal(calls[2].body.get('payment_method_types[0]'), null);
+  assert.equal(calls[2].body.get('wallet_options[link][display]'), null);
+});
+
+test('contract number is unique by application and issue, stable in review, and covered by integrity', () => {
+  const row = request(); row.id = 123;
+  const offer = buildClosureOffer(row, input());
+  assert.match(offer.contractNumber, /^VLT-\d{4}-000123-01$/);
+  assert.ok(offer.documentText.startsWith(`CONTRATO DE ADHESIÓN COMERCIAL VOLTA\nN.º ${offer.contractNumber}`));
+  assert.doesNotMatch(offer.documentText, /VERSIÓN 1/);
+  assert.equal(buildClosureOffer(row, input()).contractNumber, offer.contractNumber);
+  assert.notEqual(buildClosureOffer(row, input(), 2).contractNumber, offer.contractNumber);
+  assert.notEqual(buildClosureOffer({ ...row, id: 124 }, input()).contractNumber, offer.contractNumber);
+  const { contractNumber, ...legacy } = offer;
+  assert.equal(contractReference(row, legacy), contractNumber);
+  const keys = ['id','revision','currency','vatIncluded','pos','sms','lines','totalCents','signatureDays','refundDays','documentText','publishedAt'];
+  const canonical = value => Array.isArray(value) ? value.map(canonical) : value && typeof value === 'object'
+    ? Object.fromEntries(Object.keys(value).sort().map(key => [key, canonical(value[key])])) : value;
+  legacy.hash = crypto.createHash('sha256').update(JSON.stringify(canonical({ ...Object.fromEntries(keys.map(k => [k, legacy[k]])), hashAlgorithm: legacy.hashAlgorithm }))).digest('hex');
+  const original = JSON.stringify(legacy);
+  verifyOffer(legacy);
+  assert.equal(JSON.stringify(legacy), original);
+  assert.equal(contractReference(row, { publishedAt: '2026-12-31T23:30:00Z', revision: 1 }), 'VLT-2027-000123-01');
+  offer.contractNumber = 'VLT-2026-000999-01';
+  assert.throws(() => verifyOffer(offer), /offer_integrity_failed/);
+});
+
+test('unpaid legacy checkout is expired before replacement; concurrent retries create one new card session', async () => {
+  const f = fixture(), hash = await offered(f); await f.service.consent(1, hash, {});
+  await f.service.checkout(1, hash, 'https://example.invalid');
+  const old = f.row().formalData.closure.payment.id;
+  delete f.row().formalData.closure.payment.checkoutUi;
+  await Promise.all([f.service.checkout(1, hash, ''), f.service.checkout(1, hash, '')]);
+  assert.equal(f.sessions.get(old).status, 'expired');
+  assert.equal(f.counts().creates, 2);
+  assert.equal(f.row().formalData.closure.payment.checkoutUi, 'CARD_ONLY_V1');
+  assert.notEqual(f.row().formalData.closure.payment.id, old);
+});
+
+test('legacy session completing payment during expiration cannot produce a second checkout', async () => {
+  const f = fixture(), hash = await offered(f); await f.service.consent(1, hash, {});
+  await f.service.checkout(1, hash, 'https://example.invalid');
+  delete f.row().formalData.closure.payment.checkoutUi;
+  f.deps.expireOnboardingSession = async () => { f.paid(); throw new Error('session_not_open'); };
+  assert.deepEqual(await f.service.checkout(1, hash, ''), { paid: true });
+  assert.equal(f.counts().creates, 1);
+});
+
+test('legacy asynchronous payment remains pending without a replacement; invalid hash cannot expire it', async () => {
+  const f = fixture(), hash = await offered(f); await f.service.consent(1, hash, {});
+  await f.service.checkout(1, hash, 'https://example.invalid');
+  delete f.row().formalData.closure.payment.checkoutUi;
+  await assert.rejects(f.service.checkout(1, 'wrong', ''), /offer_changed/);
+  const session = [...f.sessions.values()][0]; assert.equal(session.status, 'open');
+  session.status = 'complete';
+  assert.deepEqual(await f.service.checkout(1, hash, ''), { url: null, pending: true });
+  assert.equal(f.counts().creates, 1);
+});
+
+test('uncertain legacy creation recovers with original parameters before retiring its session', async () => {
+  const f = fixture(), hash = await offered(f); await f.service.consent(1, hash, {});
+  await f.service.checkout(1, hash, 'https://example.invalid');
+  const p = f.row().formalData.closure.payment;
+  delete p.checkoutUi; delete p.sessionId; p.status = 'CREATING';
+  const create = f.deps.createOnboardingCheckout, policies = [];
+  f.deps.createOnboardingCheckout = args => { policies.push(args.payment.checkoutUi); return create(args); };
+  await f.service.checkout(1, hash, '');
+  assert.deepEqual(policies, ['LEGACY_AUTO', 'CARD_ONLY_V1']);
+  assert.equal(f.counts().creates, 2);
 });
