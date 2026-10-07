@@ -1,5 +1,5 @@
 // Add a user-facing note in the same change that delivers a feature.
-// Activate after both services and the new tariff are verified in production.
+// Both services and production tariff revision 5 verified on 7 October 2026.
 export const onboardingFinancedRentalAnnouncementDraft = {
   id: 'onboarding-commercial-2026-10', revision: 3, category: 'improvement', severity: 'info',
   title: 'Renting hasta 12 cuotas, con el plazo que elijas',
@@ -12,7 +12,7 @@ export const onboardingFinancedRentalAnnouncementDraft = {
     pt: { title: 'Renting até 12 prestações, com o prazo que escolher', message: 'As novas candidaturas permitem até 12 prestações, com juros de 1% ao mês sobre o saldo em dívida. A primeira é paga após a assinatura e antes da ativação; as restantes mensalmente desde a entrega operacional. Consulte o calendário e o total no formulário e no contrato.', detail: 'Sem comissões nem juros durante a espera de entrega. A última prestação ajusta os cêntimos. As candidaturas e contratos anteriores mantêm as suas condições.' },
   },
 };
-// Draft until the phase 2 email and method-prefill form are deployed together.
+// Phase 2 email and method-prefill form deployed together on 7 October 2026.
 export const onboardingSimpleEmailAnnouncementDraft = {
   id: 'onboarding-simple-email-2026-10', revision: 1, category: 'improvement', severity: 'info',
   title: 'Un correo de alta más sencillo',
@@ -722,7 +722,7 @@ export const onboardingRentalTermAnnouncementDraft = {
 
 backofficeAnnouncements.push(...[
   { ...simpleBackofficeAccessAnnouncementDraft, publishedAt: '2026-10-06T10:35:24.201Z' }, storeReceptionAnnouncementDraft,
-  { ...onboardingRentalTermAnnouncementDraft, publishedAt: '2026-10-06T10:05:47.000Z' }, { ...onboardingSignatureFirstAnnouncementDraft, publishedAt: '2026-10-06T09:54:15.000Z' },
+  { ...onboardingFinancedRentalAnnouncementDraft, publishedAt: '2026-10-07T08:19:00.000Z' }, { ...onboardingSignatureFirstAnnouncementDraft, publishedAt: '2026-10-06T09:54:15.000Z' },
   { ...onboardingEmailsAnnouncementDraft, publishedAt: '2026-10-06T09:54:15.000Z' },
 ].map(announcement => ({ ...announcement,
   publishedAt: announcement.publishedAt || '2026-10-05T09:50:00.000Z', expiresAt: '2027-01-05T09:50:00.000Z',
@@ -733,3 +733,4 @@ backofficeAnnouncements.push({ ...onboardingDefaultsAnnouncementDraft,
 });
 
 backofficeAnnouncements.push({ ...simpleStoreListAnnouncementDraft, publishedAt: '2026-10-06T10:42:00.344Z', expiresAt: '2027-01-06T23:59:59.000Z' });
+backofficeAnnouncements.push({ ...onboardingSimpleEmailAnnouncementDraft, publishedAt: '2026-10-07T08:19:00.000Z', expiresAt: '2027-01-07T23:59:59.000Z' });

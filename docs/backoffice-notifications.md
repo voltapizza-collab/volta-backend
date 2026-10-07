@@ -1,3 +1,7 @@
+# Correo sencillo y renting — publicados el 7 de octubre de 2026
+
+`onboarding-simple-email-2026-10` y la revisión 3 de `onboarding-commercial-2026-10` se publican después de verificar backend `e750344`, storefront `fc15c74` y tarifa de producción revisión 5. Tres botones en el correo; nuevos planes hasta 12 cuotas al 1 % mensual sobre saldo, con primera cuota después de firmar y antes de activar. Las solicitudes anteriores conservan condiciones. Traducciones ES/EN/IT/FR/PT. [Verificación](onboarding-phase2-simple-email.md).
+
 # Lista de tiendas simplificada — publicada el 6 de octubre de 2026
 
 `store-list-simple-2026-10` está activa en ES/EN/IT/FR/PT tras confirmar el storefront `87b8b0a` y su paquete público. La consulta del partner y de sus tiendas responde correctamente con su cuenta. [Alcance, pruebas y límite de revisión visual](store-list-simple.md).
