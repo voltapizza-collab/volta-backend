@@ -262,28 +262,27 @@ export const buildOnboardingEmail = (request, formalUrl) => {
   const safeBusinessName = escapeHtml(request.businessName);
   const safeFormalUrl = escapeHtml(formalUrl);
   const catalog = request.formalData?.commercialCatalog || onboardingCommercialCatalog();
-  const money = value => new Intl.NumberFormat('es-ES', { style: 'currency', currency: 'EUR' }).format(value / 100);
-  const lastPlan = catalog.installments[6];
-  const smsNotice = `Notificaciones SMS opcionales: ${new Intl.NumberFormat('es-ES', { maximumFractionDigits: 4 }).format(Number(catalog.sms?.unitPriceEur || SMS_SELL_PRICE_EUR))} € por parte de SMS. Un mensaje puede consumir varias partes según su longitud y caracteres. Volta incluye esta herramienta de comunicación. Puedes usarla cuando quieras recargando saldo por paquetes; el alta no obliga a recargar. La tarifa vigente se muestra antes de cada recarga.`;
+  const rentalMonths = Math.max(...(catalog.rental?.termOptions || []).map(plan => plan.months), catalog.rental?.durationMonths || 0) || 36;
   const choices = [
-    ['Al contado', `${money(catalog.posTotalCents)} IVA incluido. Un solo pago.`],
-    ['Compra a plazos', `De 2 a 6 cuotas mensuales sin intereses. Total: ${money(catalog.posTotalCents)}. En 6 cuotas: 5 de ${money(lastPlan[0])} y la última de ${money(lastPlan[5])}.`],
-    [catalog.rental.calculation === 'PRICE_BY_TERM' ? 'Renting hasta 36 meses' : 'Renting de 36 meses', catalog.rental.calculation === 'PRICE_BY_TERM'
-      ? 'Elige el número de mensualidades en el formulario, hasta un máximo de 36. La cuota se calcula dividiendo el precio del POS entre el plazo elegido, redondeada a céntimos. Verás cuota y total antes de enviar. El POS pasa a ser tuyo al terminar ese plazo y completar sus pagos, sin pago residual.'
-      : catalog.rental.monthlyCents
-      ? `${money(catalog.rental.monthlyCents)}/mes IVA incluido. Total: ${money(catalog.rental.monthlyCents * 36)}. El POS pasa a ser tuyo al finalizar el plazo y completar las 36 mensualidades.`
-      : 'La cuota se confirmará antes de firmar y pagar. El POS pasa a ser tuyo al finalizar el plazo y completar las 36 mensualidades.'],
-  ];
+    ['Al contado', 'PURCHASE'],
+    ['Compra a plazos', 'INSTALLMENTS'],
+    [`Renting ${catalog.rental?.calculation === 'PRICE_BY_TERM' ? 'hasta' : 'de'} ${rentalMonths} meses`, 'RENT_QUOTE'],
+  ].map(([title, mode]) => {
+    const url = new URL(formalUrl);
+    url.searchParams.set('posChoice', mode);
+    return { title, url: url.toString() };
+  });
+  const smsNotice = 'Las notificaciones SMS son opcionales y funcionan con saldo recargable.';
   const text = [
     `Hola ${request.name},`,
     "",
     `Hemos recibido la solicitud de ${request.businessName} en Volta Pizza.`,
     "Tu proceso entra ahora en la fase 2: validacion basica de datos legales y operativos.",
     "Necesitamos que completes el formulario con CIF/NIF/NIE, datos del responsable y documentacion basica para validar el alta.",
-    `Elige también cómo incorporar tu POS: contado, compra a plazos o renting ${catalog.rental.calculation === 'PRICE_BY_TERM' ? 'hasta' : 'de'} 36 meses, y revisa las notificaciones SMS. En esta fase no se cobra ni se firma. Confirmaremos precio, stock y entrega antes del pago.`,
-    ...choices.map(([title, description]) => `${title}: ${description}`),
+    'Elige cómo pagar tu POS. Verás los importes y las condiciones en el formulario.',
+    ...choices.map(({ title, url }) => `${title}: ${url}`),
     smsNotice,
-    'Podrás pagar por tarjeta mediante Stripe. En la compra al contado también se admite efectivo confirmado por Volta. Las tres modalidades están sujetas a stock; el contado pagado tiene prioridad entre asignaciones pendientes, respetando compromisos previos.',
+    'En esta fase no se cobra ni se firma. Confirmaremos los importes, el stock y la entrega antes del pago.',
     "",
     `Sube la informacion aqui: ${formalUrl}`,
     "",
@@ -300,12 +299,8 @@ export const buildOnboardingEmail = (request, formalUrl) => {
       <p>Completa los datos del negocio y del responsable, y adjunta la identificación y el documento fiscal. Después de nuestra revisión recibirás el correo para firmar el contrato y pagar.</p>
       <div style="margin:20px 0 10px;color:#3b008b;font-size:18px;font-weight:900">Elige cómo pagar tu POS</div>
       <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="border-collapse:separate;border-spacing:0 8px">
-        ${choices.map(([title, description]) => `<tr><td style="padding:14px;background:#f8f5ff;border:1px solid #decfff;border-radius:12px"><strong style="color:#3b008b;font-size:16px">${escapeHtml(title)}</strong><div style="margin-top:5px;line-height:1.5">${escapeHtml(description)}</div></td></tr>`).join('')}
+        ${choices.map(({ title, url }) => `<tr><td align="center" style="background:#3b008b;border-radius:14px;border:1px solid #6a3df0"><a href="${escapeHtml(url)}" style="display:block;padding:18px 22px;color:#ffffff;font-size:16px;font-weight:800;text-decoration:none;text-align:center;border-radius:14px">${escapeHtml(title)}</a></td></tr>`).join('')}
       </table>
-      <p style="font-size:13px;line-height:1.5">Pago por tarjeta mediante Stripe; para compra al contado, también efectivo confirmado por Volta. Suministro sujeto a stock. El contado pagado tiene prioridad entre asignaciones pendientes, respetando compromisos previos.</p>
-      <p style="margin:16px 0 22px;text-align:center">
-        <a href="${safeFormalUrl}" style="display:inline-block;background:#3b008b;color:#ffffff;padding:15px 26px;border-radius:999px;font-weight:900;text-decoration:none;box-shadow:0 8px 18px rgba(59,0,139,.24)">Completar fase 2</a>
-      </p>
       <p>${escapeHtml(smsNotice)}</p>
       <p>En esta fase no se cobra ni se firma. Confirmaremos los importes, el stock y la entrega antes del pago.</p>
       <div style="background:#fff8e7;border-left:5px solid #ffb61c;padding:12px 14px;margin:0 0 20px;color:#3b2c4a;font-size:13px">

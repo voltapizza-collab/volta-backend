@@ -8,7 +8,7 @@ test('new invitation describes a maximum; closure email uses the chosen rental t
   const commercialCatalog = await newOnboardingCatalog({ onboardingPricing: { findUnique: async () => ({ posTotalCents: 25000, revision: 4, defaults: { rentMode: 'CUSTOMER_TERM' } }) } });
   const mail = buildOnboardingEmail({ name: 'Test', businessName: 'Shop', formalData: { commercialCatalog } }, 'https://example.invalid/test');
   for (const text of [mail.text, mail.html]) {
-    assert.match(text, /hasta 36 meses/); assert.match(text, /Elige el número de mensualidades/);
+    assert.match(text, /hasta 36 meses/); assert.doesNotMatch(text, /La cuota se calcula|Elige el número de mensualidades/);
     assert.doesNotMatch(text, /completar las 36 mensualidades/);
   }
   const row = { name: 'Test', formalData: { closure: { offer: { workflow: 'SIGN_PAY_ACTIVATE', revision: 1, totalCents: 2083,
@@ -22,20 +22,19 @@ test('new invitation describes a maximum; closure email uses the chosen rental t
 
 test('invitation explains selection, stock and absence of payment or signature', () => {
   const email = buildOnboardingEmail({ name: '<script>test</script>', businessName: 'Test & Shop' }, 'https://example.invalid/onboarding/test');
-  assert.match(email.text, /renting de 36 meses/); assert.match(email.text, /no se cobra ni se firma/);
+  assert.match(email.text, /Renting de 36 meses/); assert.match(email.text, /no se cobra ni se firma/);
   assert.match(email.html, /&lt;script&gt;/); assert.doesNotMatch(email.html, /<script>/);
 });
 
-test('first email shows three visible payment options using the frozen application price', () => {
+test('first email shows only payment method buttons; prices and details remain in the form', () => {
   const commercialCatalog = onboardingCommercialCatalog(29999);
   commercialCatalog.rental.monthlyCents = 1250;
   const mail = buildOnboardingEmail({ name: 'Test', businessName: 'Test', formalData: { commercialCatalog } }, 'https://example.invalid/test');
   for (const body of [mail.html, mail.text]) {
-    assert.match(body, /299,99/); assert.match(body, /12,50/); assert.match(body, /450,00/);
-    assert.match(body, /tarjeta/); assert.match(body, /efectivo/); assert.match(body, /5 de 50,00/); assert.match(body, /49,99/);
-    assert.doesNotMatch(body, /250,00/);
-    assert.match(body, /Notificaciones SMS opcionales: 0,075 € por parte/);
-    assert.match(body, /el alta no obliga a recargar/);
+    assert.match(body, /Al contado/); assert.match(body, /Compra a plazos/); assert.match(body, /Renting de 36 meses/);
+    assert.doesNotMatch(body, /299,99|12,50|450,00|250,00|5 de 50,00|49,99|0,075|Stripe|prioridad/);
+    assert.match(body, /notificaciones SMS son opcionales/);
+    for (const mode of ['PURCHASE', 'INSTALLMENTS', 'RENT_QUOTE']) assert.match(body, new RegExp(`posChoice=${mode}`));
   }
 });
 test('closure email contains itemized initial payment, rental ownership, delivery and resume instructions', () => {

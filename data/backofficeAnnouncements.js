@@ -1,4 +1,16 @@
 // Add a user-facing note in the same change that delivers a feature.
+// Draft until the phase 2 email and method-prefill form are deployed together.
+export const onboardingSimpleEmailAnnouncementDraft = {
+  id: 'onboarding-simple-email-2026-10', revision: 1, category: 'improvement', severity: 'info',
+  title: 'Un correo de alta más sencillo',
+  message: 'El correo de fase 2 muestra tres botones para elegir el pago del POS. Los importes y las condiciones se revisan en el formulario. Al entrar desde un botón se propone ese método, conservando cualquier elección ya guardada.',
+  translations: {
+    en: { title: 'A simpler onboarding email', message: 'The phase 2 email shows three buttons to choose how to pay for the POS. Amounts and terms are reviewed in the form. A button suggests its payment method while preserving any saved choice.' },
+    it: { title: 'Un’email di registrazione più semplice', message: 'L’email della fase 2 mostra tre pulsanti per scegliere come pagare il POS. Importi e condizioni si consultano nel modulo. Il pulsante propone il metodo scelto conservando eventuali scelte già salvate.' },
+    fr: { title: 'Un e-mail d’inscription plus simple', message: 'L’e-mail de phase 2 affiche trois boutons pour choisir le paiement du POS. Les montants et conditions sont présentés dans le formulaire. Le bouton propose son mode de paiement en conservant tout choix déjà enregistré.' },
+    pt: { title: 'Um email de adesão mais simples', message: 'O email da fase 2 mostra três botões para escolher o pagamento do POS. Os valores e condições são consultados no formulário. O botão propõe o método escolhido, preservando qualquer escolha já guardada.' },
+  },
+};
 // Draft: publish only after POS 0.3.23 is installed and printing is verified on SUNMI.
 export const posPrintLayoutAnnouncementDraft = {
   id: "pos-print-layout-2026-10", revision: 1, category: "improvement", severity: "info",
