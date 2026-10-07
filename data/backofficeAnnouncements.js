@@ -1,5 +1,5 @@
 // Add a user-facing note in the same change that delivers a feature.
-// Publish once the email, contract display and card checkout are deployed together.
+// Backend, storefront and card-only checkout verified in production on 7 October 2026.
 export const onboardingPresentationAnnouncementDraft = {
   id: 'onboarding-presentation-card-2026-10', revision: 1, category: 'improvement', severity: 'info',
   title: 'Alta más clara y pago directo con tarjeta',
@@ -747,3 +747,4 @@ backofficeAnnouncements.push({ ...onboardingDefaultsAnnouncementDraft,
 
 backofficeAnnouncements.push({ ...simpleStoreListAnnouncementDraft, publishedAt: '2026-10-06T10:42:00.344Z', expiresAt: '2027-01-06T23:59:59.000Z' });
 backofficeAnnouncements.push({ ...onboardingSimpleEmailAnnouncementDraft, publishedAt: '2026-10-07T08:19:00.000Z', expiresAt: '2027-01-07T23:59:59.000Z' });
+backofficeAnnouncements.push({ ...onboardingPresentationAnnouncementDraft, publishedAt: '2026-10-07T08:40:00.000Z', expiresAt: '2027-01-07T23:59:59.000Z' });
