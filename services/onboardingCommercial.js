@@ -22,7 +22,7 @@ export function buildCommercialSelection(body, { draft = false, catalog = onboar
   const posChoice = ['PURCHASE', 'INSTALLMENTS', 'RENT_QUOTE'].includes(body.posChoice) ? body.posChoice : '';
   const count = Number(body.posInstallments);
   const posInstallments = posChoice === 'INSTALLMENTS' && Number.isInteger(count) && count >= 2 && count <= 6 ? count : null;
-  const flexibleRental = catalog.rental.calculation === 'PRICE_BY_TERM';
+  const flexibleRental = ['PRICE_BY_TERM', 'AMORTIZED_RENTAL'].includes(catalog.rental.calculation);
   const rentalInput = body.posRentalMonths;
   const rentalCount = (typeof rentalInput === 'number' || typeof rentalInput === 'string' && /^\d+$/.test(rentalInput)) ? Number(rentalInput) : NaN;
   const rentalPlan = flexibleRental ? catalog.rental.termOptions.find(plan => plan.months === rentalCount) : null;
@@ -44,7 +44,13 @@ export function buildCommercialSelection(body, { draft = false, catalog = onboar
         firstPaymentCents: payments?.[0] ?? (posChoice === 'RENT_QUOTE' ? monthlyRentCents : null), interval: posChoice === 'INSTALLMENTS' ? 'MONTHLY' : null,
         monthlyRentCents: posChoice === 'RENT_QUOTE' ? monthlyRentCents : null, depositCents: posChoice === 'RENT_QUOTE' ? catalog.rental.depositCents : null,
         durationMonths: posRentalMonths,
-        ...(posChoice === 'RENT_QUOTE' && flexibleRental ? { calculation: 'PRICE_BY_TERM', rentalTotalCents: rentalPlan?.totalCents ?? null } : {}),
+        ...(posChoice === 'RENT_QUOTE' && flexibleRental ? { calculation: catalog.rental.calculation, rentalTotalCents: rentalPlan?.totalCents ?? null } : {}),
+        ...(posChoice === 'RENT_QUOTE' && catalog.rental.calculation === 'AMORTIZED_RENTAL' && rentalPlan ? {
+          rentalPayments: rentalPlan.payments, rentalSchedule: rentalPlan.schedule,
+          principalCents: rentalPlan.principalCents, interestCents: rentalPlan.interestCents,
+          monthlyInterestPercent: rentalPlan.monthlyInterestPercent, annualNominalPercent: rentalPlan.annualNominalPercent,
+          annualEffectivePercent: rentalPlan.annualEffectivePercent, firstPaymentTiming: rentalPlan.firstPaymentTiming,
+          commissionCents: rentalPlan.commissionCents } : {}),
         ownership: posChoice === 'RENT_QUOTE' ? 'VOLTA' : 'PURCHASE_TERMS_PENDING',
         rentalTermsStatus: posChoice === 'RENT_QUOTE' ? 'QUOTE_REQUIRED' : null },
       sms: { ...withOnboardingSmsTariff(catalog).sms, initialRecharge: 'SEPARATE', initialCents: 0, credits: 0 },

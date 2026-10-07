@@ -266,7 +266,7 @@ export const buildOnboardingEmail = (request, formalUrl) => {
   const choices = [
     ['Al contado', 'PURCHASE'],
     ['Compra a plazos', 'INSTALLMENTS'],
-    [`Renting ${catalog.rental?.calculation === 'PRICE_BY_TERM' ? 'hasta' : 'de'} ${rentalMonths} meses`, 'RENT_QUOTE'],
+    [`Renting ${['PRICE_BY_TERM', 'AMORTIZED_RENTAL'].includes(catalog.rental?.calculation) ? 'hasta' : 'de'} ${rentalMonths} meses`, 'RENT_QUOTE'],
   ].map(([title, mode]) => {
     const url = new URL(formalUrl);
     url.searchParams.set('posChoice', mode);
@@ -455,7 +455,7 @@ export const buildClosureEmail = (request, contractUrl) => {
   const pos = offer.pos;
   const mode = pos.mode === 'RENT_QUOTE'
     ? Number.isInteger(pos.durationMonths) && pos.durationMonths >= 1 && pos.durationMonths <= 36
-      ? `Renting de ${pos.durationMonths} meses: ${money(pos.firstCents)}/mes; total ${money(pos.totalCents)}. Propiedad de Volta durante el plazo y transmisión al finalizarlo y completar las ${pos.durationMonths} mensualidades, sin pago residual.`
+      ? `Renting de ${pos.durationMonths} meses: ${money(pos.firstCents)}/mes${pos.calculation === 'AMORTIZED_RENTAL' ? `; última cuota ${money(pos.payments.at(-1))}; 1 % mensual sobre saldo pendiente` : ''}; total ${money(pos.totalCents)}. Propiedad de Volta durante el plazo y transmisión al finalizarlo y completar las ${pos.durationMonths} mensualidades, sin pago residual.`
       : `Alquiler: ${money(pos.firstCents)}/mes. Consulta la propiedad, duración y devolución en las condiciones de esta versión.`
     : `${pos.mode === 'INSTALLMENTS' ? `Compra en ${pos.payments.length} cuotas` : 'Compra al contado'}: ${money(pos.totalCents)} IVA incluido.`;
   const supply = pos.delivery ? `Disponibilidad: ${pos.delivery.status === 'IN_STOCK' ? 'stock confirmado' : 'reposición con fecha comprometida'}. Entrega prevista: ${pos.delivery.expected}; fecha límite: ${pos.delivery.latest}.` : '';

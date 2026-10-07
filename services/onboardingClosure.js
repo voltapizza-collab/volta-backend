@@ -47,20 +47,30 @@ export function buildClosureOffer(request, input, revision = 1) {
   const mode = selection.pos.mode;
   requireValue(['PURCHASE','INSTALLMENTS','RENT_QUOTE'].includes(mode), 'invalid_pos_choice');
   const rental = mode === 'RENT_QUOTE';
+  const financedRental = rental && selection.pos.calculation === 'AMORTIZED_RENTAL';
   const rentalMonths = rental ? selection.pos.durationMonths ?? 36 : null;
   if (rental) requireValue(Number.isInteger(rentalMonths) && rentalMonths >= 1 && rentalMonths <= 36, 'invalid_rental_months');
-  if (rental && selection.pos.calculation === 'PRICE_BY_TERM') {
+  if (rental && ['PRICE_BY_TERM', 'AMORTIZED_RENTAL'].includes(selection.pos.calculation)) {
     requireValue(input.rentCents === selection.pos.monthlyRentCents && input.depositCents === selection.pos.depositCents, 'rental_selection_changed');
   }
+  const frozenPlan = financedRental ? request.formalData.commercialCatalog?.rental?.termOptions?.find(plan => plan.months === rentalMonths) : null;
+  if (financedRental) requireValue(frozenPlan && rentalMonths <= 12 && frozenPlan.monthlyCents === input.rentCents &&
+    JSON.stringify(frozenPlan.payments) === JSON.stringify(selection.pos.rentalPayments) &&
+    frozenPlan.totalCents === selection.pos.rentalTotalCents, 'rental_selection_changed');
   if (!rental) requireValue(validPosPrice(input.posTotalCents), 'invalid_pos_price');
   requireValue(['IN_STOCK', 'REPLENISHMENT'].includes(input.stockStatus), 'stock_confirmation_required');
   const delivery = signatureFirst ? null : { status: input.stockStatus, expected: date(input.deliveryExpected), latest: date(input.deliveryLatest),
     reference: text(input.supplyReference, 3, 200), terms: text(input.supplyTerms, 30, 4000) };
   if (delivery) requireValue(delivery.expected >= today() && delivery.latest >= delivery.expected, 'delivery_date_required');
   const payments = mode === 'INSTALLMENTS' ? installmentAmounts(selection.pos.installmentCount, input.posTotalCents)
-    : mode === 'PURCHASE' ? [input.posTotalCents] : Array(rentalMonths).fill(cents(input.rentCents));
+    : mode === 'PURCHASE' ? [input.posTotalCents] : financedRental ? [...frozenPlan.payments] : Array(rentalMonths).fill(cents(input.rentCents));
   const pos = { mode, payments, firstCents: rental ? cents(input.rentCents) : payments[0], depositCents: rental ? cents(input.depositCents) : 0,
     totalCents: payments.reduce((a, b) => a + b, 0), durationMonths: rentalMonths,
+    ...(financedRental ? { calculation: 'AMORTIZED_RENTAL', principalCents: frozenPlan.principalCents,
+      interestCents: frozenPlan.interestCents, monthlyInterestPercent: frozenPlan.monthlyInterestPercent,
+      annualNominalPercent: frozenPlan.annualNominalPercent, annualEffectivePercent: frozenPlan.annualEffectivePercent,
+      firstPaymentTiming: frozenPlan.firstPaymentTiming, commissionCents: frozenPlan.commissionCents,
+      schedule: frozenPlan.schedule } : {}),
     ownershipTransfer: rental ? 'AFTER_TERM_AND_FULL_PAYMENT' : null, delivery,
     previousPriceCents: selection.pos.totalCents ?? null,
     priceChanged: !rental && selection.pos.totalCents !== input.posTotalCents,
@@ -92,8 +102,9 @@ export function buildClosureOffer(request, input, revision = 1) {
     `Cuenta declarada: ${f.accountHolder}, ${f.iban}.`,
     'ACCESO AL BACKOFFICE. El usuario y la contraseña inicial coinciden con el identificador del partner. El Comerciante es responsable de custodiar sus credenciales y elegir la contraseña de su cuenta. Puede cambiarla voluntariamente desde Ajustes, Cuenta y contraseña, y cerrar sesión en los dispositivos que deje de utilizar.',
     'EQUIPO POS',
-    rental ? `Renting: ${rentalMonths} mensualidades de ${money(pos.firstCents)}, IVA incluido. Total: ${money(pos.totalCents)}, IVA incluido. Duración de ${rentalMonths} meses desde la entrega operativa; primer mes por adelantado y restantes mensualmente desde esa entrega. La espera anterior a la entrega no devenga mensualidades y desplaza el inicio, fin y vencimientos restantes. Propiedad de Volta durante el plazo; al finalizar los ${rentalMonths} meses y completar las ${rentalMonths} mensualidades se transmite automáticamente al Comerciante sin precio residual ni mensualidad ${rentalMonths + 1}. No hay transmisión antes de completar el plazo elegido y todos sus pagos. Fianza reembolsable: ${money(pos.depositCents)}. Cancelación anticipada: ${pos.cancellationTerms}`
+    rental ? `Renting: ${rentalMonths} mensualidades${financedRental ? `, primera de ${money(pos.firstCents)} y última de ${money(payments.at(-1))}` : ` de ${money(pos.firstCents)}`}, IVA incluido. Total: ${money(pos.totalCents)}, IVA incluido. Duración de ${rentalMonths} meses desde la entrega operativa; primer mes por adelantado y restantes mensualmente desde esa entrega. La espera anterior a la entrega no devenga mensualidades y desplaza el inicio, fin y vencimientos restantes. Propiedad de Volta durante el plazo; al finalizar los ${rentalMonths} meses y completar las ${rentalMonths} mensualidades se transmite automáticamente al Comerciante sin precio residual ni mensualidad ${rentalMonths + 1}. No hay transmisión antes de completar el plazo elegido y todos sus pagos. Fianza reembolsable: ${money(pos.depositCents)}. Cancelación anticipada: ${pos.cancellationTerms}`
       : `Compra: ${money(pos.totalCents)} IVA incluido. ${payments.length > 1 ? `Sin intereses. Cuotas: ${payments.map(money).join(', ')}. Primera cuota antes de firmar; restantes cada mes a partir del primer pago.` : 'Pago completo antes de la firma.'}`,
+    ...(financedRental ? [`Interés del renting: 1 % mensual sobre saldo pendiente (12 % nominal anual; equivalente anual aproximado 12,68 %, sin comisiones). Precio del POS: ${money(pos.principalCents)}. Intereses totales: ${money(pos.interestCents)}. Cuotas: ${payments.map(money).join(', ')}. La primera cuota se paga después de firmar y antes de activar, sin intereses anticipados; las siguientes vencen mensualmente desde la entrega operativa. La última cuota ajusta los céntimos del saldo. No se devengan intereses durante la espera anterior a la entrega.`] : []),
     ...(pos.priceChanged ? [`Precio propuesto en fase 2: ${money(pos.previousPriceCents)}. Precio de esta oferta: ${money(pos.totalCents)}. Revisa y acepta el cambio antes de pagar.`] : []),
     delivery ? `Suministro sujeto al stock de Volta en las tres modalidades. Disponibilidad confirmada: ${delivery.status === 'IN_STOCK' ? 'en stock' : 'reposición con fecha comprometida'}. Referencia: ${delivery.reference}. Entrega prevista: ${delivery.expected}. Fecha límite: ${delivery.latest}. Pagar o firmar no garantiza entrega inmediata.` : 'El suministro del POS está sujeto al stock disponible de Volta. Volta confirma el suministro durante la revisión y comunica la entrega al comercio. El pago no implica una entrega física inmediata.',
     'Las compras al contado con pago íntegro confirmado tienen prioridad entre asignaciones pendientes, respetando equipos ya asignados y fechas comprometidas. Sin stock ni fecha de reposición comprometible, el expediente espera sin exigir pago inicial.',

@@ -76,7 +76,9 @@ test('review button publishes the exact reviewed contract and sends one resumabl
   assert.equal((await post({})).status, 200); assert.equal(emails.length, 2); // Explicit resend.
 });
 
-for (const mode of ['PURCHASE','INSTALLMENTS','RENT_QUOTE']) test(`signature before payment and automatic webhook activation: ${mode}`, async t => {
+for (const scenario of ['PURCHASE','INSTALLMENTS','RENT_QUOTE','FINANCED_RENT']) test(`signature before payment and automatic webhook activation: ${scenario}`, async t => {
+  const mode = scenario === 'FINANCED_RENT' ? 'RENT_QUOTE' : scenario;
+  const firstRent = scenario === 'FINANCED_RENT' ? 2199 : 2083;
   for (const key of ['GOOGLE_GEOCODING_KEY','GOOGLE_MAPS_API_KEY','REACT_APP_GOOGLE_KEY']) {
     const previous = process.env[key]; delete process.env[key];
     t.after(() => { if (previous === undefined) delete process.env[key]; else process.env[key] = previous; });
@@ -86,12 +88,21 @@ for (const mode of ['PURCHASE','INSTALLMENTS','RENT_QUOTE']) test(`signature bef
   t.after(() => { if (previousSecret === undefined) delete process.env.STRIPE_ONBOARDING_WEBHOOK_SECRET; else process.env.STRIPE_ONBOARDING_WEBHOOK_SECRET = previousSecret; });
   const f = fixture(mode); f.row().formalData.commercialSelection.sms.initialRecharge = 'SEPARATE';
   if (mode === 'RENT_QUOTE') {
-    const catalog = await newOnboardingCatalog({ onboardingPricing: { findUnique: async () => ({ posTotalCents: 25000, revision: 4, defaults: { rentMode: 'CUSTOMER_TERM' } }) } });
+    const catalog = await newOnboardingCatalog({ onboardingPricing: { findUnique: async () => ({ posTotalCents: 25000, revision: 4, defaults: { rentMode: scenario === 'FINANCED_RENT' ? 'FINANCED_TERM' : 'CUSTOMER_TERM' } }) } });
     f.row().formalData.commercialCatalog = catalog;
     f.row().formalData.commercialSelection = buildCommercialSelection({ posChoice: mode, posRentalMonths: 12,
       commercialAcknowledged: true, commercialVersion: catalog.version }, { catalog }).selection;
   }
-  const hash = await offered(f, { workflow: 'SIGN_PAY_ACTIVATE', ...(mode === 'RENT_QUOTE' ? { rentCents: 2083 } : {}) });
+  const hash = await offered(f, { workflow: 'SIGN_PAY_ACTIVATE', ...(mode === 'RENT_QUOTE' ? { rentCents: firstRent } : {}) });
+  if (scenario === 'FINANCED_RENT') {
+    const offer = f.row().formalData.closure.offer;
+    assert.equal(offer.pos.totalCents, 26390);
+    assert.equal(offer.pos.payments.at(-1), 2201);
+    assert.match(offer.documentText, /1 % mensual sobre saldo pendiente/);
+    assert.match(offer.documentText, /primera de 21.99 EUR y última de 22.01 EUR/);
+    assert.match(offer.documentText, /antes de activar, sin intereses anticipados/);
+    verifyOffer(offer);
+  }
   let partners = 0, stores = 0, emails = [], failMail = true;
   f.db.$executeRawUnsafe = async () => 1;
   f.db.partner = { findUnique: async () => null, create: async ({ data }) => { partners++; return { id: 10, ...data }; } };
@@ -120,7 +131,7 @@ for (const mode of ['PURCHASE','INSTALLMENTS','RENT_QUOTE']) test(`signature bef
   await post('/form/test-only/closure/refresh', {}); assert.equal(partners, 0);
   const session = [...f.sessions.values()][0];
   if (mode === 'RENT_QUOTE') {
-    assert.equal(session.amount_total, 2083);
+    assert.equal(session.amount_total, firstRent);
     assert.equal(f.row().formalData.closure.offer.pos.durationMonths, 12);
     assert.equal(f.row().formalData.signedContract.offerHash, hash);
   }
@@ -150,6 +161,21 @@ const selection = mode => {
   result.sms.initialRecharge = 'INCLUDED'; // Historical offer fixtures include a paid recharge.
   return result;
 };
+
+test('financed rental review keeps the signed schedule even if the general tariff changes', async () => {
+  const catalog = await newOnboardingCatalog({ onboardingPricing: { findUnique: async () => ({ posTotalCents: 25000, revision: 5, defaults: { rentMode: 'FINANCED_TERM' } }) } });
+  const row = request('RENT_QUOTE');
+  row.formalData.commercialCatalog = catalog;
+  row.formalData.commercialSelection = buildCommercialSelection({ posChoice: 'RENT_QUOTE', posRentalMonths: 12,
+    commercialAcknowledged: true, commercialVersion: catalog.version }, { catalog }).selection;
+  const review = reviewContract(row, { posTotalCents: 90000, defaults: { rentMode: 'FIXED', rentCents: 9999 } }, input().generalTerms);
+  assert.equal(review.offer.totalCents, 2199);
+  assert.equal(review.offer.pos.totalCents, 26390);
+  assert.equal(review.offer.pos.interestCents, 1390);
+  assert.throws(() => buildClosureOffer(row, { ...review.input, rentCents: 2000 }), /rental_selection_changed/);
+  row.formalData.commercialSelection.pos.rentalPayments = Array(12).fill(1);
+  assert.throws(() => buildClosureOffer(row, review.input), /rental_selection_changed/);
+});
 const request = (mode = 'PURCHASE') => ({ id: 1, token: 'test-only', status: 'IN_REVIEW', submittedAt: new Date(),
   formalData: { commercialSelection: selection(mode), legalName: 'Test', taxId: 'TEST', commercialName: 'Test store',
     legalRepresentative: 'Test', representativeRole: 'Owner', businessEmail: 'test@example.invalid',

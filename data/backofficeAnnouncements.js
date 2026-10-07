@@ -1,4 +1,17 @@
 // Add a user-facing note in the same change that delivers a feature.
+// Activate after both services and the new tariff are verified in production.
+export const onboardingFinancedRentalAnnouncementDraft = {
+  id: 'onboarding-commercial-2026-10', revision: 3, category: 'improvement', severity: 'info',
+  title: 'Renting hasta 12 cuotas, con el plazo que elijas',
+  message: 'Las nuevas altas permiten elegir hasta 12 cuotas, con un 1 % mensual sobre el saldo pendiente. La primera se paga después de firmar y antes de activar; las siguientes, mensualmente desde la entrega operativa. Revisa el calendario y el total en el formulario y el contrato.',
+  detail: 'Sin comisiones ni intereses durante la espera de entrega. La última cuota ajusta los céntimos. Las solicitudes y contratos anteriores conservan sus condiciones.',
+  translations: {
+    en: { title: 'Rental in up to 12 payments, with your chosen term', message: 'New applications offer up to 12 payments at 1% monthly interest on the outstanding balance. The first is paid after signing and before activation; the rest are monthly from operational delivery. Review the schedule and total in the form and contract.', detail: 'No fees or interest while awaiting delivery. The last payment adjusts rounding. Existing applications and contracts retain their terms.' },
+    it: { title: 'Noleggio fino a 12 rate, con la durata che scegli', message: 'Le nuove richieste consentono fino a 12 rate, con interesse mensile dell’1% sul saldo residuo. La prima si paga dopo la firma e prima dell’attivazione; le successive mensilmente dalla consegna operativa. Verifica il calendario e il totale nel modulo e nel contratto.', detail: 'Nessuna commissione né interessi durante l’attesa della consegna. L’ultima rata adegua i centesimi. Le richieste e i contratti precedenti conservano le proprie condizioni.' },
+    fr: { title: 'Location jusqu’à 12 mensualités, selon votre choix', message: 'Les nouvelles demandes permettent jusqu’à 12 mensualités, avec un intérêt de 1 % par mois sur le solde restant. La première est payée après signature et avant activation ; les suivantes chaque mois à compter de la livraison opérationnelle. Vérifiez l’échéancier et le total dans le formulaire et le contrat.', detail: 'Sans frais ni intérêts pendant l’attente de la livraison. La dernière mensualité ajuste les centimes. Les demandes et contrats précédents conservent leurs conditions.' },
+    pt: { title: 'Renting até 12 prestações, com o prazo que escolher', message: 'As novas candidaturas permitem até 12 prestações, com juros de 1% ao mês sobre o saldo em dívida. A primeira é paga após a assinatura e antes da ativação; as restantes mensalmente desde a entrega operacional. Consulte o calendário e o total no formulário e no contrato.', detail: 'Sem comissões nem juros durante a espera de entrega. A última prestação ajusta os cêntimos. As candidaturas e contratos anteriores mantêm as suas condições.' },
+  },
+};
 // Draft until the phase 2 email and method-prefill form are deployed together.
 export const onboardingSimpleEmailAnnouncementDraft = {
   id: 'onboarding-simple-email-2026-10', revision: 1, category: 'improvement', severity: 'info',

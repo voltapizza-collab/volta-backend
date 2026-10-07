@@ -1,6 +1,7 @@
 import { onboardingCommercialCatalog, validPosPrice } from './onboardingCommercial.js';
 import { normalizeOnboardingDefaults, rentalMonthlyCents } from './onboardingDefaults.js';
 import { smsPricingInfo, SMS_SELL_PRICE_EUR } from './smsCredits.js';
+import { rentalPlan } from './onboardingRental.js';
 
 export async function readOnboardingPricing(db) {
   const row = await db.onboardingPricing.findUnique({ where: { id: 1 } });
@@ -21,6 +22,15 @@ export async function newOnboardingCatalog(db) {
       }) };
   }
   catalog.sms = { ...catalog.sms, ...smsPricingInfo(settings.smsUnitPriceEur || SMS_SELL_PRICE_EUR) };
+  if (settings.rentMode === 'FINANCED_TERM') {
+    catalog.version += '-rental-1pct-upfront-v1';
+    catalog.rental = { status: 'PROPOSED', calculation: 'AMORTIZED_RENTAL',
+      monthlyCents: null, totalCents: null, durationMonths: null, maxMonths: 12,
+      depositCents: settings.depositCents ?? 0, ownershipTransfer: 'AFTER_TERM_AND_FULL_PAYMENT',
+      monthlyInterestPercent: 1, annualNominalPercent: 12, annualEffectivePercent: 12.682503,
+      firstPaymentTiming: 'UPFRONT', commissionCents: 0,
+      termOptions: Array.from({ length: 12 }, (_, i) => rentalPlan(price.posTotalCents, i + 1)) };
+  }
   return catalog;
 }
 export async function updateOnboardingPricing(db, input, actor) {
