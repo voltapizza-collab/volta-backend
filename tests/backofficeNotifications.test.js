@@ -2,12 +2,27 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { ingredientRemovalAnnouncement } from "../data/backofficeAnnouncements.js";
 import { ingredientRestaurantTaxonomyAnnouncementDraft } from '../data/backofficeAnnouncements.js';
+import { qrDeliveryClaimAnnouncementDraft } from '../data/backofficeAnnouncements.js';
+import { qrCustomerMetricsAnnouncement } from '../data/backofficeAnnouncements.js';
 import express from "express";
 import { backofficeAnnouncements } from "../data/backofficeAnnouncements.js";
 import { buildSmsBalanceNotification, buildBackofficeNotifications, validateAnnouncement } from "../services/backofficeNotifications.js";
 import backofficeNotificationsRoutes from "../routes/backofficeNotifications.js";
 
 const partner = { id: 7, smsCredits: 10, smsLowBalanceThreshold: 50 };
+test('QR customer metrics announcement explains registration and distinguishes visits from customers', () => {
+  assert.ok(backofficeAnnouncements.includes(qrCustomerMetricsAnnouncement));
+  assert.ok(validateAnnouncement(qrCustomerMetricsAnnouncement));
+  for (const locale of ['en', 'it', 'fr', 'pt']) {
+    for (const field of ['title', 'message', 'detail']) assert.ok(qrCustomerMetricsAnnouncement.translations[locale][field]);
+  }
+});
+test('QR delivery announcement stays unpublished until the coordinated release', () => {
+  assert.ok(!backofficeAnnouncements.some(row => row.id === qrDeliveryClaimAnnouncementDraft.id));
+  for (const locale of ['en', 'it', 'fr', 'pt']) {
+    for (const field of ['title', 'message', 'detail']) assert.ok(qrDeliveryClaimAnnouncementDraft.translations[locale][field]);
+  }
+});
 
 test('restaurant taxonomy announcement stays out of the feed until the coordinated release', () => {
   const draft = ingredientRestaurantTaxonomyAnnouncementDraft;

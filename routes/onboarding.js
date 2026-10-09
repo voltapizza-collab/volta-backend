@@ -14,6 +14,7 @@ import { newOnboardingCatalog, readOnboardingPricing } from '../services/onboard
 import onboardingClosureRoutes from './onboardingClosure.js';
 import { closureView, createClosureService, hasClosure, lockedClosure, verifyOffer, signsBeforePayment, contractReference } from '../services/onboardingClosure.js';
 import * as stripe from '../services/stripe.js';
+import demoRequestsRoutes, { isDemoRequest } from './demoRequests.js';
 
 const MAX_DOCUMENTS = 8;
 const MAX_DOCUMENT_SIZE_BYTES = 8 * 1024 * 1024;
@@ -180,6 +181,7 @@ const buildFormalUrl = (token) => `${publicFrontendUrl()}/onboarding/${encodeURI
 const buildContractUrl = (token) => `${buildFormalUrl(token)}?contract=1`;
 
 const mapRequestBase = (request) => ({
+  requestKind: isDemoRequest(request) ? 'DEMO' : 'ONBOARDING',
   commercialCatalog: withOnboardingSmsTariff(request.formalData?.commercialCatalog || onboardingCommercialCatalog()),
   commercialClosurePending: needsCommercialClosure(request),
   closure: closureView(request),
@@ -198,7 +200,7 @@ const mapRequestBase = (request) => ({
   submittedAt: request.submittedAt,
   reviewedAt: request.reviewedAt,
   reviewerNote: request.reviewerNote,
-  formalUrl: buildFormalUrl(request.token),
+  formalUrl: isDemoRequest(request) ? null : buildFormalUrl(request.token),
   createdAt: request.createdAt,
   updatedAt: request.updatedAt,
 });
@@ -247,7 +249,7 @@ const buildVoltaSignature = () => `
         <div style="color:#000000;font-size:14px;line-height:1.5">Gracias,</div>
         <div style="margin-top:4px;color:#3b008b;font-size:18px;line-height:1.2;font-weight:900">Equipo Volta Pizza</div>
         <div style="margin-top:8px;color:#4b405a;font-size:13px;line-height:1.5">
-          THE PIZZA SALE ENGINE<br>
+          El motor para vender pizzas por Internet<br>
           <a href="mailto:${escapeHtml(process.env.ONBOARDING_REPLY_TO || "voltapizza@gmail.com")}" style="color:#6a3df0;text-decoration:none;font-weight:700">${escapeHtml(process.env.ONBOARDING_REPLY_TO || "voltapizza@gmail.com")}</a>
           <span style="color:#ffb61c;font-weight:900"> | </span>
           <a href="https://voltapizza.com" style="color:#6a3df0;text-decoration:none;font-weight:700">voltapizza.com</a>
@@ -998,6 +1000,7 @@ export default function onboardingRoutes(prisma, { sendEmail = sendSmtpEmail, st
   const router = express.Router();
   const mapRequest = async request => {
     const mapped = mapRequestBase(request);
+    if (isDemoRequest(request)) return { ...mapped, token: undefined, commercialCatalog: null, commercialClosurePending: false };
     return { ...mapped, commercialCatalog: { ...mapped.commercialCatalog, sms: smsPricingInfo(await readSmsPrice(prisma)) } };
   };
   const closureService = createClosureService(prisma, stripeDeps);
@@ -1118,6 +1121,7 @@ export default function onboardingRoutes(prisma, { sendEmail = sendSmtpEmail, st
     if (completed.formalData.credentialsNotification?.emailStatus !== 'SENT') throw Object.assign(new Error('welcome_delivery_failed'), { status: 503 });
     return completed;
   };
+  router.use(demoRequestsRoutes(prisma, { mail, mapRequest, buildOnboardingEmail, buildFormalUrl }));
   router.use(onboardingClosureRoutes(prisma, { mapRequest, stripeDeps, draftContract, completePaid }));
   router.post('/requests/:id/credentials/send', async (req, res) => {
     try {

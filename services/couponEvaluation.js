@@ -1,3 +1,4 @@
+import { isDeliveryClaimQr } from './couponQrClaims.js';
 const money = (value) => Math.round(Number(value || 0) * 100) / 100;
 const json = (value, fallback = {}) => {
   try { return typeof value === "string" ? JSON.parse(value) : value ?? fallback; }
@@ -27,6 +28,7 @@ export function evaluateCoupon(coupon, { eligibleSubtotal = 0, deliveryFee = 0, 
     minAmount, missingAmount, subtotal: money(eligibleSubtotal),
     discount: status === "valid" ? calculateCouponDiscount(coupon, eligibleSubtotal, { deliveryFee }) : 0 });
   if (!coupon) return result("not_found", "Cupón no encontrado.");
+  if (isDeliveryClaimQr(coupon)) return result("claim_required", "Escanea el QR y solicita tu cupón de envío gratis por SMS.");
   if (coupon.status !== "ACTIVE") return result(String(coupon.status || "inactive").toLowerCase(),
     coupon.status === "USED" ? "Este cupón ya alcanzó su límite de usos." :
     coupon.status === "EXPIRED" ? "Este cupón ya caducó." : "Este cupón no está activo.");
@@ -55,5 +57,5 @@ export function evaluateCoupon(coupon, { eligibleSubtotal = 0, deliveryFee = 0, 
     hasProducts ? "Estos productos ya tienen descuento o no admiten cupón. Añade productos sin oferta; Top Deals, Promos, Boost y recompensas quedan excluidos."
       : "Cupón guardado. Añade productos sin oferta y el descuento se aplicará automáticamente.");
   if (missingAmount > 0) return result("min_not_met", `El cupón requiere EUR ${minAmount.toFixed(2)} en productos sin oferta. Faltan EUR ${missingAmount.toFixed(2)}.`);
-  return result("valid", "Cupón aplicado. El descuento solo afecta a los productos compatibles.");
+  return result("valid", isDeliveryFreeCoupon(coupon) ? "Cupón aplicado a los gastos de envío compatibles." : "Cupón aplicado. El descuento solo afecta a los productos compatibles.");
 }

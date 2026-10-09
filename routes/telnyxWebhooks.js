@@ -1,7 +1,8 @@
 import express from "express";
 import { verifyTelnyxWebhookSignature } from "../services/telnyx.js";
+import { writeQrMessageMeta } from "../services/couponQrClaims.js";
 
-const COUPON_CODE_PATTERN = /\bVOL-(?:RC|PF|CD|CS)[A-Z0-9]{6}\b/i;
+const COUPON_CODE_PATTERN = /\bVOL-(?:(?:RC|PF|CD|CS)[A-Z0-9]{6}|DF(?:[A-Z0-9]{32}|[A-Z0-9]{10}|[A-Z0-9]{6}))\b/i;
 const STOP_WORDS = new Set(["STOP", "STOPALL", "UNSUBSCRIBE", "CANCEL", "END", "QUIT"]);
 
 const readMetaObject = (value) => {
@@ -67,6 +68,7 @@ async function updateCouponMessageStatus(prisma, event) {
     select: {
       id: true,
       meta: true,
+      sourceQrId: true,
     },
   });
 
@@ -85,7 +87,7 @@ async function updateCouponMessageStatus(prisma, event) {
 
   const occurredAt = data.occurred_at || new Date().toISOString();
   const nextMessage = {
-    ...currentMessage,
+    ...(coupon.sourceQrId ? {} : currentMessage),
     provider: "telnyx",
     providerMessageId: payload.id || currentMessage.providerMessageId || null,
     eventId: data.id || currentMessage.eventId || null,
@@ -99,6 +101,10 @@ async function updateCouponMessageStatus(prisma, event) {
     ...(eventType === "message.finalized" ? { finalizedAt: occurredAt } : {}),
   };
 
+  if (coupon.sourceQrId) {
+    await writeQrMessageMeta(prisma, coupon.id, { messageStatus: nextStatus, message: nextMessage });
+    return { ok: true, couponCode, status: nextStatus };
+  }
   await prisma.coupon.update({
     where: { id: coupon.id },
     data: {

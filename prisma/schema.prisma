@@ -640,6 +640,7 @@ model Customer {
   daysOff           Int?
   activity          CustomerActivity    @default(HOT)
   isRestricted      Boolean             @default(false)
+  marketingSuppressed Boolean           @default(false)
   restrictedAt      DateTime?
   restrictionReason String?
 
@@ -796,6 +797,9 @@ model Coupon {
   meta         Json?
   segments     Json?
   assignedToId Int?
+  sourceQrId   Int?
+  claimPhone   String?                  @db.VarChar(20)
+  qrViewCount  Int                      @default(0)
   visibility   CouponVisibility     @default(PUBLIC)
   activeFrom   DateTime?
   expiresAt    DateTime?
@@ -813,7 +817,10 @@ model Coupon {
   game         Game?                @relation("GameCoupons", fields: [gameId], references: [id], onDelete: SetNull)
   redemptions  CouponRedemption[]   @relation("CouponToRedemptions")
   reservations CouponReservation[]
+  sourceQr     Coupon?                 @relation("QrClaimCoupons", fields: [sourceQrId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  claimedCoupons Coupon[]              @relation("QrClaimCoupons")
 
+  @@unique([sourceQrId, claimPhone])
   @@index([partnerId])
   @@index([status])
   @@index([assignedToId])
@@ -822,6 +829,13 @@ model Coupon {
   @@index([channel])
   @@index([gameId])
   @@index([acquisition, gameId])
+}
+model CouponClaimThrottle {
+  key       String   @id @db.VarChar(64)
+  attempts  Int      @default(1)
+  expiresAt DateTime
+
+  @@index([expiresAt])
 }
 model CouponReservation {
   id              Int      @id @default(autoincrement())

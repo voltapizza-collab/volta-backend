@@ -1,3 +1,4 @@
+import { getOrderDisplayCode } from "../services/orderDisplayCode.js";
 import express from "express";
 
 const parseMaybeJson = (value, fallback) => {
@@ -128,6 +129,7 @@ export default function salesRoutes(prisma) {
       return res.json({
         ok: true,
         code: sale.code,
+        displayCode: getOrderDisplayCode(sale),
         stage,
         status: sale.status,
         processed: sale.processed,

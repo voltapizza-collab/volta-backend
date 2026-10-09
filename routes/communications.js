@@ -133,6 +133,7 @@ const resolveRecipients = async (
         partnerId,
         id: { in: customerIds },
         isRestricted: false,
+        marketingSuppressed: false,
       },
       select: customerSelect,
     });
@@ -152,6 +153,7 @@ const resolveRecipients = async (
     where: {
       partnerId,
       isRestricted: false,
+      marketingSuppressed: false,
       ...(segments.length ? { segment: { in: segments } } : {}),
       ...(activities.length ? { activity: { in: activities } } : {}),
       ...(storeWhere || zipWhere ? { AND: [storeWhere, zipWhere].filter(Boolean) } : {}),

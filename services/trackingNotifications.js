@@ -1,3 +1,4 @@
+import { getOrderDisplayCode } from "./orderDisplayCode.js";
 import { reserveSmsCreditForMessage, refundSmsCreditForMessage } from "./smsCredits.js";
 import { estimateSmsParts, normalizeE164Phone, sendTelnyxSms } from "./telnyx.js";
 import {
@@ -97,7 +98,7 @@ const getSaleCustomerName = (sale) => {
 const buildBoostPurchasedText = ({ partnerName, storeName, sale, occurredAt }) => {
   const brand = smsBrand(partnerName);
   const store = shortSmsPart(storeName || "tienda", 24);
-  const code = cleanSmsPart(sale?.code || "pedido");
+  const code = cleanSmsPart(sale?.code || sale?.id ? getOrderDisplayCode(sale) : "pedido");
   const amount = Number(sale?.boostAmount || 0);
   const currency = cleanSmsPart(sale?.currency || "EUR");
   const target = Number(sale?.boostTargetPosition || 0);

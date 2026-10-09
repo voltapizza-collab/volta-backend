@@ -457,6 +457,57 @@ test("Telnyx webhook accepts status event and updates coupon message metadata", 
   }
 });
 
+for (const claimCode of ["VOL-DF0123456789ABCDEF0123456789ABCDEF", "VOL-DF7K9MX4T2QP"]) test(`Telnyx webhook recognizes private delivery claim coupon ${claimCode.length} characters`, async () => {
+  const env = snapshotEnv();
+  process.env.TELNYX_SKIP_WEBHOOK_VERIFY = "true";
+
+  let updatedMeta = null;
+  const prisma = {
+    coupon: {
+      findUnique: async () => ({ id: 1, meta: { message: { status: "queued" } } }),
+      update: async ({ data }) => {
+        updatedMeta = data.meta;
+        return {};
+      },
+    },
+    customer: {
+      updateMany: async () => ({ count: 0 }),
+    },
+  };
+  const app = express();
+  app.use(express.json({ verify: (req, _res, buf) => { req.rawBody = buf.toString("utf8"); } }));
+  app.use("/api/webhooks", telnyxWebhooksRoutes(prisma));
+  const server = await listen(app);
+
+  try {
+    const port = server.address().port;
+    const response = await fetch(`http://127.0.0.1:${port}/api/webhooks/telnyx`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        data: {
+          id: "event_test",
+          event_type: "message.finalized",
+          occurred_at: "2026-04-30T00:00:00Z",
+          payload: {
+            id: "msg_test",
+            tags: [`coupon:${claimCode}`],
+            to: [{ status: "delivered", phone_number: "+34612345678" }],
+          },
+        },
+      }),
+    });
+
+    assert.equal(response.status, 200);
+    await new Promise((resolve) => setTimeout(resolve, 25));
+    assert.equal(updatedMeta.messageStatus, "delivered");
+    assert.equal(updatedMeta.message.providerMessageId, "msg_test");
+  } finally {
+    server.close();
+    restoreEnv(env);
+  }
+});
+
 test("Telnyx webhook handles STOP opt-out by restricting matching customer", async () => {
   const env = snapshotEnv();
   process.env.TELNYX_SKIP_WEBHOOK_VERIFY = "true";

@@ -1,4 +1,141 @@
+// Draft: user requested local review; do not add to the feed before an authorized deployment.
+export const landingProductHeroAnnouncementDraft = {
+  "id": "landing-real-product-hero-2026-10",
+  "revision": 1,
+  "category": "improvement",
+  "severity": "info",
+  "title": "Volta muestra su producto en portada",
+  "message": "La portada combina una laptop con el backoffice y un móvil con el Storefront real, conservando los textos y botones comerciales.",
+  "detail": "La composición se adapta a escritorio, tablet y móvil. Las capturas muestran el inventario de la demo y la carta pública de MyCrushPizza, sin añadir métricas comerciales. Recupera dos engranajes de fondo con giro lento; se desactivan en móvil y respetan el movimiento reducido. Las modalidades de incorporación tienen tarjetas más claras, el footer recupera THE PIZZA SALE ENGINE y la pizza original gira suavemente junto a los engranajes.",
+  "translations": {
+    "en": {
+      "title": "Volta shows its product on the homepage",
+      "message": "The homepage combines a laptop displaying the backoffice with a phone showing the real Storefront, preserving the commercial copy and buttons.",
+      "detail": "The composition adapts to desktop, tablet and mobile. Screenshots show the demo inventory and the public MyCrushPizza menu without adding business metrics. Two slow background gears return; they are disabled on mobile and respect reduced motion. Onboarding options have clearer cards, the footer brings back THE PIZZA SALE ENGINE, and the original pizza rotates gently beside the gears."
+    },
+    "it": {
+      "title": "Volta mostra il prodotto in homepage",
+      "message": "La homepage combina un laptop con il backoffice e un telefono con lo Storefront reale, mantenendo testi e pulsanti commerciali.",
+      "detail": "La composizione si adatta a desktop, tablet e mobile. Le schermate mostrano l’inventario della demo e il menu pubblico di MyCrushPizza senza aggiungere metriche commerciali. Tornano due ingranaggi di sfondo a rotazione lenta; sono disattivati su mobile e rispettano il movimento ridotto. Le modalità di adesione hanno schede più chiare, il footer riprende THE PIZZA SALE ENGINE e la pizza originale ruota lentamente accanto agli ingranaggi."
+    },
+    "fr": {
+      "title": "Volta présente son produit en page d’accueil",
+      "message": "La page d’accueil associe un ordinateur affichant le backoffice et un téléphone montrant le véritable Storefront, en conservant les textes et boutons commerciaux.",
+      "detail": "La composition s’adapte aux ordinateurs, tablettes et mobiles. Les captures montrent l’inventaire de démonstration et la carte publique de MyCrushPizza sans ajouter de mesures commerciales. Deux engrenages de fond tournent lentement ; ils sont désactivés sur mobile et respectent la réduction des animations. Les formules d’adhésion ont des cartes plus lisibles, le pied de page retrouve THE PIZZA SALE ENGINE et la pizza d’origine tourne doucement à côté des engrenages."
+    },
+    "pt": {
+      "title": "A Volta mostra o produto na página inicial",
+      "message": "A página inicial combina um portátil com o backoffice e um telemóvel com o Storefront real, mantendo os textos e botões comerciais.",
+      "detail": "A composição adapta-se a computador, tablet e telemóvel. As capturas mostram o inventário da demonstração e o menu público da MyCrushPizza sem adicionar métricas comerciais. Regressam duas engrenagens de fundo com rotação lenta; ficam desativadas no telemóvel e respeitam o movimento reduzido. As modalidades de adesão têm cartões mais claros, o rodapé recupera THE PIZZA SALE ENGINE e a pizza original gira suavemente junto às engrenagens."
+    }
+  }
+};
+export const qrSmsConfirmationAnnouncement = {
+  "id": "qr-sms-confirmation-2026-10",
+  "revision": 1,
+  "category": "improvement",
+  "severity": "info",
+  "publishedAt": "2026-10-09T10:01:37.198790Z",
+  "expiresAt": "2027-01-09T23:59:59.000Z",
+  "title": "Estado del SMS más claro",
+  "message": "La confirmación del QR de envío gratis muestra texto gris oscuro sobre fondo claro y distingue un SMS en camino de una solicitud anterior.",
+  "detail": "Repetir la solicitud no envía otro SMS. Si el envío falla, la pantalla lo indica y pide contactar con la pizzería.",
+  "translations": {
+    "en": {
+      "title": "Clearer SMS status",
+      "message": "The free-delivery QR confirmation uses dark grey text on a light background and distinguishes an SMS on its way from a previous request.",
+      "detail": "Repeating the request does not send another SMS. If sending fails, the page says so and asks the customer to contact the pizzeria."
+    },
+    "it": {
+      "title": "Stato SMS più chiaro",
+      "message": "La conferma del QR di consegna gratuita usa testo grigio scuro su sfondo chiaro e distingue un SMS in arrivo da una richiesta precedente.",
+      "detail": "Ripetere la richiesta non invia un altro SMS. Se l’invio fallisce, la pagina lo indica e invita a contattare la pizzeria."
+    },
+    "fr": {
+      "title": "Un statut SMS plus clair",
+      "message": "La confirmation du QR de livraison offerte utilise un texte gris foncé sur fond clair et distingue un SMS en cours de livraison d’une demande précédente.",
+      "detail": "Répéter la demande n’envoie pas un autre SMS. En cas d’échec, la page l’indique et invite à contacter la pizzeria."
+    },
+    "pt": {
+      "title": "Estado do SMS mais claro",
+      "message": "A confirmação do QR de entrega grátis usa texto cinzento escuro sobre fundo claro e distingue um SMS a caminho de um pedido anterior.",
+      "detail": "Repetir o pedido não envia outro SMS. Se o envio falhar, a página indica-o e pede para contactar a pizzaria."
+    }
+  }
+};
+export const qrSingleSmsAnnouncement = {
+  "id": "qr-short-codes-single-sms-2026-10",
+  "revision": 1,
+  "category": "improvement",
+  "severity": "info",
+  "publishedAt": "2026-10-09T09:23:46.011029Z",
+  "expiresAt": "2027-01-09T23:59:59.000Z",
+  "title": "Cupones compactos y un único SMS",
+  "message": "Los nuevos cupones de envío gratis por QR tienen códigos de 16 caracteres. Al solicitarlo, el modal se cierra y aparece una confirmación, sin botón de reenvío.",
+  "detail": "Se realiza un único intento de SMS por teléfono y campaña, incluso si se repite la solicitud. Los cupones ya enviados siguen siendo válidos. Si el envío falla, el beneficio y el cliente quedan guardados para su revisión por la pizzería.",
+  "translations": {
+    "en": {
+      "title": "Compact coupons and a single SMS",
+      "message": "New QR free-delivery coupons have 16-character codes. After the request, the modal closes and a confirmation appears without a resend button.",
+      "detail": "Only one SMS attempt is made per phone and campaign, even if the request is repeated. Previously sent coupons remain valid. If sending fails, the benefit and customer stay saved for the pizzeria to review."
+    },
+    "it": {
+      "title": "Coupon compatti e un solo SMS",
+      "message": "I nuovi coupon di consegna gratuita tramite QR hanno codici di 16 caratteri. Dopo la richiesta, il modulo si chiude e appare una conferma senza pulsante di reinvio.",
+      "detail": "È previsto un solo tentativo SMS per telefono e campagna, anche ripetendo la richiesta. I coupon già inviati restano validi. Se l’invio fallisce, il beneficio e il cliente restano salvati per la verifica della pizzeria."
+    },
+    "fr": {
+      "title": "Des coupons courts et un seul SMS",
+      "message": "Les nouveaux coupons de livraison offerte par QR ont des codes de 16 caractères. Après la demande, la fenêtre se ferme et une confirmation apparaît sans bouton de renvoi.",
+      "detail": "Une seule tentative de SMS est effectuée par téléphone et campagne, même si la demande est répétée. Les coupons déjà envoyés restent valables. En cas d’échec, l’avantage et le client restent enregistrés pour vérification par la pizzeria."
+    },
+    "pt": {
+      "title": "Cupões compactos e um único SMS",
+      "message": "Os novos cupões de entrega grátis por QR têm códigos de 16 caracteres. Após o pedido, a janela fecha e aparece uma confirmação sem botão de reenvio.",
+      "detail": "É feita uma única tentativa de SMS por telefone e campanha, mesmo repetindo o pedido. Os cupões já enviados continuam válidos. Se o envio falhar, o benefício e o cliente ficam guardados para revisão pela pizzaria."
+    }
+  }
+};
 // Add a user-facing note in the same change that delivers a feature.
+export const qrCustomerMetricsAnnouncement = {
+  id: 'qr-customer-metrics-2026-10', revision: 1, category: 'improvement', severity: 'info',
+  publishedAt: '2026-10-09T09:05:00.000Z', expiresAt: '2027-01-09T23:59:59.000Z',
+  title: 'Resultados claros para tus tokens QR',
+  message: 'Los tokens de envío gratis muestran escaneos/visitas y clientes nuevos incorporados. En Ver detalle puedes consultar clientes existentes, SMS y cupones utilizados.',
+  detail: 'Al solicitar el cupón se busca el teléfono en tu base de clientes: si existe, se reutiliza su ficha; si es nuevo, se guarda antes de enviar el SMS. Un fallo de envío no elimina el alta. Las visitas repetidas no son personas únicas.',
+  translations: {
+    en: { title: 'Clear results for your QR tokens', message: 'Free-delivery tokens show scans/visits and newly added customers. View details lists existing customers, SMS and used coupons.', detail: 'When a coupon is requested, the phone number is checked against your customers: an existing record is reused; a new one is saved before sending the SMS. A delivery failure does not remove the customer. Repeat visits are not unique people.' },
+    it: { title: 'Risultati chiari per i tuoi token QR', message: 'I token di consegna gratuita mostrano scansioni/visite e nuovi clienti registrati. Nei dettagli trovi clienti esistenti, SMS e coupon utilizzati.', detail: 'Alla richiesta del coupon si cerca il telefono nella tua base clienti: una scheda esistente viene riutilizzata; una nuova viene salvata prima dell’SMS. Un errore di invio non elimina il cliente. Le visite ripetute non sono persone uniche.' },
+    fr: { title: 'Des résultats clairs pour vos tokens QR', message: 'Les tokens de livraison offerte affichent les scans/visites et les nouveaux clients enregistrés. Les détails présentent les clients existants, les SMS et les coupons utilisés.', detail: 'Lors de la demande, le téléphone est recherché dans votre base clients : la fiche existante est réutilisée, ou une nouvelle est enregistrée avant l’envoi du SMS. Un échec d’envoi ne supprime pas le client. Les visites répétées ne sont pas des personnes uniques.' },
+    pt: { title: 'Resultados claros para os seus tokens QR', message: 'Os tokens de entrega grátis mostram leituras/visitas e novos clientes registados. Nos detalhes encontra clientes existentes, SMS e cupões utilizados.', detail: 'Ao pedir o cupão, o telefone é procurado na sua base de clientes: reutiliza-se o registo existente ou guarda-se um novo antes de enviar o SMS. Uma falha no envio não elimina o cliente. Visitas repetidas não são pessoas únicas.' },
+  },
+};
+// Draft: enable only after the QR claim migration and both applications are deployed.
+export const qrDeliveryClaimAnnouncementDraft = {
+  id: 'qr-delivery-sms-2026-10', revision: 1, category: 'improvement', severity: 'info',
+  title: 'Tokens QR con envío gratis por SMS',
+  message: 'En Tokens QR puedes elegir Envío gratis. El cliente introduce nombre y teléfono y recibe un cupón individual por SMS, con 15, 20 o 30 días de validez desde la reclamación.',
+  detail: 'El QR es reutilizable. Cada teléfono recibe un beneficio por campaña; recuperarlo no renueva su caducidad. Detener el QR conserva los cupones ya entregados. Activa el envío de cupones y revisa tu saldo SMS. Los tokens de descuento fijo mantienen su funcionamiento.',
+  translations: {
+    en: { title: 'QR tokens with free delivery by SMS', message: 'In QR Tokens, choose Free delivery. Customers enter their name and phone number and receive an individual coupon by SMS, valid for 15, 20 or 30 days from the claim.', detail: 'The QR is reusable. Each phone receives one benefit per campaign; recovery does not extend expiry. Stopping the QR preserves issued coupons. Enable coupon messaging and check your SMS balance. Fixed-discount tokens keep their existing behavior.' },
+    it: { title: 'Token QR con consegna gratuita via SMS', message: 'In Token QR puoi scegliere Consegna gratuita. Il cliente inserisce nome e telefono e riceve un coupon individuale via SMS, valido per 15, 20 o 30 giorni dalla richiesta.', detail: 'Il QR è riutilizzabile. Ogni telefono riceve un beneficio per campagna; recuperarlo non rinnova la scadenza. Fermare il QR conserva i coupon già emessi. Attiva l’invio dei coupon e verifica il saldo SMS. I token con sconto fisso mantengono il funzionamento attuale.' },
+    fr: { title: 'Tokens QR avec livraison offerte par SMS', message: 'Dans Tokens QR, choisissez Livraison offerte. Le client renseigne son nom et son téléphone et reçoit un coupon individuel par SMS, valable 15, 20 ou 30 jours à compter de la demande.', detail: 'Le QR est réutilisable. Chaque téléphone reçoit un avantage par campagne ; le récupérer ne prolonge pas sa validité. Arrêter le QR préserve les coupons émis. Activez l’envoi des coupons et vérifiez le solde SMS. Les tokens de réduction fixe restent inchangés.' },
+    pt: { title: 'Tokens QR com entrega grátis por SMS', message: 'Em Tokens QR, escolha Entrega grátis. O cliente indica nome e telefone e recebe um cupão individual por SMS, válido durante 15, 20 ou 30 dias após o pedido.', detail: 'O QR é reutilizável. Cada telefone recebe um benefício por campanha; recuperá-lo não prolonga a validade. Parar o QR preserva os cupões emitidos. Ative o envio de cupões e verifique o saldo SMS. Os tokens de desconto fixo mantêm o funcionamento atual.' },
+  },
+};
+// Draft: publish only after the landing and demo workflow are deployed together.
+export const directSalesPositioningAnnouncementDraft = {
+  id: 'direct-sales-demo-2026-10', revision: 1, category: 'improvement', severity: 'info',
+  title: 'Venta directa y demostraciones más claras',
+  message: 'La presentación de Volta explica cómo el motor, las promociones y los datos de clientes ayudan a desarrollar la venta directa. Solicitar una demostración no inicia el alta ni pide documentos o pagos.',
+  detail: 'Las consultas se identifican como Demo en Global Manager. El equipo puede registrar el seguimiento e invitar al alta cuando la pizzería solicite continuar. Se conservan las condiciones de los expedientes anteriores.',
+  translations: {
+    en: { title: 'Clearer direct sales and demonstrations', message: 'Volta explains how its sales engine, promotions and customer data help develop direct sales. Requesting a demonstration does not start onboarding or request documents or payment.', detail: 'Inquiries appear as Demo in Global Manager. The team can record follow-up and invite the pizzeria to onboard when it asks to continue. Existing applications retain their terms.' },
+    it: { title: 'Vendite dirette e dimostrazioni più chiare', message: 'Volta spiega come il motore di vendita, le promozioni e i dati dei clienti aiutano a sviluppare le vendite dirette. Richiedere una dimostrazione non avvia l’attivazione e non richiede documenti o pagamenti.', detail: 'Le richieste appaiono come Demo in Global Manager. Il team può registrare i contatti e invitare la pizzeria all’attivazione quando chiede di proseguire. Le pratiche esistenti mantengono le proprie condizioni.' },
+    fr: { title: 'Ventes directes et démonstrations plus claires', message: 'Volta explique comment son moteur de vente, les promotions et les données clients aident à développer les ventes directes. Demander une démonstration ne lance pas l’inscription et ne demande ni documents ni paiement.', detail: 'Les demandes apparaissent comme Demo dans Global Manager. L’équipe peut suivre les contacts et inviter la pizzeria à s’inscrire lorsqu’elle souhaite continuer. Les dossiers existants conservent leurs conditions.' },
+    pt: { title: 'Vendas diretas e demonstrações mais claras', message: 'A Volta explica como o motor de vendas, as promoções e os dados dos clientes ajudam a desenvolver as vendas diretas. Pedir uma demonstração não inicia a adesão nem pede documentos ou pagamentos.', detail: 'Os pedidos aparecem como Demo no Global Manager. A equipa pode registar o acompanhamento e convidar a pizzaria a aderir quando esta quiser continuar. Os processos existentes mantêm as suas condições.' },
+  },
+};
 // Backend, storefront and card-only checkout verified in production on 7 October 2026.
 export const onboardingPresentationAnnouncementDraft = {
   id: 'onboarding-presentation-card-2026-10', revision: 1, category: 'improvement', severity: 'info',
@@ -352,6 +489,9 @@ export const singleLineCardPricesAnnouncement = {
 };
 
 export const backofficeAnnouncements = [
+  qrSmsConfirmationAnnouncement,
+  qrSingleSmsAnnouncement,
+  qrCustomerMetricsAnnouncement,
   singleLineCardPricesAnnouncement,
   productSpecialNoticesAnnouncement,
   ingredientAvailableBadgeAnnouncement,
@@ -748,3 +888,16 @@ backofficeAnnouncements.push({ ...onboardingDefaultsAnnouncementDraft,
 backofficeAnnouncements.push({ ...simpleStoreListAnnouncementDraft, publishedAt: '2026-10-06T10:42:00.344Z', expiresAt: '2027-01-06T23:59:59.000Z' });
 backofficeAnnouncements.push({ ...onboardingSimpleEmailAnnouncementDraft, publishedAt: '2026-10-07T08:19:00.000Z', expiresAt: '2027-01-07T23:59:59.000Z' });
 backofficeAnnouncements.push({ ...onboardingPresentationAnnouncementDraft, publishedAt: '2026-10-07T08:40:00.000Z', expiresAt: '2027-01-07T23:59:59.000Z' });
+// Draft: activate only after the backend and storefront improvements are deployed together.
+export const orderCommunicationAndStoreSelectionAnnouncementDraft = {
+  id: 'order-communication-store-selection-2026-10', revision: 1, category: 'improvement', severity: 'info',
+  title: 'Pedidos más fáciles de identificar y recoger',
+  message: 'Los avisos de pedidos web muestran el mismo número corto del POS. Al elegir una ciudad con una sola tienda, el cliente entra directamente; si hay varias, elige por nombre y dirección. Con una única tienda, el acceso también es directo, conservando la comprobación de cobertura para reparto.',
+  detail: 'El mismo código corto aparece en Movimientos y sus tickets, Finanzas y sus CSV, Repetir pedido y las valoraciones. En Movimientos puedes buscar por el código corto o por el completo. Los pedidos antiguos conservan su referencia.',
+  translations: {
+    en: { title: 'Orders that are easier to identify and collect', message: 'Web order notifications show the same short number as the POS. Choosing a city with one store opens it directly; with several stores, customers choose by name and address. A business with one store also opens directly, while delivery coverage checks remain in place.', detail: 'The same short code appears in Movements and its tickets, Finance and its CSV exports, Repeat order and reviews. In Movements you can search by either the short or full code. Older orders retain their reference.' },
+    it: { title: 'Ordini più facili da identificare e ritirare', message: 'Gli avvisi degli ordini web mostrano lo stesso numero breve del POS. Scegliendo una città con un solo negozio si entra direttamente; con più negozi si sceglie per nome e indirizzo. Anche un’attività con un solo negozio offre accesso diretto, mantenendo la verifica della copertura per la consegna.', detail: 'Lo stesso codice breve appare in Movimenti e nei relativi ticket, in Finanze e nei CSV, in Ripeti ordine e nelle recensioni. In Movimenti puoi cercare il codice breve o completo. Gli ordini precedenti conservano il proprio riferimento.' },
+    fr: { title: 'Des commandes plus faciles à identifier et à retirer', message: 'Les notifications des commandes web affichent le même numéro court que le POS. Choisir une ville avec un seul magasin ouvre directement celui-ci ; avec plusieurs magasins, le client choisit par nom et adresse. L’accès est aussi direct pour une enseigne avec un seul magasin, tout en conservant la vérification de la zone de livraison.', detail: 'Le même code court apparaît dans Mouvements et ses tickets, dans Finances et ses CSV, dans Commander à nouveau et dans les avis. Dans Mouvements, la recherche accepte le code court ou complet. Les anciennes commandes conservent leur référence.' },
+    pt: { title: 'Pedidos mais fáceis de identificar e levantar', message: 'Os avisos de pedidos online mostram o mesmo número curto do POS. Ao escolher uma cidade com uma única loja, o cliente entra diretamente; se houver várias, escolhe pelo nome e morada. Um negócio com uma única loja também tem acesso direto, mantendo a verificação de cobertura para entrega.', detail: 'O mesmo código curto aparece em Movimentos e nos respetivos tickets, em Finanças e nos CSV, em Repetir pedido e nas avaliações. Em Movimentos pode pesquisar pelo código curto ou completo. Os pedidos antigos mantêm a referência.' },
+  },
+};

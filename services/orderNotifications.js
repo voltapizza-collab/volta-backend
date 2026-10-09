@@ -1,3 +1,4 @@
+import { getOrderDisplayCode } from "./orderDisplayCode.js";
 import { reserveSmsCreditForMessage, refundSmsCreditForMessage } from "./smsCredits.js";
 import { isPartnerSmsServiceEnabled } from "./smsNotificationSettings.js";
 import { estimateSmsParts, normalizeE164Phone, sendTelnyxSms } from "./telnyx.js";
@@ -47,7 +48,10 @@ const resolvePartnerName = async (prisma, sale) => {
   }
 };
 
-export async function sendOrderPaidTrackingSms(prisma, sale) {
+export async function sendOrderPaidTrackingSms(prisma, sale, deps = {}) {
+  const reserve = deps.reserveSmsCreditForMessage || reserveSmsCreditForMessage;
+  const refund = deps.refundSmsCreditForMessage || refundSmsCreditForMessage;
+  const send = deps.sendTelnyxSms || sendTelnyxSms;
   const serviceEnabled = await isPartnerSmsServiceEnabled(prisma, {
     partnerId: sale.partnerId,
     storeId: sale.storeId,
@@ -65,10 +69,10 @@ export async function sendOrderPaidTrackingSms(prisma, sale) {
 
   const trackingUrl = buildOrderTrackingUrl(sale);
   const partnerName = await resolvePartnerName(prisma, sale);
-  const text = `${partnerName}: pago OK ${customerFirstName(sale)}. Pedido ${sale.code}. Seguimiento: ${trackingUrl}`;
+  const text = `${partnerName}: pago OK ${customerFirstName(sale)}. Pedido ${getOrderDisplayCode(sale)}. Seguimiento: ${trackingUrl}`;
   const smsEstimate = estimateSmsParts(text);
 
-  const reservation = await reserveSmsCreditForMessage(prisma, {
+  const reservation = await reserve(prisma, {
     partnerId: sale.partnerId,
     couponCode: sale.code,
     customerId: sale.customerId,
@@ -81,14 +85,14 @@ export async function sendOrderPaidTrackingSms(prisma, sale) {
     return { ok: false, skipped: true, reason: reservation.error, trackingUrl };
   }
 
-  const result = await sendTelnyxSms({
+  const result = await send({
     to,
     text,
     tags: [`order:${sale.id}`, `order-code:${sale.code}`, `partner:${sale.partnerId}`],
   });
 
   if (!result.ok) {
-    await refundSmsCreditForMessage(prisma, {
+    await refund(prisma, {
       partnerId: sale.partnerId,
       couponCode: sale.code,
       customerId: sale.customerId,
@@ -107,7 +111,10 @@ export async function sendOrderPaidTrackingSms(prisma, sale) {
   };
 }
 
-export async function sendOrderReadySms(prisma, sale) {
+export async function sendOrderReadySms(prisma, sale, deps = {}) {
+  const reserve = deps.reserveSmsCreditForMessage || reserveSmsCreditForMessage;
+  const refund = deps.refundSmsCreditForMessage || refundSmsCreditForMessage;
+  const send = deps.sendTelnyxSms || sendTelnyxSms;
   const serviceEnabled = await isPartnerSmsServiceEnabled(prisma, {
     partnerId: sale.partnerId,
     storeId: sale.storeId,
@@ -127,11 +134,11 @@ export async function sendOrderReadySms(prisma, sale) {
   const partnerName = await resolvePartnerName(prisma, sale);
   const isDelivery = sale.delivery === "COURIER";
   const text = isDelivery
-    ? `${partnerName}: pedido ${sale.code} en camino desde ${storeName}.`
-    : `${partnerName}: pedido ${sale.code} listo para recoger en ${storeName}.`;
+    ? `${partnerName}: pedido ${getOrderDisplayCode(sale)} en camino desde ${storeName}.`
+    : `${partnerName}: pedido ${getOrderDisplayCode(sale)} listo para recoger en ${storeName}.`;
   const smsEstimate = estimateSmsParts(text);
 
-  const reservation = await reserveSmsCreditForMessage(prisma, {
+  const reservation = await reserve(prisma, {
     partnerId: sale.partnerId,
     couponCode: sale.code,
     customerId: sale.customerId,
@@ -144,14 +151,14 @@ export async function sendOrderReadySms(prisma, sale) {
     return { ok: false, skipped: true, reason: reservation.error };
   }
 
-  const result = await sendTelnyxSms({
+  const result = await send({
     to,
     text,
     tags: [`order:${sale.id}`, `order-ready:${sale.code}`, `partner:${sale.partnerId}`],
   });
 
   if (!result.ok) {
-    await refundSmsCreditForMessage(prisma, {
+    await refund(prisma, {
       partnerId: sale.partnerId,
       couponCode: sale.code,
       customerId: sale.customerId,
@@ -169,7 +176,10 @@ export async function sendOrderReadySms(prisma, sale) {
   };
 }
 
-export async function sendOrderCustomerMessageSms(prisma, sale, message) {
+export async function sendOrderCustomerMessageSms(prisma, sale, message, deps = {}) {
+  const reserve = deps.reserveSmsCreditForMessage || reserveSmsCreditForMessage;
+  const refund = deps.refundSmsCreditForMessage || refundSmsCreditForMessage;
+  const send = deps.sendTelnyxSms || sendTelnyxSms;
   const serviceEnabled = await isPartnerSmsServiceEnabled(prisma, {
     partnerId: sale.partnerId,
     storeId: sale.storeId,
@@ -195,7 +205,7 @@ export async function sendOrderCustomerMessageSms(prisma, sale, message) {
   const text = `${partnerName}: ${cleanMessage} Responde: ${trackingUrl}`;
   const smsEstimate = estimateSmsParts(text);
 
-  const reservation = await reserveSmsCreditForMessage(prisma, {
+  const reservation = await reserve(prisma, {
     partnerId: sale.partnerId,
     couponCode: sale.code,
     customerId: sale.customerId,
@@ -208,14 +218,14 @@ export async function sendOrderCustomerMessageSms(prisma, sale, message) {
     return { ok: false, skipped: true, reason: reservation.error, trackingUrl };
   }
 
-  const result = await sendTelnyxSms({
+  const result = await send({
     to,
     text,
     tags: [`order:${sale.id}`, `order-chat:${sale.code}`, `partner:${sale.partnerId}`],
   });
 
   if (!result.ok) {
-    await refundSmsCreditForMessage(prisma, {
+    await refund(prisma, {
       partnerId: sale.partnerId,
       couponCode: sale.code,
       customerId: sale.customerId,

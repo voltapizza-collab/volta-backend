@@ -1,3 +1,4 @@
+import { getOrderDisplayCode } from "./orderDisplayCode.js";
 import crypto from "crypto";
 
 const STRIPE_API_BASE = "https://api.stripe.com/v1";
@@ -183,7 +184,7 @@ export const createOrderCheckoutSession = async ({
   appendParam(params, "line_items[0][quantity]", 1);
   appendParam(params, "line_items[0][price_data][currency]", cleanCurrency);
   appendParam(params, "line_items[0][price_data][unit_amount]", amountCents);
-  appendParam(params, "line_items[0][price_data][product_data][name]", `Pedido ${CHECKOUT_DISPLAY_NAME} - ${orderCode}`);
+  appendParam(params, "line_items[0][price_data][product_data][name]", `Pedido ${CHECKOUT_DISPLAY_NAME} - ${getOrderDisplayCode(sale)}`);
   appendParam(params, "line_items[0][price_data][product_data][description]", customerData.scheduledFor
     ? `${store.storeName} - Pedido programado: ${new Intl.DateTimeFormat("es-ES", {
         timeZone: process.env.TIMEZONE || "Europe/Madrid", dateStyle: "medium", timeStyle: "short",
@@ -237,7 +238,7 @@ export const createBoostCheckoutSession = async ({
   appendParam(params, "line_items[0][quantity]", 1);
   appendParam(params, "line_items[0][price_data][currency]", cleanCurrency);
   appendParam(params, "line_items[0][price_data][unit_amount]", amountCents);
-  appendParam(params, "line_items[0][price_data][product_data][name]", `Boost pedido ${orderCode}`);
+  appendParam(params, "line_items[0][price_data][product_data][name]", `Boost pedido ${getOrderDisplayCode(sale)}`);
   appendParam(
     params,
     "line_items[0][price_data][product_data][description]",

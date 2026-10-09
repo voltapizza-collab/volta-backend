@@ -1,3 +1,27 @@
+# Hero con producto real — borrador local del 9 de octubre de 2026
+
+`landingProductHeroAnnouncementDraft` incluye ES/EN/IT/FR/PT y permanece fuera del feed. El usuario pide revisión local y prohíbe desplegar sin autorización expresa. El borrador también cubre las tarjetas de incorporación, el footer y la pizza animada de los ajustes finales. Antes de publicar deben conciliarse los importes solicitados para la maqueta (46 €/mes y 20 €/mes) con el catálogo comercial vigente (aprox. 41,67 €/mes y 21,99 €/mes). Publicar la nota solo cuando la portada esté desplegada con autorización.
+
+# Confirmación SMS del QR — 9 de octubre de 2026
+
+`qr-sms-confirmation-2026-10` explica la confirmación legible y la distinción entre envío en curso y solicitud anterior. Incluye ES/EN/IT/FR/PT; publicar backend después del storefront.
+
+# Cupones compactos y SMS único — 9 de octubre de 2026
+
+`qrSingleSmsAnnouncement` incluye ES/EN/IT/FR/PT. Publicar con el backend después del storefront final: códigos nuevos de 16 caracteres, cierre del modal y un único intento SMS por teléfono/campaña. Los cupones anteriores conservan su validez.
+
+# Resultados y altas de clientes en Tokens QR — 9 de octubre de 2026
+
+`qrCustomerMetricsAnnouncement` incluye ES/EN/IT/FR/PT. Publicar el backend que activa esta nota después de verificar el storefront de resultados: escaneos/visitas, altas nuevas reales y detalle de clientes existentes, SMS y usos. La ficha de cliente se conserva aunque falle el SMS; los reenvíos no cuentan como altas nuevas. [Alcance y pruebas](qr-delivery-claims-2026-10-09.md).
+
+# Tokens QR con envío gratis — borrador local del 9 de octubre de 2026
+
+`qrDeliveryClaimAnnouncementDraft` incluye ES/EN/IT/FR/PT y queda fuera del feed. Activarlo tras aplicar la migración de reclamaciones QR, publicar juntos backend y storefront y verificar el SMS en el entorno correspondiente. [Alcance y pruebas](qr-delivery-claims-2026-10-09.md).
+
+# Venta directa y demostraciones — borrador local del 9 de octubre de 2026
+
+`directSalesPositioningAnnouncementDraft` incluye ES/EN/IT/FR/PT y permanece fuera del feed. Publicar después de desplegar juntos la portada, la entrada pública de demos, su seguimiento en Global Manager y la invitación expresa al alta. No implica cambios en contratos, precios de equipo ni liquidaciones de expedientes anteriores.
+
 # Diseño del correo, referencia de contrato y tarjeta — publicado el 7 de octubre de 2026
 
 `onboarding-presentation-card-2026-10` se activa tras verificar backend `911f28b`, storefront `4e11882` y el reemplazo real de un checkout pendiente por tarjeta sin Link, sin cobrar. Incluye colores por método, botón de fase 2 y referencia de contrato, en ES/EN/IT/FR/PT. [Comprobaciones](onboarding-presentation-card.md).
@@ -157,3 +181,6 @@ Pasaron las 6 pruebas del backend y las 15 del centro de avisos, incluida la lec
 ## Reparto y revisión manual — borrador local del 18 de septiembre
 
 `checkoutDeliveryAnnouncementDraft` contiene ES/EN/IT/FR/PT y permanece fuera del feed. Publicar con backend, storefront y POS actualizados, tras la comprobación del Sunmi. Explica la revisión de tarifa antes de confirmar y la señal de reparto pendiente de comprobación humana. No anuncia que toda dirección aceptada tenga cobertura verificada. Véase `checkout-delivery-repair-2026-09-18.md`.
+# Número corto y acceso a tiendas — borrador local del 8 de octubre de 2026
+
+`orderCommunicationAndStoreSelectionAnnouncementDraft` contiene ES/EN/IT/FR/PT y permanece fuera del feed. Activarlo tras desplegar y verificar juntos backend y storefront. Describe los números visibles de pedido iguales al POS y la entrada directa cuando no hay que elegir entre varias tiendas, conservando la cobertura de reparto. [Alcance y verificaciones](order-code-store-selection-2026-10-08.md).

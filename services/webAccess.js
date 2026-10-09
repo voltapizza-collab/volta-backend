@@ -9,6 +9,7 @@ const canonical = req => decodeURIComponent(req.path).replace(/^\/api(?=\/)/, ''
 // Public routes have their own business validation / signed webhook / capability token.
 // Everything else requires a server session, including aliases and newly added routes.
 export function isPublicWebRoute(method, path) {
+  if (method === 'POST' && path === '/onboarding/demo-requests') return true;
   const read = ['GET', 'HEAD'].includes(method);
   if (read && /^\/(?:health|backoffice(?:\/[^/]+)?|Backoffice(?:\/[^/]+)?)$/.test(path)) return true;
   if (read && path === '/') return true;
@@ -23,6 +24,7 @@ export function isPublicWebRoute(method, path) {
   if (read && /^\/(?:menuDisponible\/\d+|ingredient-extras|ingredient-category-uses|incentives\/active\/one)$/.test(path)) return true;
   if (read && /^\/coupons\/(?:resolve-link\/[^/]+|games|gallery|gallery-pools|gallery-context)$/.test(path)) return true;
   if (method === 'POST' && /^\/coupons\/(?:validate|direct-claim)$/.test(path)) return true;
+  if (method === 'POST' && /^\/coupons\/qr-claim\/[^/]+$/.test(path)) return true;
   if ((read && /^\/games\/[^/]+\/[^/]+\/status$/.test(path)) ||
       (method === 'POST' && /^\/games\/[^/]+\/[^/]+\/(?:play|claim)$/.test(path))) return true;
   if ((read && /^\/checkout\/availability\/\d+$/.test(path)) ||

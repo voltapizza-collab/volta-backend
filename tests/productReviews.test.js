@@ -1,11 +1,37 @@
 import test from "node:test";
 import assert from "node:assert/strict";
+import express from "express";
+import productReviewsRoutes from "../routes/productReviews.js";
 import { estimateSmsParts } from "../services/telnyx.js";
 import {
   buildProductReviewRequestSms,
   getReviewItemsFromSale,
   isReviewableProductName,
 } from "../services/productReviews.js";
+
+test("review response adds a short display code without changing the order or review token", async t => {
+  const code = `WEB-${'A'.repeat(32)}`;
+  const sale = { id: 775, code, status: 'PAID', products: [] };
+  const app = express();
+  app.use(productReviewsRoutes({ productReviewRequest: {
+    findUnique: async ({ where }) => where.token === 'private-review-token'
+      ? { token: where.token, sale, votes: [] } : null,
+  } }));
+  const server = app.listen(0, '127.0.0.1');
+  await new Promise(resolve => server.once('listening', resolve));
+  t.after(() => new Promise(resolve => server.close(resolve)));
+  const origin = `http://127.0.0.1:${server.address().port}`;
+  const response = await fetch(`${origin}/private-review-token`);
+  assert.equal(response.status, 200);
+  const { review } = await response.json();
+  assert.equal(review.displayCode, 'WEB-775');
+  assert.equal(review.orderCode, code);
+  assert.equal(review.token, 'private-review-token');
+  assert.equal((await fetch(`${origin}/WEB-775`)).status, 404);
+  sale.code = 'WEB-HISTORICO-123';
+  const legacy = await fetch(`${origin}/private-review-token`).then(r => r.json());
+  assert.equal(legacy.review.displayCode, sale.code);
+});
 
 test("product reviews include only purchased reviewable food products", () => {
   const items = getReviewItemsFromSale({

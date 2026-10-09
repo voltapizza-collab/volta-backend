@@ -1,3 +1,4 @@
+import { getOrderDisplayCode } from "../services/orderDisplayCode.js";
 import express from "express";
 import { normalizeSmsNotificationSettings } from "../services/smsNotificationSettings.js";
 
@@ -283,7 +284,7 @@ const CHANNEL_SHIFT_CAMPAIGN = "CHANNEL_SHIFT";
           type: "pending_order_unaccepted",
           serviceId: "pendingOrderUnaccepted",
           severity: ageMinutes >= pendingMinutes * 2 ? "danger" : "warning",
-          title: `Pedido sin aceptar: ${sale.code}`,
+          title: `Pedido sin aceptar: ${getOrderDisplayCode(sale)}`,
           message: `${sale.store?.storeName || "Tienda"} tiene un pedido pagado sin aceptar desde hace ${ageMinutes || pendingMinutes} min.`,
           occurredAt,
           entity: {
@@ -350,7 +351,7 @@ const CHANNEL_SHIFT_CAMPAIGN = "CHANNEL_SHIFT";
           type: "high_average_ticket_sale",
           serviceId: "highAverageTicketSale",
           severity: saleTotal >= averageTicket * 1.5 ? "success" : "info",
-          title: `Venta sobre ticket promedio: ${sale.code}`,
+          title: `Venta sobre ticket promedio: ${getOrderDisplayCode(sale)}`,
           message: `${sale.store?.storeName || "Tienda"} vendio ${saleTotal.toFixed(2)} ${sale.currency || "EUR"} sobre un promedio de ${averageTicket.toFixed(2)}.`,
           occurredAt: sale.date || sale.createdAt,
           entity: {
@@ -454,7 +455,7 @@ const CHANNEL_SHIFT_CAMPAIGN = "CHANNEL_SHIFT";
           type: "boost_purchased",
           serviceId: "boostPurchased",
           severity: "success",
-          title: `Boost comprado: ${sale.code}`,
+          title: `Boost comprado: ${getOrderDisplayCode(sale)}`,
           message: `${customerData.name || sale.customer?.name || "Cliente"} compro Boost en ${sale.store?.storeName || "la tienda"}.`,
           occurredAt: sale.boostPaidAt || sale.updatedAt || sale.createdAt,
           entity: {

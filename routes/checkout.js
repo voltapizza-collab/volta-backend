@@ -8,6 +8,7 @@ import { validateCheckoutDelivery, deliveryPolicyFingerprint, calculateDeliveryF
 import { validateIngredientRemovals } from "../services/ingredientRemovals.js";
 import { lockCheckoutCoupon, reserveCouponForSale, releaseCouponReservation, reconcileCouponReservations } from "../services/couponReservations.js";
 import { evaluateCoupon, calculateCouponDiscount, isDeliveryFreeCoupon } from "../services/couponEvaluation.js";
+import { assertQrCouponCustomer } from "../services/couponQrClaims.js";
 export { calculateCouponDiscount } from "../services/couponEvaluation.js";
 import { buildOrderAvailability, validateOrderSchedule } from "../services/orderAvailability.js";
 import {
@@ -1065,6 +1066,7 @@ export default function checkoutRoutes(prisma) {
             getDeliveryBlocks(lines, currentPartner.deliveryFeeBlockSize).totalBlocks !== deliveryQuote.deliveryBlocks)
           throwCheckoutError("delivery_policy_changed", 409);
 
+        assertQrCouponCustomer(lockedCoupon?.coupon, customerInput);
         const customer = await resolveCheckoutCustomer(tx, {
           partnerId,
           customer: customerInput,
@@ -1081,6 +1083,7 @@ export default function checkoutRoutes(prisma) {
           throw error;
         }
 
+        assertQrCouponCustomer(lockedCoupon?.coupon, customer);
         const checkoutEmail = normalizeEmail(customer.email || customerInput.email);
 
         const createdSale = await tx.sale.create({

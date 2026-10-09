@@ -1,4 +1,5 @@
 import express from "express";
+import { getOrderDisplayCode } from "../services/orderDisplayCode.js";
 import {
   getReviewItemsFromSale,
   isReviewableProductName,
@@ -403,6 +404,7 @@ export default function productReviewsRoutes(prisma) {
           status: request.status,
           respondedAt: request.respondedAt,
           orderCode: request.sale.code,
+          displayCode: getOrderDisplayCode(request.sale),
           partnerName: request.sale.partner?.name || "VoltaPizza",
           partnerSlug: request.sale.partner?.slug || "",
           storeName: request.sale.store?.storeName || "",
