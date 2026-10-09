@@ -1,3 +1,11 @@
+# Landing publicada — 9 de octubre de 2026
+
+Publicación autorizada expresamente tras los commits. Storefront `c01f9db`, despliegue Railway `b602c4fc-40cd-4c3b-908c-391132f7a3c9`, SUCCESS; backend funcional `9cc937f`, despliegue `be7788cd-6055-4232-809a-2aa427011c37`, SUCCESS. Web y API responden HTTP 200; la demo rechaza un formulario vacío con `invalid_demo_request` sin guardar ni enviar. Migración QR ya aplicada, arranque sin migraciones pendientes.
+
+Se activa `landingProductHeroAnnouncementDraft` en ES/EN/IT/FR/PT después de comprobar portada y footer «THE PIZZA SALE ENGINE» en producción. Los otros borradores no se activan por esta publicación. La documentación histórica de revisión local inferior se conserva como registro.
+
+La autorización publica los importes de la landing solicitados por Luigi (250 €, 46 €/mes y 20 €/mes). Se mantiene documentada su diferencia con el catálogo de contratación actual (250 €, cuotas de aprox. 41,67 € y renting a 12 meses de aprox. 21,99 €). No se han modificado tarifas, contratos ni expedientes. No se ha afirmado inclusión de software, enviado SMS/correos ni realizado pagos reales durante la verificación.
+
 # Hero con producto real — borrador local del 9 de octubre de 2026
 
 `landingProductHeroAnnouncementDraft` incluye ES/EN/IT/FR/PT y permanece fuera del feed. El usuario pide revisión local y prohíbe desplegar sin autorización expresa. El borrador también cubre las tarjetas de incorporación, el footer y la pizza animada de los ajustes finales. Antes de publicar deben conciliarse los importes solicitados para la maqueta (46 €/mes y 20 €/mes) con el catálogo comercial vigente (aprox. 41,67 €/mes y 21,99 €/mes). Publicar la nota solo cuando la portada esté desplegada con autorización.

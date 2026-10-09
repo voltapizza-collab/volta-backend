@@ -1,4 +1,4 @@
-// Draft: user requested local review; do not add to the feed before an authorized deployment.
+// Published after the user-authorized deployment and production verification of the landing.
 export const landingProductHeroAnnouncementDraft = {
   "id": "landing-real-product-hero-2026-10",
   "revision": 1,
@@ -489,6 +489,7 @@ export const singleLineCardPricesAnnouncement = {
 };
 
 export const backofficeAnnouncements = [
+  { ...landingProductHeroAnnouncementDraft, publishedAt: "2026-10-09T12:03:37.169Z", expiresAt: "2027-01-09T23:59:59.000Z" },
   qrSmsConfirmationAnnouncement,
   qrSingleSmsAnnouncement,
   qrCustomerMetricsAnnouncement,
