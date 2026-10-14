@@ -1,3 +1,7 @@
+# Cabecera compacta de cupones — 14 de octubre de 2026
+
+`compactCouponGalleryAnnouncementDraft` se activa en ES/EN/IT/FR/PT tras verificar el storefront `7880a0f`, despliegue Railway `7efa4239-b4b0-490a-b9a7-0770a03b2d9f` en SUCCESS y respuesta HTTP 200. La cabecera conserva el nombre del negocio y elimina el logo: a 375 px de ancho pasa de 228,83 a 112,83 px antes de seleccionar zona, recuperando 116 px verticales. Compilación local y de producción correctas; nueve pruebas de la galería y diez de avisos superadas.
+
 # Landing publicada — 9 de octubre de 2026
 
 Publicación autorizada expresamente tras los commits. Storefront `c01f9db`, despliegue Railway `b602c4fc-40cd-4c3b-908c-391132f7a3c9`, SUCCESS; backend funcional `9cc937f`, despliegue `be7788cd-6055-4232-809a-2aa427011c37`, SUCCESS. Web y API responden HTTP 200; la demo rechaza un formulario vacío con `invalid_demo_request` sin guardar ni enviar. Migración QR ya aplicada, arranque sin migraciones pendientes.

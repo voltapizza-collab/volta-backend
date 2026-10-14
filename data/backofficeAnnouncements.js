@@ -1,3 +1,16 @@
+// Storefront 7880a0f deployed and the compact header verified on 14 October 2026.
+export const compactCouponGalleryAnnouncementDraft = {
+  id: 'compact-coupon-gallery-2026-10', revision: 1, category: 'improvement', severity: 'info',
+  title: 'Más espacio para los cupones',
+  message: 'La galería de cupones muestra el nombre del negocio sin logo en la cabecera, dejando más espacio vertical para explorar los cupones, especialmente en el móvil.',
+  translations: {
+    en: { title: 'More room for coupons', message: 'The coupon gallery shows the business name without a logo in the header, leaving more vertical space to browse coupons, especially on mobile.' },
+    it: { title: 'Più spazio per i coupon', message: 'La galleria dei coupon mostra il nome del locale senza logo nell’intestazione, lasciando più spazio verticale per esplorare i coupon, soprattutto sul cellulare.' },
+    fr: { title: 'Plus de place pour les coupons', message: 'La galerie de coupons affiche le nom du commerce sans logo dans l’en-tête, laissant plus d’espace vertical pour parcourir les coupons, surtout sur mobile.' },
+    pt: { title: 'Mais espaço para os cupões', message: 'A galeria de cupões mostra o nome do negócio sem logótipo no cabeçalho, deixando mais espaço vertical para explorar os cupões, sobretudo no telemóvel.' },
+  },
+};
+
 // Published after the user-authorized deployment and production verification of the landing.
 export const landingProductHeroAnnouncementDraft = {
   "id": "landing-real-product-hero-2026-10",
@@ -489,6 +502,7 @@ export const singleLineCardPricesAnnouncement = {
 };
 
 export const backofficeAnnouncements = [
+  { ...compactCouponGalleryAnnouncementDraft, publishedAt: "2026-10-14T11:39:10.000Z", expiresAt: "2027-01-14T23:59:59.000Z" },
   { ...landingProductHeroAnnouncementDraft, publishedAt: "2026-10-09T12:03:37.169Z", expiresAt: "2027-01-09T23:59:59.000Z" },
   qrSmsConfirmationAnnouncement,
   qrSingleSmsAnnouncement,
