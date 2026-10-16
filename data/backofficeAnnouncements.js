@@ -1,3 +1,4 @@
+import { pizzaSpatialAnnouncementDraft, pizzaWorkbenchAnnouncementDraft, categoryBasePricingAnnouncementDraft } from './pizzaSpatialAnnouncement.js';
 // Storefront 7880a0f deployed and the compact header verified on 14 October 2026.
 export const compactCouponGalleryAnnouncementDraft = {
   id: 'compact-coupon-gallery-2026-10', revision: 1, category: 'improvement', severity: 'info',
@@ -916,4 +917,9 @@ export const orderCommunicationAndStoreSelectionAnnouncementDraft = {
     pt: { title: 'Pedidos mais fáceis de identificar e levantar', message: 'Os avisos de pedidos online mostram o mesmo número curto do POS. Ao escolher uma cidade com uma única loja, o cliente entra diretamente; se houver várias, escolhe pelo nome e morada. Um negócio com uma única loja também tem acesso direto, mantendo a verificação de cobertura para entrega.', detail: 'O mesmo código curto aparece em Movimentos e nos respetivos tickets, em Finanças e nos CSV, em Repetir pedido e nas avaliações. Em Movimentos pode pesquisar pelo código curto ou completo. Os pedidos antigos mantêm a referência.' },
   },
 };
-export { pizzaSpatialAnnouncementDraft, pizzaWorkbenchAnnouncementDraft, categoryBasePricingAnnouncementDraft } from './pizzaSpatialAnnouncement.js';
+export { pizzaSpatialAnnouncementDraft, pizzaWorkbenchAnnouncementDraft, categoryBasePricingAnnouncementDraft };
+
+// Published after backend and storefront production verification on 16 October 2026.
+backofficeAnnouncements.push(...[pizzaSpatialAnnouncementDraft, pizzaWorkbenchAnnouncementDraft, categoryBasePricingAnnouncementDraft].map(announcement => ({
+  ...announcement, publishedAt: '2026-10-16T11:18:11.416Z', expiresAt: '2027-01-16T23:59:59.000Z',
+})));

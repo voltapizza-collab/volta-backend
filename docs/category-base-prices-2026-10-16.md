@@ -49,3 +49,11 @@ No se han publicado servicios ni elegido precios del negocio. La columna ya exis
 La revisión sintética se inicia con `node scripts/category-pricing-preview.cjs` en el storefront. La aplicación real de localhost:3000 ya usa el backend local actualizado; la compilación separada `build-category-pricing` apunta a la API pública y no se está sirviendo.
 
 Fuera de esta entrega: compactación móvil, retorno automático a familias al añadir ingredientes y persistencia del borrador del minijuego.
+
+## Publicación completada — 16 de octubre de 2026
+
+Esta sección sustituye el estado histórico de publicación pendiente. El usuario autorizó desplegar todo. Backend 8f7d277 (Railway 4971b42f-bc78-47d9-a3a1-5a34a52c1452) y storefront 5dc802e (Railway a3893734-0215-4d3c-834f-8c8236f2a691) finalizaron con SUCCESS. No había migraciones pendientes. El menú público de MyCrushPizza/Plaza Diario devolvió HTTP 200, 47 productos y las cinco bases configuradas: Básica M 8, Especial M 10, Deep Dish M 11, Frita M 5 y Dulces M 5. No se modificaron esos importes durante el despliegue.
+
+Se retiró la restricción por hostname del constructor visual. El bundle público main.ecb8ece1.js incluye el contrato de bases, el editor y la API HTTPS. El chunk visual 196.4722a8d8 y su CSS 196.86d139f1 responden HTTP 200, igual que la ruta de backoffice. Compilación de producción y doce pruebas de integración/armado correctas tras retirar la restricción; las 57 pruebas seleccionadas de la entrega habían pasado antes de los commits iniciales.
+
+La sesión nueva del navegador público mostró la tienda y sus condiciones de entrada; no se aceptaron términos ni se enviaron pedidos. El flujo interactivo está cubierto por las pruebas locales previas, sin afirmar una compra real en producción. La instalación y prueba física de la APK 0.3.24 siguen pendientes de confirmación. Los tres avisos traducidos se activan después de esta verificación.

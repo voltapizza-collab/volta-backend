@@ -203,3 +203,7 @@ Pasaron las 6 pruebas del backend y las 15 del centro de avisos, incluida la lec
 ## Bases por categoría — borrador del 16 de octubre de 2026
 
 `categoryBasePricingAnnouncementDraft` (ES/EN/IT/FR/PT) queda fuera del feed hasta aplicar la migración y publicar backend y storefront coordinadamente. El negocio fija el precio de cada tamaño desde el icono de personalización; Global Manager conserva las capacidades. Los tamaños sin importe no se ofrecen para armar. Detalle y verificación: [Precio de bases](category-base-prices-2026-10-16.md).
+
+## Armado, bases y comandas — publicación del 16 de octubre de 2026
+
+Activados los tres avisos traducidos después de verificar backend 8f7d277 y storefront 5dc802e en producción. El constructor visual está habilitado públicamente; los precios proceden de la configuración del negocio. La nota del POS describe la APK disponible y pide comprobar Impresión de prueba, sin afirmar instalación ni validación física. Fecha de los avisos: 2026-10-16T11:18:11.416Z.
