@@ -196,3 +196,10 @@ Pasaron las 6 pruebas del backend y las 15 del centro de avisos, incluida la lec
 # Número corto y acceso a tiendas — borrador local del 8 de octubre de 2026
 
 `orderCommunicationAndStoreSelectionAnnouncementDraft` contiene ES/EN/IT/FR/PT y permanece fuera del feed. Activarlo tras desplegar y verificar juntos backend y storefront. Describe los números visibles de pedido iguales al POS y la entrada directa cuando no hay que elegir entre varias tiendas, conservando la cobertura de reparto. [Alcance y verificaciones](order-code-store-selection-2026-10-08.md).
+## Comandas espaciales — borrador local del 16 de octubre de 2026
+
+`pizzaSpatialAnnouncementDraft`, reexportado desde el catálogo, contiene ES/EN/IT/FR/PT y permanece fuera del feed. Publicar con fechas y audiencia reales tras validar impresión física y actualizar web/POS. La APK 0.3.24/código 27 se publicó y asignó a los tres SUNMI el 16 de octubre; instalación e impresión física pendientes de confirmar. El constructor visual permanece como experimento local. Véase `../../volta-storefront/docs/pos/spatial-ticket-2026-10-15.md`.
+
+## Bases por categoría — borrador del 16 de octubre de 2026
+
+`categoryBasePricingAnnouncementDraft` (ES/EN/IT/FR/PT) queda fuera del feed hasta aplicar la migración y publicar backend y storefront coordinadamente. El negocio fija el precio de cada tamaño desde el icono de personalización; Global Manager conserva las capacidades. Los tamaños sin importe no se ofrecen para armar. Detalle y verificación: [Precio de bases](category-base-prices-2026-10-16.md).

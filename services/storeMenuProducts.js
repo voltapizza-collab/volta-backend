@@ -11,12 +11,14 @@ export async function loadStoreMenuProducts(prisma, partnerId, storeId) {
     SELECT p.id, p.name, p.category, p.categoryId, p.cookingMethod, p.selectSize,
            p.priceBySize, p.image, p.launchAt, p.availableUntil, p.productTags,
            c.position, c.customizable, c.halfAndHalf,
+           pc.customBasePrices, pc.enabled AS categoryEnabled,
            s.active AS productActive, s.stock,
            r.id AS recipeId, r.qtyBySize,
            i.id AS ingredientId, i.name AS ingredientName, i.canonicalKey,
            i.allergens, i.costPrice, i.status AS ingredientStatus, t.active AS ingredientActive
       FROM MenuPizza p
       LEFT JOIN Category c ON c.id = p.categoryId
+      LEFT JOIN PartnerCategory pc ON pc.categoryId = p.categoryId AND pc.partnerId = p.partnerId
       LEFT JOIN StorePizzaStock s ON s.pizzaId = p.id AND s.storeId = ?
       LEFT JOIN MenuPizzaIngredient r ON r.menuPizzaId = p.id
       LEFT JOIN Ingredient i ON i.id = r.ingredientId
@@ -30,7 +32,8 @@ export async function loadStoreMenuProducts(prisma, partnerId, storeId) {
       cookingMethod: row.cookingMethod, selectSize: json(row.selectSize, []),
       priceBySize: json(row.priceBySize, {}), image: row.image, launchAt: row.launchAt,
       availableUntil: row.availableUntil, productTags: json(row.productTags, []),
-      categoryRef: { position: row.position, customizable: Boolean(row.customizable), halfAndHalf: Boolean(row.halfAndHalf) },
+      categoryRef: { position: row.position, customizable: Boolean(row.customizable) && row.categoryEnabled !== false && row.categoryEnabled !== 0, halfAndHalf: Boolean(row.halfAndHalf) },
+      categoryBasePriceBySize: json(row.customBasePrices, {}),
       stocks: row.productActive == null ? [] : [{ active: Boolean(row.productActive), stock: row.stock }],
       ingredients: [],
     });

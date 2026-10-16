@@ -2,6 +2,7 @@ import { loadStorefrontPricing } from '../routes/stores.js';
 import { normalizeBoostSettings } from './boostSettings.js';
 import { isPizzaCategory } from './fulfillmentPolicy.js';
 import { isDeliveryFreeCoupon } from './couponEvaluation.js';
+import { configuredCategoryBasePrice } from './categoryBasePrices.js';
 
 const array = value => Array.isArray(value) ? value : [];
 const money = value => Math.round(Number(value) * 100) / 100;
@@ -117,18 +118,14 @@ export function priceCheckoutLines(lines, context) {
     if (!custom(line) && selected.length) fail(line,'cart_line_invalid');
     let base, directDiscount = null, ingredientTotal = 0;
     if (custom(line)) {
-      const hasExplicitCustom = references.some(p=>p.categoryRef?.customizable);
-      if (hasExplicitCustom ? !product.categoryRef?.customizable : !normalized(product.category).includes('pizza')) fail(line,'cart_item_unavailable');
+      if (!product.categoryRef?.customizable) fail(line,'cart_item_unavailable');
       if (!selected.length || array(line.extras).length || (line.customMeta?.categoryId && Number(line.customMeta.categoryId) !== product.categoryId)) fail(line,'cart_line_invalid');
       const availableCategory = menu.filter(p=>categorySame(product,p));
       const category = availableCategory.length ? availableCategory : references.filter(p=>categorySame(product,p));
       const sizeProducts = category.filter(p=>array(p.selectSize).includes(line.size) && Number(p.priceBySize[line.size])>0);
-      const sizePrices = sizeProducts.map(p=>Number(p.priceBySize[line.size]));
-      if (!sizePrices.length) fail(line,'cart_item_unavailable');
-      base = money(Math.min(...sizePrices)*0.8);
-      // Browser category minima can include the advertised ±0.50 trending band.
-      const floatingMinimum = sizeProducts.map(p=>Math.max(0,Number(p.priceBySize[line.size])-(p.trending?0.5:0)));
-      if (Number(line.price) >= money(Math.min(...floatingMinimum)*0.8) && Number(line.price) <= money(Math.min(...sizeProducts.map(p=>Number(p.priceBySize[line.size])+(p.trending?0.5:0)))*0.8)) base=Number(line.price);
+      if (!sizeProducts.length) fail(line,'cart_item_unavailable');
+      base = configuredCategoryBasePrice(product.categoryBasePriceBySize, line.size);
+      if (base === null) fail(line, 'cart_item_unavailable');
       const seen = new Set();
       for (const ingredient of selected) {
         const ingredientId = Number(ingredient.ingredientId ?? ingredient.id);

@@ -916,3 +916,4 @@ export const orderCommunicationAndStoreSelectionAnnouncementDraft = {
     pt: { title: 'Pedidos mais fáceis de identificar e levantar', message: 'Os avisos de pedidos online mostram o mesmo número curto do POS. Ao escolher uma cidade com uma única loja, o cliente entra diretamente; se houver várias, escolhe pelo nome e morada. Um negócio com uma única loja também tem acesso direto, mantendo a verificação de cobertura para entrega.', detail: 'O mesmo código curto aparece em Movimentos e nos respetivos tickets, em Finanças e nos CSV, em Repetir pedido e nas avaliações. Em Movimentos pode pesquisar pelo código curto ou completo. Os pedidos antigos mantêm a referência.' },
   },
 };
+export { pizzaSpatialAnnouncementDraft, pizzaWorkbenchAnnouncementDraft, categoryBasePricingAnnouncementDraft } from './pizzaSpatialAnnouncement.js';

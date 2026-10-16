@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { priceCheckoutLines, offerInWindow } from '../services/checkoutPricing.js';
 
-const product = (id, price, categoryId=1) => ({id,name:`Dish ${id}`,categoryId,category:categoryId===1?'Pizzas':'Bebidas',selectSize:['M','XL'],priceBySize:{M:price,XL:price+4},categoryRef:{customizable:categoryId===1,halfAndHalf:categoryId===1},ingredients:[]});
+const product = (id, price, categoryId=1) => ({id,name:`Dish ${id}`,categoryId,category:categoryId===1?'Pizzas':'Bebidas',selectSize:['M','XL'],priceBySize:{M:price,XL:price+4},categoryBasePriceBySize:{M:8,XL:11.2},categoryRef:{customizable:categoryId===1,halfAndHalf:categoryId===1},ingredients:[]});
 const menu = [product(1,10),product(2,14),product(3,3,2)];
 const line = {cartLineId:'dish',pizzaId:1,size:'M',qty:1,price:10,subtotal:10};
 const quote = (lines,context={}) => priceCheckoutLines(lines,{menu,...context});
@@ -31,7 +31,7 @@ test('halves use the higher price, and charge extras once on each requested half
   assert.equal(quote([{...half,subtotal:18,extras:[{ingredientId:7,side:'A',price:2},{ingredientId:7,side:'B',price:2}]}],{extras})[0].subtotal,18);
   rejects([{...half,rightPizzaId:3}],{},'cart_item_unavailable');
 });
-test('custom recipe uses category minimum, partner cost, size and placement',()=>{
+test('custom recipe uses configured category base, partner cost, size and placement',()=>{
   const selected={ingredientId:7,quantity:'DOUBLE',placement:'LEFT'};
   const custom={...line,type:'CUSTOM_BUILD',price:8,subtotal:10,ingredients:[selected]};
   const uses=[{ingredientId:7,categoryId:1,active:true,ingredient:{costPrice:5}}];
@@ -90,4 +90,15 @@ test('offer windows cover weekdays and overnight hours',()=>{
   assert.equal(offerInWindow({daysActive:[6],windowStart:1320,windowEnd:120},now),true);
   assert.equal(offerInWindow({daysActive:[5],windowStart:1320,windowEnd:120},now),false);
   assert.equal(offerInWindow({active:false},now),false);
+});
+
+test('configured base ignores clearance and trending prices and rejects stale or missing configuration', () => {
+  const custom = {...line,type:'CUSTOM_BUILD',price:8,subtotal:10,ingredients:[{ingredientId:7,placement:'FULL',quantity:'SIMPLE'}]};
+  const uses = [{ingredientId:7,categoryId:1,active:true,ingredient:{costPrice:2}}];
+  const discounted = menu.map(p => ({...p,priceBySize:{M:4.94,XL:5},trending:true,directDiscount:{isClearance:true}}));
+  assert.equal(quote([custom],{menu:discounted,uses})[0].subtotal,10);
+  rejects([{...custom,price:3.95,subtotal:5.95}],{menu:discounted,uses});
+  rejects([custom],{menu:menu.map(p=>({...p,categoryBasePriceBySize:{M:9}})),uses});
+  rejects([custom],{menu:menu.map(p=>({...p,categoryBasePriceBySize:{}})),uses},'cart_item_unavailable');
+  rejects([custom],{menu:menu.map(p=>({...p,categoryRef:{customizable:false}})),uses},'cart_item_unavailable');
 });

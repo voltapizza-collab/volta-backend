@@ -799,6 +799,7 @@ const attachStorePublicMenu = (router, prisma) => {
           category: pizza.category ?? null,
           categoryPosition: pizza.categoryRef?.position ?? 999,
           categoryCustomizable: pizza.categoryRef?.customizable ?? false,
+          categoryBasePriceBySize: pizza.categoryBasePriceBySize || {},
           categoryHalfAndHalf:
             pizza.categoryRef?.halfAndHalf ?? false,
           cookingMethod: pizza.cookingMethod ?? null,
@@ -877,6 +878,7 @@ const attachStorePublicMenu = (router, prisma) => {
               category: pizza.category,
               categoryPosition: pizza.categoryPosition,
               categoryCustomizable: pizza.categoryCustomizable,
+              categoryBasePriceBySize: pizza.categoryBasePriceBySize,
               categoryHalfAndHalf: pizza.categoryHalfAndHalf,
             }
           : pizza

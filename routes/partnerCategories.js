@@ -1,4 +1,5 @@
 import express from "express";
+import { validateCategoryBasePrices } from '../services/categoryBasePrices.js';
 
 const DEMO_PARTNER_SLUG = "volta-demo";
 const DEMO_ONLY_CATEGORY_NAMES = new Set(["Demo Pizzas", "Demo Especiales"]);
@@ -44,6 +45,8 @@ const loadGlobalCategoryFallback = async (prisma, partner) => {
       partnerCategoryId: null,
       name: category.name,
       customizable: category.customizable ?? false,
+      halfAndHalf: category.halfAndHalf ?? false,
+      customBasePrices: {},
       enabled: true,
       position: category.position ?? index,
       createdAt: category.createdAt,
@@ -143,6 +146,8 @@ const syncPartnerCategories = async (prisma, partner) => {
       partnerCategoryId: link.id,
       name: link.category.name,
       customizable: link.category.customizable ?? false,
+      halfAndHalf: link.category.halfAndHalf ?? false,
+      customBasePrices: link.customBasePrices || {},
       enabled: link.enabled,
       position: link.category.position ?? link.position,
       createdAt: link.category.createdAt,
@@ -231,6 +236,27 @@ export default function partnerCategoriesRoutes(prisma) {
       const partnerId = partner.id;
       const categoryId = Number(req.params.categoryId);
       const { enabled } = req.body;
+
+      if (Object.hasOwn(req.body, 'customBasePrices')) {
+        // This endpoint only edits this business's prices, never global capabilities.
+        if (Object.keys(req.body).some(key => key !== 'customBasePrices')) {
+          return res.status(400).json({ error: 'invalid_category_base_prices' });
+        }
+        if (!Number.isSafeInteger(categoryId) || categoryId <= 0) return res.status(400).json({ error: 'Invalid categoryId' });
+        const category = await prisma.category.findUnique({ where: { id: categoryId } });
+        if (!category || (partner.slug !== DEMO_PARTNER_SLUG && isDemoOnlyCategory(category))) return res.status(404).json({ error: 'Category not found' });
+        if (!category.customizable) return res.status(409).json({ error: 'category_not_customizable' });
+        if (!prisma.partnerCategory) return res.status(503).json({ error: 'category_base_prices_unavailable' });
+        const products = await prisma.menuPizza.findMany({ where: { partnerId, categoryId, type: 'SELLABLE' }, select: { selectSize: true } });
+        const sizes = [...new Set(products.flatMap(product => Array.isArray(product.selectSize) ? product.selectSize : []))];
+        const customBasePrices = validateCategoryBasePrices(req.body.customBasePrices, sizes);
+        const updated = await prisma.partnerCategory.upsert({
+          where: { partnerId_categoryId: { partnerId, categoryId } },
+          update: { customBasePrices },
+          create: { partnerId, categoryId, position: category.position || 0, customBasePrices },
+        });
+        return res.json({ id: categoryId, customBasePrices: updated.customBasePrices });
+      }
 
       if (!prisma.partnerCategory) {
         return res.json({

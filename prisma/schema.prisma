@@ -765,6 +765,7 @@ model PartnerCategory {
   categoryId  Int
   enabled     Boolean  @default(true)
   position    Int      @default(0)
+  customBasePrices Json?
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 

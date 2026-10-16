@@ -1,5 +1,11 @@
 # Distribución permanente de Volta POS
 
+## Comandas por zonas — 16 de octubre de 2026
+
+0.3.24/código 27 publicada y asignada a los tres terminales autorizados SUNMI V3 001, 002 y 003, tras la petición explícita del usuario de actualizar toda la red. Agrupa las personalizadas en FULL, DERECHA e IZQUIERDA y las pizzas de dos recetas en LADO 1/LADO 2, conservando cantidades, extras y observaciones. SHA256 `977c5c3a423110012f8a64e363f645896b330d9750352a6d0650a1561f148e62`.
+
+La CLI verificó firma, paquete, versión, tamaño, SHA y descarga del almacenamiento privado; certificado comparado con la versión publicada 0.3.23. A las 11:10:21 UTC se confirmó la versión habilitada y las tres asignaciones. Los últimos reportes disponibles seguían en código 26; instalación y prueba física pendientes. Evidencia: `../../output/pos-spatial-release-2026-10-16/publication-verification.json`. La nota administrativa traducida sigue preparada fuera del feed hasta coordinar su publicación y validación; las notas de la APK describen la mejora. No se desplegó el backend ni el storefront web con esta distribución.
+
 ## Corrección de impresión — 7 de octubre de 2026
 
 0.3.23/código 26 publicada y asignada únicamente al SUNMI V3 002 de VigoCity. Incluye ajuste del ancho del ticket, resultado de impresión en la página sin modal, prevención de doble envío pendiente y número corto `WEB-<Sale.id>` para referencias web largas. Los códigos de seguimiento originales se conservan. APK y metadatos verificados por la CLI; SHA256 `c67c0c989d3c64ffcfbc823023d0e0cc3b7227b0415ea504f0850a83fba49bc0`.
