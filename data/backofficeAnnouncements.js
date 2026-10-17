@@ -1,4 +1,5 @@
-import { pizzaSpatialAnnouncementDraft, pizzaWorkbenchAnnouncementDraft, categoryBasePricingAnnouncementDraft } from './pizzaSpatialAnnouncement.js';
+import { pizzaSpatialAnnouncementDraft, pizzaWorkbenchAnnouncementDraft, categoryBasePricingAnnouncementDraft, pizzaSauceLayersAnnouncementDraft } from './pizzaSpatialAnnouncement.js';
+export { pizzaSauceLayersAnnouncementDraft } from './pizzaSpatialAnnouncement.js';
 // Storefront 7880a0f deployed and the compact header verified on 14 October 2026.
 export const compactCouponGalleryAnnouncementDraft = {
   id: 'compact-coupon-gallery-2026-10', revision: 1, category: 'improvement', severity: 'info',
@@ -923,3 +924,9 @@ export { pizzaSpatialAnnouncementDraft, pizzaWorkbenchAnnouncementDraft, categor
 backofficeAnnouncements.push(...[pizzaSpatialAnnouncementDraft, pizzaWorkbenchAnnouncementDraft, categoryBasePricingAnnouncementDraft].map(announcement => ({
   ...announcement, publishedAt: '2026-10-16T11:18:11.416Z', expiresAt: '2027-01-16T23:59:59.000Z',
 })));
+
+// Storefront a4d4360 verified in production on 17 October 2026.
+backofficeAnnouncements.push({
+  ...pizzaSauceLayersAnnouncementDraft,
+  publishedAt: '2026-10-17T09:12:24.992Z', expiresAt: '2027-01-17T23:59:59.000Z',
+});

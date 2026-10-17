@@ -1,4 +1,18 @@
 // Release copy; feed activation follows production verification. Physical printing is checked on each terminal.
+// Sauce rendering correction: storefront verified in production on 17 October 2026.
+export const pizzaSauceLayersAnnouncementDraft = {
+  id: 'pizza-sauce-layers-2026-10', revision: 1, category: 'improvement', severity: 'info',
+  title: 'Salsas de base y salsas de acabado',
+  message: 'En el armado visual, la salsa de tomate cubre la base. La barbacoa, la salsa cheddar y las demás salsas de acabado se dibujan en líneas sobre los ingredientes, respetando la mitad elegida y la cantidad.',
+  detail: 'La presentación se define de forma central junto al catálogo de ingredientes. No hay nuevos controles por negocio ni cambios de precios o recetas. La mozzarella y los quesos de cobertura ocupan gran parte de la superficie sobre la salsa de base. Los quesos distintivos, como azul, cabra o cheddar sólido, conservan sus piezas.',
+  translations: {
+    en: { title: 'Base sauces and finishing sauces', message: 'In the visual builder, tomato sauce covers the base. BBQ, cheddar sauce and other finishing sauces are drawn as lines over the ingredients, respecting the selected half and quantity.', detail: 'Presentation is centrally defined alongside the ingredient catalogue. There are no new business controls or price or recipe changes. Mozzarella and covering cheeses fill most of the surface over the base sauce. Distinctive cheeses such as blue cheese, goat cheese and solid cheddar retain their pieces.' },
+    it: { title: 'Salse di base e salse di finitura', message: 'Nel configuratore visivo, la salsa di pomodoro copre la base. Barbecue, salsa cheddar e altre salse di finitura sono disegnate a filo sopra gli ingredienti, rispettando la metà e la quantità scelte.', detail: 'La presentazione è definita centralmente accanto al catalogo degli ingredienti. Nessun nuovo controllo per il locale né modifiche a prezzi o ricette. La mozzarella e i formaggi di copertura occupano gran parte della superficie sopra la salsa di base. Formaggi distintivi come erborinato, caprino e cheddar solido restano in pezzi.' },
+    fr: { title: 'Sauces de base et sauces de finition', message: 'Dans le configurateur visuel, la sauce tomate couvre la base. Les sauces barbecue, cheddar et les autres sauces de finition sont dessinées en filets sur les ingrédients, selon la moitié et la quantité choisies.', detail: 'La présentation est définie de manière centrale avec le catalogue des ingrédients. Aucun nouveau réglage par établissement ni changement de prix ou de recette. La mozzarella et les fromages de couverture occupent une grande partie de la surface au-dessus de la sauce de base. Les fromages distinctifs, comme le bleu, le chèvre et le cheddar solide, gardent leurs morceaux.' },
+    pt: { title: 'Molhos de base e molhos de acabamento', message: 'No construtor visual, o molho de tomate cobre a base. Barbecue, molho cheddar e outros molhos de acabamento aparecem em linhas sobre os ingredientes, respeitando a metade e a quantidade escolhidas.', detail: 'A apresentação é definida centralmente junto ao catálogo de ingredientes. Não há novos controlos por negócio nem alterações de preços ou receitas. A mozzarella e os queijos de cobertura ocupam grande parte da superfície sobre o molho de base. Os queijos distintos, como azul, cabra e cheddar sólido, mantêm os seus pedaços.' },
+  },
+};
+
 export const pizzaSpatialAnnouncementDraft = {
   id: 'pizza-spatial-tickets-2026-10', revision: 1, category: 'improvement', severity: 'info',
   title: 'Pizzas más fáciles de preparar',

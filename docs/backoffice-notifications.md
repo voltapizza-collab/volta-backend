@@ -1,3 +1,7 @@
+# Salsas y cobertura de queso — 17 de octubre de 2026
+
+Se activa `pizzaSauceLayersAnnouncementDraft` en ES/EN/IT/FR/PT tras verificar el storefront `a4d4360`, despliegue Railway `019c97fc-54ec-4c32-87f8-713517cd763b` en SUCCESS. La tienda responde HTTP 200 y sirve `main.8b8c99c5.js` junto al constructor `633.409e898d.chunk.js`, con las capas de salsas y la cobertura del queso. Fecha de comprobación: 2026-10-17T09:12:24.992Z. Quince pruebas del constructor y diez de avisos superadas; compilación de producción correcta. La corrección es visual y no requiere migraciones ni actualización de la APK.
+
 # Cabecera compacta de cupones — 14 de octubre de 2026
 
 `compactCouponGalleryAnnouncementDraft` se activa en ES/EN/IT/FR/PT tras verificar el storefront `7880a0f`, despliegue Railway `7efa4239-b4b0-490a-b9a7-0770a03b2d9f` en SUCCESS y respuesta HTTP 200. La cabecera conserva el nombre del negocio y elimina el logo: a 375 px de ancho pasa de 228,83 a 112,83 px antes de seleccionar zona, recuperando 116 px verticales. Compilación local y de producción correctas; nueve pruebas de la galería y diez de avisos superadas.
