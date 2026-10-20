@@ -1,6 +1,10 @@
-# Confirmación de modalidad en checkout — borrador local del 19 de octubre de 2026
+# Confirmación de modalidad en checkout — publicada el 20 de octubre de 2026
 
-`checkoutModeConfirmationAnnouncementDraft` incluye ES/EN/IT/FR/PT y permanece fuera del feed. Activarlo con fechas reales después de desplegar y verificar la confirmación de modalidad en el carrito y en el selector de pago del storefront. El cambio reutiliza el editor existente y conserva el carrito al volver; el servidor mantiene las validaciones de disponibilidad, precios, promociones, cupones y mínimo antes de crear el pedido.
+`checkoutModeConfirmationAnnouncementDraft` se activa en ES/EN/IT/FR/PT tras comprobar los despliegues SUCCESS del storefront `a3f2b0d` (Railway `e7c146c4-6cb5-4174-82c6-cde0c288efb7`) y backend `221944c` (`754b7d67-8e57-4667-b0be-45b8138cedab`). El cambio reutiliza el editor existente y conserva el carrito al volver; el servidor mantiene las validaciones de disponibilidad, precios, promociones, cupones y mínimo antes de crear el pedido.
+
+Validación: 72 pruebas del backend, 28 de React/SEO (incluidas 12 de modalidad) y 4 de publicación/medios superadas. Railway compiló el storefront correctamente. Producción sirve `main.06e372f2.js`, que contiene la confirmación de modalidad y apunta a la API de producción; `/health` devuelve `ok: true` y la tienda pública responde 200. No se creó ni pagó ningún pedido en producción; el recorrido completo de cambio de modalidad se verificó con las pruebas automatizadas.
+
+El mismo despliegue publica los botones comerciales y `/recursos`: navegación y apertura de Google Calendar comprobadas en navegador, biblioteca HTTP 200 con canonical y borrador de la primera clase HTTP 404/noindex. El manifiesto permanece vacío hasta recibir materiales reales. Esto actualiza el estado local previo registrado en `volta-storefront/docs/resources.md`.
 
 # Salsas y cobertura de queso — 17 de octubre de 2026
 

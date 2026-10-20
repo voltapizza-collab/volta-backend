@@ -1,5 +1,5 @@
 import { pizzaSpatialAnnouncementDraft, pizzaWorkbenchAnnouncementDraft, categoryBasePricingAnnouncementDraft, pizzaSauceLayersAnnouncementDraft } from './pizzaSpatialAnnouncement.js';
-// Activate only after the checkout confirmation is deployed and verified in the storefront.
+// Published after storefront a3f2b0d and backend 221944c were verified on 20 October 2026.
 export const checkoutModeConfirmationAnnouncementDraft = {
   id: 'checkout-mode-confirmation-2026-10', revision: 1, category: 'improvement', severity: 'info',
   title: 'Entrega o recogida, visible antes de pagar',
@@ -941,4 +941,9 @@ backofficeAnnouncements.push(...[pizzaSpatialAnnouncementDraft, pizzaWorkbenchAn
 backofficeAnnouncements.push({
   ...pizzaSauceLayersAnnouncementDraft,
   publishedAt: '2026-10-17T09:12:24.992Z', expiresAt: '2027-01-17T23:59:59.000Z',
+});
+
+backofficeAnnouncements.push({
+  ...checkoutModeConfirmationAnnouncementDraft,
+  publishedAt: '2026-10-20T11:25:49.511Z', expiresAt: '2027-01-20T23:59:59.000Z',
 });
