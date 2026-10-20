@@ -80,6 +80,18 @@ test("delivery free coupon discounts the delivery fee", () => {
   assert.equal(calculateCouponDiscount(coupon, 30, { deliveryFee: 0 }), 0);
 });
 
+test("checkout requires review when the submitted coupon amount differs from the current benefit", () => {
+  const coupon = { status: "ACTIVE", kind: "AMOUNT", amount: 5, usageUnlimited: true };
+  const context = { eligibleSubtotal: 20, deliveryFee: 3, store: { id: 3 } };
+  assert.equal(validateCouponForCheckout(coupon, { ...context, submittedDiscount: 5 }), null);
+  assert.equal(validateCouponForCheckout(coupon, { ...context, submittedDiscount: 3 }), "coupon_changed");
+  assert.equal(validateCouponForCheckout(coupon, { ...context, submittedDiscount: 7 }), "coupon_changed");
+  const freeDelivery = { ...coupon, campaign: "DELIVERY_FREE" };
+  assert.equal(validateCouponForCheckout(freeDelivery, { ...context, submittedDiscount: 3 }), null);
+  assert.equal(validateCouponForCheckout(freeDelivery, { ...context, deliveryFee: 6, submittedDiscount: 3 }), "coupon_changed");
+  assert.equal(validateCouponForCheckout(freeDelivery, { ...context, deliveryFee: 0, submittedDiscount: 3 }), "coupon_not_applicable");
+});
+
 test("channel shift QR coupons do not stack with top deals or other coupon lines", () => {
   const activeTopDeals = [
     {

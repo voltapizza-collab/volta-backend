@@ -1,4 +1,16 @@
 import { pizzaSpatialAnnouncementDraft, pizzaWorkbenchAnnouncementDraft, categoryBasePricingAnnouncementDraft, pizzaSauceLayersAnnouncementDraft } from './pizzaSpatialAnnouncement.js';
+// Activate only after the checkout confirmation is deployed and verified in the storefront.
+export const checkoutModeConfirmationAnnouncementDraft = {
+  id: 'checkout-mode-confirmation-2026-10', revision: 1, category: 'improvement', severity: 'info',
+  title: 'Entrega o recogida, visible antes de pagar',
+  message: 'El checkout destaca la modalidad y su dirección antes de elegir el pago. El cliente puede pulsar Cambiar modalidad y volver con su carrito para revisar el total actualizado.',
+  translations: {
+    en: { title: 'Delivery or pickup, visible before payment', message: 'Checkout highlights the order mode and its address before payment selection. Customers can select Change order mode and return with their cart to review the updated total.' },
+    it: { title: 'Consegna o ritiro, visibili prima del pagamento', message: 'Il checkout evidenzia la modalità e il relativo indirizzo prima della scelta del pagamento. Il cliente può cambiare modalità e tornare con il carrello per verificare il totale aggiornato.' },
+    fr: { title: 'Livraison ou retrait, visibles avant de payer', message: 'Le checkout met en évidence le mode de commande et son adresse avant le choix du paiement. Le client peut changer de mode et retrouver son panier pour vérifier le total actualisé.' },
+    pt: { title: 'Entrega ou recolha, visíveis antes de pagar', message: 'O checkout destaca a modalidade e a respetiva morada antes da escolha do pagamento. O cliente pode mudar de modalidade e voltar com o carrinho para rever o total atualizado.' },
+  },
+};
 export { pizzaSauceLayersAnnouncementDraft } from './pizzaSpatialAnnouncement.js';
 // Storefront 7880a0f deployed and the compact header verified on 14 October 2026.
 export const compactCouponGalleryAnnouncementDraft = {

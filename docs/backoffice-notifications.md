@@ -1,3 +1,7 @@
+# Confirmación de modalidad en checkout — borrador local del 19 de octubre de 2026
+
+`checkoutModeConfirmationAnnouncementDraft` incluye ES/EN/IT/FR/PT y permanece fuera del feed. Activarlo con fechas reales después de desplegar y verificar la confirmación de modalidad en el carrito y en el selector de pago del storefront. El cambio reutiliza el editor existente y conserva el carrito al volver; el servidor mantiene las validaciones de disponibilidad, precios, promociones, cupones y mínimo antes de crear el pedido.
+
 # Salsas y cobertura de queso — 17 de octubre de 2026
 
 Se activa `pizzaSauceLayersAnnouncementDraft` en ES/EN/IT/FR/PT tras verificar el storefront `a4d4360`, despliegue Railway `019c97fc-54ec-4c32-87f8-713517cd763b` en SUCCESS. La tienda responde HTTP 200 y sirve `main.8b8c99c5.js` junto al constructor `633.409e898d.chunk.js`, con las capas de salsas y la cobertura del queso. Fecha de comprobación: 2026-10-17T09:12:24.992Z. Quince pruebas del constructor y diez de avisos superadas; compilación de producción correcta. La corrección es visual y no requiere migraciones ni actualización de la APK.

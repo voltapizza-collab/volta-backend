@@ -539,7 +539,12 @@ export const getCouponLines = (lines) => lines.filter(isCouponLine);
 
 export const validateCouponForCheckout = (coupon, context) => {
   const result = evaluateCoupon(coupon, context);
-  if (result.valid) return null;
+  if (result.valid) {
+    if (context.submittedDiscount != null && Math.abs(Number(context.submittedDiscount) - result.discount) > 0.004) {
+      return "coupon_changed";
+    }
+    return null;
+  }
   return ["no_delivery_fee", "no_eligible_products", "empty_cart", "min_not_met"].includes(result.status)
     ? "coupon_not_applicable" : "coupon_not_available";
 };
@@ -942,6 +947,7 @@ export default function checkoutRoutes(prisma) {
         const couponCheckoutError = validateCouponForCheckout(coupon, {
           eligibleSubtotal,
           deliveryFee: shippingBenefitFee,
+          submittedDiscount: Math.abs(getLineTotal(couponLine)),
           store,
           reference: new Date(),
         });
