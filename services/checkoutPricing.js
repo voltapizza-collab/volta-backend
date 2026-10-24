@@ -1,3 +1,4 @@
+import { categoryBuilder } from './foodPackages.js';
 import { loadStorefrontPricing } from '../routes/stores.js';
 import { normalizeBoostSettings } from './boostSettings.js';
 import { isPizzaCategory } from './fulfillmentPolicy.js';
@@ -118,7 +119,7 @@ export function priceCheckoutLines(lines, context) {
     if (!custom(line) && selected.length) fail(line,'cart_line_invalid');
     let base, directDiscount = null, ingredientTotal = 0;
     if (custom(line)) {
-      if (!product.categoryRef?.customizable) fail(line,'cart_item_unavailable');
+      if (!product.categoryRef?.customizable || categoryBuilder(product.categoryRef) !== 'PIZZA') fail(line,'cart_item_unavailable');
       if (!selected.length || array(line.extras).length || (line.customMeta?.categoryId && Number(line.customMeta.categoryId) !== product.categoryId)) fail(line,'cart_line_invalid');
       const availableCategory = menu.filter(p=>categorySame(product,p));
       const category = availableCategory.length ? availableCategory : references.filter(p=>categorySame(product,p));
@@ -189,6 +190,8 @@ export function priceCheckoutLines(lines, context) {
 
 export async function validateCheckoutPricing(prisma, lines, { partner, store, activeTopDeals, checkRewards = true }) {
   const { menu, products, references } = await loadStorefrontPricing(prisma,{partner,store,activeTopDeals});
+  if (partner.storefrontButtonConfig?.customPizza === false && lines.some(custom)) fail(lines.find(custom), 'cart_item_unavailable');
+  if (partner.storefrontButtonConfig?.halfAndHalf === false && lines.some(half)) fail(lines.find(half), 'cart_item_unavailable');
   const needsCustom=lines.some(custom), needsExtras=lines.some(l=>array(l.extras).length), needsReward=lines.some(reward);
   const [extras,uses,profiles,promos,incentives,average,boostSettings,queueSize] = await Promise.all([
     needsExtras?prisma.ingredientExtra.findMany({where:{partnerId:partner.id,status:'ACTIVE'}}):[],

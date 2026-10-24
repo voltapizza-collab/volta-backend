@@ -1,3 +1,4 @@
+import { isFoodManaged, categoryAllowed } from '../services/foodPackages.js';
 import express from "express";
 
 const computeProductStatus = (pizzaStock, ingredientsAll) => {
@@ -33,6 +34,7 @@ export default function menuDisponibleRoutes(prisma) {
 
       if (!store) return res.json([]);
 
+      const partner = await prisma.partner.findUnique({ where: { id: store.partnerId } });
       let enabledPartnerCategories = [];
 
       if (prisma.partnerCategory) {
@@ -49,11 +51,12 @@ export default function menuDisponibleRoutes(prisma) {
             "menuDisponible partnerCategory fallback:",
             partnerCategoryError?.message || partnerCategoryError
           );
+          if (isFoodManaged(partner)) throw partnerCategoryError;
           enabledPartnerCategories = [];
         }
       }
 
-      const enabledCategoryIds = enabledPartnerCategories.map(
+      const enabledCategoryIds = enabledPartnerCategories.filter(row => categoryAllowed(partner, row.categoryId)).map(
         (row) => row.categoryId
       );
 
@@ -62,7 +65,7 @@ export default function menuDisponibleRoutes(prisma) {
           partnerId: store.partnerId,
           status: "ACTIVE",
           type: "SELLABLE",
-          ...(enabledCategoryIds.length
+          ...(isFoodManaged(partner) || enabledCategoryIds.length
             ? { categoryId: { in: enabledCategoryIds } }
             : {}),
         },

@@ -7,7 +7,7 @@ import { isPublicWebRoute } from '../services/webAccess.js';
 async function fixture(t, sendEmail = async () => ({ ok: true })) {
   let row;
   const emails = [];
-  const db = { onboardingRequest: {
+  const db = { foodPackage: { findMany: async () => [], count: async () => 0 }, onboardingRequest: {
     create: async ({ data }) => row = { id: 7, ...data, createdAt: new Date(), emailStatus: 'PENDING' },
     findUnique: async ({ where }) => row && (where.id === row.id || where.token === row.token) ? structuredClone(row) : null,
     findMany: async () => row ? [structuredClone(row)] : [],

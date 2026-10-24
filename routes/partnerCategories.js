@@ -1,3 +1,4 @@
+import { isFoodManaged, categoryAllowed, categoryBuilder } from '../services/foodPackages.js';
 import express from "express";
 import { validateCategoryBasePrices } from '../services/categoryBasePrices.js';
 
@@ -18,7 +19,7 @@ const getPartnerOrThrow = async (prisma, partnerId) => {
 
   const partner = await prisma.partner.findUnique({
     where: { id: parsedPartnerId },
-    select: { id: true, slug: true },
+    select: { id: true, slug: true, foodConfiguration: true },
   });
 
   if (!partner) {
@@ -31,6 +32,7 @@ const getPartnerOrThrow = async (prisma, partnerId) => {
 };
 
 const loadGlobalCategoryFallback = async (prisma, partner) => {
+  if (isFoodManaged(partner)) throw Object.assign(new Error('food_categories_unavailable'), { status: 503 });
   const categories = await prisma.category.findMany({
     orderBy: [{ position: "asc" }, { name: "asc" }],
   });
@@ -111,7 +113,7 @@ const syncPartnerCategories = async (prisma, partner) => {
         data: missingCategories.map((category, index) => ({
           partnerId,
           categoryId: category.id,
-          enabled: true,
+          enabled: categoryAllowed(partner, category.id),
           position: startPosition + index,
         })),
         skipDuplicates: true,
@@ -129,7 +131,7 @@ const syncPartnerCategories = async (prisma, partner) => {
       include: {
         category: true,
       },
-      orderBy: [{ category: { position: "asc" } }, { category: { name: "asc" } }],
+      orderBy: [{ position: "asc" }, { category: { name: "asc" } }],
     });
   } catch (err) {
     console.error("partnerCategories final fallback:", err.message);
@@ -148,8 +150,10 @@ const syncPartnerCategories = async (prisma, partner) => {
       customizable: link.category.customizable ?? false,
       halfAndHalf: link.category.halfAndHalf ?? false,
       customBasePrices: link.customBasePrices || {},
-      enabled: link.enabled,
-      position: link.category.position ?? link.position,
+      enabled: link.enabled && categoryAllowed(partner, link.categoryId),
+      assigned: categoryAllowed(partner, link.categoryId),
+      builderType: categoryBuilder(link.category),
+      position: link.position,
       createdAt: link.category.createdAt,
       updatedAt: link.category.updatedAt,
     }));
@@ -193,12 +197,12 @@ export default function partnerCategoriesRoutes(prisma) {
       }
 
       if (!prisma.partnerCategory) {
+        if (isFoodManaged(partner)) return res.status(503).json({ error: 'food_categories_unavailable' });
         await persistGlobalCategoryOrder(prisma, orderedIds);
         return res.json({ ok: true, fallback: true, scope: "global-category" });
       }
 
       await syncPartnerCategories(prisma, partner);
-      await persistGlobalCategoryOrder(prisma, orderedIds);
 
       const reordered = await withPartnerCategoryFallback(
         prisma,
@@ -219,6 +223,7 @@ export default function partnerCategoriesRoutes(prisma) {
       );
 
       if (!reordered) {
+        if (isFoodManaged(partner)) return res.status(503).json({ error: "food_categories_unavailable" });
         await persistGlobalCategoryOrder(prisma, orderedIds);
         return res.json({ ok: true, fallback: true, scope: "global-category" });
       }
@@ -236,6 +241,7 @@ export default function partnerCategoriesRoutes(prisma) {
       const partnerId = partner.id;
       const categoryId = Number(req.params.categoryId);
       const { enabled } = req.body;
+      if (!categoryAllowed(partner, categoryId)) return res.status(409).json({ error: 'category_not_in_food_packages' });
 
       if (Object.hasOwn(req.body, 'customBasePrices')) {
         // This endpoint only edits this business's prices, never global capabilities.
@@ -309,6 +315,7 @@ export default function partnerCategoriesRoutes(prisma) {
       );
 
       if (!updated) {
+        if (isFoodManaged(partner)) return res.status(503).json({ error: "food_categories_unavailable" });
         return res.json({
           id: categoryId,
           partnerCategoryId: null,

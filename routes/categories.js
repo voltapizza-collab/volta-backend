@@ -1,3 +1,4 @@
+import { categoryBuilder } from '../services/foodPackages.js';
 import express from "express";
 import prisma from "../services/prisma.js";
 
@@ -5,6 +6,7 @@ const router = express.Router();
 
 const normalizeCategory = (row) => ({
   ...row,
+  builderType: categoryBuilder(row),
   customizable: Boolean(row?.customizable),
   halfAndHalf: Boolean(row?.halfAndHalf),
 });
@@ -38,7 +40,9 @@ router.get("/", async (req, res) => {
 router.post("/", async (req, res) => {
   try {
     const rawName = String(req.body?.name || "").trim();
-    const customizable = Boolean(req.body?.customizable);
+    const builderType = req.body?.builderType ?? (req.body?.customizable ? 'PIZZA' : 'NONE');
+    if (!['NONE', 'PIZZA'].includes(builderType)) return res.status(400).json({ error: 'invalid_builder_type' });
+    const customizable = builderType === 'PIZZA';
     const halfAndHalf = Boolean(req.body?.halfAndHalf);
 
     if (!rawName) {
@@ -68,6 +72,7 @@ router.post("/", async (req, res) => {
     const row = await prisma.category.create({
       data: {
         name: rawName,
+        builderType,
         customizable,
         position,
       },
@@ -133,14 +138,15 @@ router.patch("/:id", async (req, res) => {
       return res.status(409).json({ error: "Category already exists" });
     }
 
+    const builderType = req.body.builderType ?? (hasCustomizable ? (req.body.customizable ? 'PIZZA' : 'NONE') : categoryBuilder(existing));
+    if (!['NONE', 'PIZZA'].includes(builderType)) return res.status(400).json({ error: 'invalid_builder_type' });
     const updated = await prisma.$transaction(async (tx) => {
       const category = await tx.category.update({
         where: { id },
         data: {
           name: nextName,
-          ...(hasCustomizable
-            ? { customizable: Boolean(req.body.customizable) }
-            : {}),
+          builderType,
+          customizable: builderType === "PIZZA",
         },
       });
 
@@ -214,6 +220,8 @@ router.delete("/:id", async (req, res) => {
       });
     }
 
+    const packages = await prisma.foodPackage.findMany();
+    if (packages.some(pack => pack.categoryIds.includes(id))) return res.status(409).json({ error: 'Category belongs to a food package' });
     await prisma.category.delete({
       where: { id },
     });

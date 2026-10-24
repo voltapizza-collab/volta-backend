@@ -54,7 +54,7 @@ export default function demoRequestsRoutes(prisma, { mail, mapRequest, buildOnbo
         if (previous?.emailStatus === 'SENDING' && Date.now() - new Date(previous.startedAt).getTime() < 120000) throw failure('invitation_in_progress');
         if (current.status === 'REJECTED') throw failure('demo_request_closed');
         const commercialCatalog = current.formalData.commercialCatalog || await newOnboardingCatalog(tx);
-        return tx.onboardingRequest.update({ where: { id }, data: { formalData: { ...current.formalData, commercialCatalog,
+        return tx.onboardingRequest.update({ where: { id }, data: { formalData: { ...current.formalData, commercialCatalog, foodPackagesRequired: current.formalData.foodPackagesRequired ?? (tx.foodPackage ? (await tx.foodPackage.count({ where: { active: true } })) > 0 : false),
           demoInvitation: { attempt, emailStatus: 'SENDING', startedAt: new Date().toISOString(), requestedByBusiness: true },
         } } });
       });

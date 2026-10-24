@@ -10,13 +10,14 @@ export async function loadStoreMenuProducts(prisma, partnerId, storeId) {
   const rows = await prisma.$queryRawUnsafe(`
     SELECT p.id, p.name, p.category, p.categoryId, p.cookingMethod, p.selectSize,
            p.priceBySize, p.image, p.launchAt, p.availableUntil, p.productTags,
-           c.position, c.customizable, c.halfAndHalf,
+           c.position, c.customizable, c.halfAndHalf, c.builderType, b.foodConfiguration,
            pc.customBasePrices, pc.enabled AS categoryEnabled,
            s.active AS productActive, s.stock,
            r.id AS recipeId, r.qtyBySize,
            i.id AS ingredientId, i.name AS ingredientName, i.canonicalKey,
            i.allergens, i.costPrice, i.status AS ingredientStatus, t.active AS ingredientActive
       FROM MenuPizza p
+      JOIN Partner b ON b.id = p.partnerId
       LEFT JOIN Category c ON c.id = p.categoryId
       LEFT JOIN PartnerCategory pc ON pc.categoryId = p.categoryId AND pc.partnerId = p.partnerId
       LEFT JOIN StorePizzaStock s ON s.pizzaId = p.id AND s.storeId = ?
@@ -27,12 +28,15 @@ export async function loadStoreMenuProducts(prisma, partnerId, storeId) {
      ORDER BY p.id, r.id`, storeId, storeId, partnerId);
   const products = new Map();
   for (const row of rows) {
+    const food = json(row.foodConfiguration, null);
+    if (row.categoryEnabled === false || row.categoryEnabled === 0) continue;
+    if (food?.version === 1 && (row.categoryEnabled == null || !food.packages.some(pack => pack.categoryIds.includes(row.categoryId)))) continue;
     if (!products.has(row.id)) products.set(row.id, {
       id: row.id, name: row.name, category: row.category, categoryId: row.categoryId,
       cookingMethod: row.cookingMethod, selectSize: json(row.selectSize, []),
       priceBySize: json(row.priceBySize, {}), image: row.image, launchAt: row.launchAt,
       availableUntil: row.availableUntil, productTags: json(row.productTags, []),
-      categoryRef: { position: row.position, customizable: Boolean(row.customizable) && row.categoryEnabled !== false && row.categoryEnabled !== 0, halfAndHalf: Boolean(row.halfAndHalf) },
+      categoryRef: { builderType: row.builderType ?? (row.customizable ? "PIZZA" : "NONE"), position: row.position, customizable: Boolean(row.customizable) && row.categoryEnabled !== false && row.categoryEnabled !== 0, halfAndHalf: Boolean(row.halfAndHalf) },
       categoryBasePriceBySize: json(row.customBasePrices, {}),
       stocks: row.productActive == null ? [] : [{ active: Boolean(row.productActive), stock: row.stock }],
       ingredients: [],

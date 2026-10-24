@@ -1,4 +1,5 @@
 import { multipartWebScope } from '../services/webAccess.js';
+import { categoryAllowed } from '../services/foodPackages.js';
 import express from "express";
 import { deleteUnlinkedProduct, getProductLinks } from "../services/productLinks.js";
 import multer from "multer";
@@ -608,7 +609,7 @@ export default function pizzasRoutes(prisma) {
 
       const partner = await prisma.partner.findUnique({
         where: { id: parsedPartnerId },
-        select: { id: true },
+        select: { id: true, foodConfiguration: true },
       });
 
       if (!partner) {
@@ -616,6 +617,7 @@ export default function pizzasRoutes(prisma) {
       }
 
       const category = await getCategoryOrThrow(prisma, categoryId);
+      if (!categoryAllowed(partner, category.id)) return res.status(409).json({ error: 'category_not_in_food_packages' });
       const parsedSizes = parseMaybeJson(sizes, []);
       const parsedPrices = parseMaybeJson(priceBySize, {});
       const parsedIngredients = parseMaybeJson(ingredients, []);
@@ -749,6 +751,10 @@ export default function pizzasRoutes(prisma) {
 
       if (body.categoryId != null && body.categoryId !== "") {
         const category = await getCategoryOrThrow(prisma, body.categoryId);
+        if (category.id !== existing.categoryId) {
+          const partner = await prisma.partner.findUnique({ where: { id: existing.partnerId } });
+          if (!categoryAllowed(partner, category.id)) return res.status(409).json({ error: 'category_not_in_food_packages' });
+        }
         nextCategoryId = category.id;
         nextCategoryName = category.name;
       }

@@ -798,6 +798,7 @@ const attachStorePublicMenu = (router, prisma) => {
           categoryId: pizza.categoryId ?? null,
           category: pizza.category ?? null,
           categoryPosition: pizza.categoryRef?.position ?? 999,
+          categoryBuilderType: pizza.categoryRef?.builderType ?? "NONE",
           categoryCustomizable: pizza.categoryRef?.customizable ?? false,
           categoryBasePriceBySize: pizza.categoryBasePriceBySize || {},
           categoryHalfAndHalf:

@@ -1,3 +1,7 @@
+# Paquetes de comida — borrador local, 24 de octubre de 2026
+
+`foodPackagesAnnouncementDraft` está exportado por el catálogo y traducido a ES/EN/IT/FR/PT, pero permanece fuera del feed. Publicarlo después de la migración, el despliegue coordinado y la verificación de los paquetes. Véase [alcance y publicación](food-packages-rollout.md).
+
 # Confirmación de modalidad en checkout — publicada el 20 de octubre de 2026
 
 `checkoutModeConfirmationAnnouncementDraft` se activa en ES/EN/IT/FR/PT tras comprobar los despliegues SUCCESS del storefront `a3f2b0d` (Railway `e7c146c4-6cb5-4174-82c6-cde0c288efb7`) y backend `221944c` (`754b7d67-8e57-4667-b0be-45b8138cedab`). El cambio reutiliza el editor existente y conserva el carrito al volver; el servidor mantiene las validaciones de disponibilidad, precios, promociones, cupones y mínimo antes de crear el pedido.

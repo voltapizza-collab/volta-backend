@@ -1,3 +1,4 @@
+import { snapshotPackages, applyFoodConfiguration, parsePackageIds } from '../services/foodPackages.js';
 import { safeActivation, ensureBackofficeCredentialColumns } from '../services/backofficeInvitation.js';
 import crypto from "crypto";
 import axios from "axios";
@@ -181,6 +182,7 @@ const buildFormalUrl = (token) => `${publicFrontendUrl()}/onboarding/${encodeURI
 const buildContractUrl = (token) => `${buildFormalUrl(token)}?contract=1`;
 
 const mapRequestBase = (request) => ({
+  foodPackagesRequired: request.formalData?.foodPackagesRequired === true,
   requestKind: isDemoRequest(request) ? 'DEMO' : 'ONBOARDING',
   commercialCatalog: withOnboardingSmsTariff(request.formalData?.commercialCatalog || onboardingCommercialCatalog()),
   commercialClosurePending: needsCommercialClosure(request),
@@ -836,6 +838,9 @@ const createPartnerActivation = async (tx, request, storeCoordinates = null) => 
     },
   });
 
+  if (formalData.foodConfiguration?.version === 1) {
+    await applyFoodConfiguration(tx, partner, formalData.foodConfiguration, 'onboarding');
+  }
   return buildActivationPayload({
     partner,
     store,
@@ -1153,7 +1158,7 @@ export default function onboardingRoutes(prisma, { sendEmail = sendSmtpEmail, st
           email,
           phone,
           message,
-          formalData: { commercialCatalog: await newOnboardingCatalog(prisma) },
+          formalData: { commercialCatalog: await newOnboardingCatalog(prisma), foodPackagesRequired: prisma.foodPackage ? (await prisma.foodPackage.count({ where: { active: true } })) > 0 : false },
         },
       });
 
@@ -1387,6 +1392,12 @@ export default function onboardingRoutes(prisma, { sendEmail = sendSmtpEmail, st
       }
       const { data } = buildFormalData(req.body || {}, []);
       delete data.supportingDocuments;
+      const savedFood = request.formalData?.onboardingDraft?.foodConfiguration || request.formalData?.foodConfiguration;
+      if (savedFood) Object.assign(data, { foodConfiguration: savedFood, foodPackageIds: savedFood.packages.map(p => p.id) });
+      if (req.body.foodPackageIds !== undefined) {
+        data.foodConfiguration = await snapshotPackages(prisma, req.body.foodPackageIds, request.formalData?.onboardingDraft?.foodConfiguration || request.formalData?.foodConfiguration, { allowEmpty: true });
+        data.foodPackageIds = data.foodConfiguration.packages.map(p => p.id);
+      }
       const commercial = buildCommercialSelection(req.body || {}, { draft: true, catalog: request.formalData?.commercialCatalog || onboardingCommercialCatalog() });
       const saved = await prisma.onboardingRequest.updateMany({
         where: { id: request.id, status: request.status, updatedAt: request.updatedAt },
@@ -1398,6 +1409,7 @@ export default function onboardingRoutes(prisma, { sendEmail = sendSmtpEmail, st
       return res.json({ ok: true, request: await mapRequest(await prisma.onboardingRequest.findUnique({ where: { token } })) });
     } catch (error) {
       console.error('[onboarding.draft]', error);
+      if (error.status === 400 || error.status === 409) return res.status(error.status).json({ ok: false, error: error.message, missing: ['foodPackageIds'] });
       return res.status(500).json({ ok: false, error: 'onboarding_draft_failed' });
     }
   });
@@ -1411,7 +1423,9 @@ export default function onboardingRoutes(prisma, { sendEmail = sendSmtpEmail, st
         return res.status(404).json({ ok: false, error: "onboarding_request_not_found" });
       }
 
-      return res.json({ ok: true, request: await mapRequest(request) });
+      const mapped = await mapRequest(request);
+      mapped.foodPackages = await prisma.foodPackage.findMany({ where: { active: true }, orderBy: [{ position: 'asc' }, { id: 'asc' }] });
+      return res.json({ ok: true, request: mapped });
     } catch (error) {
       console.error("[onboarding.form.get] error:", error);
       return res.status(500).json({ ok: false, error: "onboarding_form_failed" });
@@ -1444,6 +1458,12 @@ export default function onboardingRoutes(prisma, { sendEmail = sendSmtpEmail, st
         ...incomingDocumentPlaceholders,
       ];
       const precheck = buildFormalData(req.body, documentsForValidation);
+      const foodPackagesRequired = request.formalData?.foodPackagesRequired === true;
+      let foodConfiguration = request.formalData?.onboardingDraft?.foodConfiguration || request.formalData?.foodConfiguration;
+      try {
+        const selectedIds = req.body.foodPackageIds === undefined ? foodConfiguration?.packages.map(p => p.id) ?? [] : parsePackageIds(req.body.foodPackageIds);
+        if (foodPackagesRequired || selectedIds.length || foodConfiguration?.packages?.length) foodConfiguration = await snapshotPackages(prisma, selectedIds, foodConfiguration);
+      } catch (error) { if (!error.status) throw error; return res.status(error.status).json({ error: error.message, missing: ['foodPackageIds'] }); }
       const commercial = buildCommercialSelection(req.body, { catalog: request.formalData?.commercialCatalog || onboardingCommercialCatalog() });
       precheck.missing.push(...commercial.missing);
 
@@ -1463,6 +1483,8 @@ export default function onboardingRoutes(prisma, { sendEmail = sendSmtpEmail, st
         ? [...existingDocuments, ...uploadedDocuments].slice(0, MAX_DOCUMENTS)
         : existingDocuments;
       const { data } = buildFormalData(req.body, supportingDocuments);
+      data.foodPackagesRequired = foodPackagesRequired;
+      if (foodConfiguration?.packages?.length) Object.assign(data, { foodConfiguration, foodPackageIds: foodConfiguration.packages.map(p => p.id) });
       Object.assign(data, commercial.fields, { commercialSelection: commercial.selection,
         commercialCatalog: request.formalData?.commercialCatalog || onboardingCommercialCatalog() });
 

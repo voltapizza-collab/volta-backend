@@ -87,6 +87,13 @@ for (const scenario of ['PURCHASE','INSTALLMENTS','RENT_QUOTE','FINANCED_RENT'])
   process.env.STRIPE_ONBOARDING_WEBHOOK_SECRET = 'whsec_local_test';
   t.after(() => { if (previousSecret === undefined) delete process.env.STRIPE_ONBOARDING_WEBHOOK_SECRET; else process.env.STRIPE_ONBOARDING_WEBHOOK_SECRET = previousSecret; });
   const f = fixture(mode); f.row().formalData.commercialSelection.sms.initialRecharge = 'SEPARATE';
+  const foodLinks = []; let savedFood;
+  if (scenario === 'PURCHASE') {
+    f.row().formalData.foodConfiguration = { version: 1, packages: [{ id: 2, name: 'Burger', categoryIds: [2] }] };
+    f.db.category = { findMany: async () => [{ id: 1, position: 0 }, { id: 2, position: 1 }] };
+    f.db.partnerCategory = { upsert: async ({ create }) => { foodLinks.push(create); return create; } };
+    f.db.foodConfigurationChange = { create: async () => ({}) };
+  }
   if (mode === 'RENT_QUOTE') {
     const catalog = await newOnboardingCatalog({ onboardingPricing: { findUnique: async () => ({ posTotalCents: 25000, revision: 4, defaults: { rentMode: scenario === 'FINANCED_RENT' ? 'FINANCED_TERM' : 'CUSTOMER_TERM' } }) } });
     f.row().formalData.commercialCatalog = catalog;
@@ -106,6 +113,7 @@ for (const scenario of ['PURCHASE','INSTALLMENTS','RENT_QUOTE','FINANCED_RENT'])
   let partners = 0, stores = 0, emails = [], failMail = true;
   f.db.$executeRawUnsafe = async () => 1;
   f.db.partner = { findUnique: async () => null, create: async ({ data }) => { partners++; return { id: 10, ...data }; } };
+  f.db.partner.update = async ({ data }) => { savedFood = data.foodConfiguration; return { id: 10, ...data }; };
   f.db.store = { findUnique: async () => null, create: async ({ data }) => { stores++; assert.equal(data.acceptingOrders, false); return { id: 20, ...data }; } };
   f.db.smsCreditLedger = { create: async () => assert.fail('No mandatory SMS recharge') };
   const app = express(); app.use(express.json({ verify: (req, _res, buf) => { req.rawBody = buf; } }));
@@ -151,6 +159,11 @@ for (const scenario of ['PURCHASE','INSTALLMENTS','RENT_QUOTE','FINANCED_RENT'])
   failMail = false;
   await webhook(); await webhook();
   assert.equal(emails.length, 1); assert.equal(partners, 1); assert.equal(stores, 1);
+  if (scenario === 'PURCHASE') {
+    assert.deepEqual(foodLinks.map(row => [row.categoryId, row.enabled]), [[1, false], [2, true]]);
+    assert.equal(savedFood.packages[0].name, 'Burger');
+    assert.equal(savedFood.updatedBy, 'onboarding');
+  }
   assert.match(emails[0].text, /QR de tu tienda/); assert.match(emails[0].text, /backoffice/);
   assert.equal(f.row().formalData.credentialsNotification.emailStatus, 'SENT');
   assert.equal(f.row().formalData.closure.payment.status, 'PAID');

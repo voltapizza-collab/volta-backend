@@ -162,6 +162,7 @@ model Partner {
     brandLogoProcessing String? @db.VarChar(32)
     minimumPaymentAmount Float?   @default(0)
     storefrontButtonConfig Json?
+    foodConfiguration    Json?
     storefrontMode       String?
     trackingNotificationSettings Json?
     priceAdjustmentRules Json?
@@ -746,7 +747,29 @@ model CouponRedemption {
   @@index([channel])
   @@index([acquisition])
 }
+model FoodPackage {
+  id Int @id @default(autoincrement())
+  name String @db.VarChar(120)
+  description String @db.Text
+  categoryIds Json
+  active Boolean @default(false)
+  position Int @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model FoodConfigurationChange {
+  id Int @id @default(autoincrement())
+  partnerId Int
+  actor String
+  before Json?
+  after Json
+  createdAt DateTime @default(now())
+  @@index([partnerId, createdAt])
+}
+
 model Category {
+  builderType String @default("NONE") @db.VarChar(24)
   id               Int               @id @default(autoincrement())
   name             String            @unique
   customizable     Boolean           @default(false)

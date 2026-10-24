@@ -66,7 +66,7 @@ test('HTTP saves partial drafts, resumes, validates submission, freezes selectio
   let row = { id: 1, token: 'test-token', status: 'EMAIL_SENT', email: 'test@example.com', businessName: 'Test',
     updatedAt: new Date(1000), formalData: { supportingDocuments: [{ type: 'IDENTITY' }, { type: 'FISCAL' }] } };
   let conflict = false;
-  const db = { onboardingRequest: {
+  const db = { foodPackage: { findMany: async () => [], count: async () => 0 }, onboardingRequest: {
     findUnique: async () => structuredClone(row),
     updateMany: async ({ where, data }) => {
       if (conflict || where.status !== row.status || +where.updatedAt !== +row.updatedAt) return { count: 0 };
@@ -126,4 +126,23 @@ test('HTTP saves partial drafts, resumes, validates submission, freezes selectio
   assert.equal(row.formalData.commercialSelection.pos.monthlyRentCents, 2083);
   assert.equal(row.formalData.commercialSelection.pos.durationMonths, 12);
   assert.equal(row.formalData.commercialSelection.pos.rentalTotalCents, 24996);
+
+  // A new multi-food invitation requires a selection; drafts resume verified snapshots.
+  const packages = [{ id: 2, name: 'Burger', active: true, categoryIds: [20, 40], updatedAt: new Date() }, { id: 3, name: 'Kebab', active: true, categoryIds: [30, 40], updatedAt: new Date() }];
+  db.foodPackage.findMany = async ({ where } = {}) => packages.filter(p => !where?.id || where.id.in.includes(p.id));
+  db.category = { findMany: async ({ where }) => where.id.in.map(id => ({ id })) };
+  row = { ...row, status: 'EMAIL_SENT', formalData: { foodPackagesRequired: true, supportingDocuments: [{ type: 'IDENTITY' }, { type: 'FISCAL' }] } };
+  response = await post('/form/test-token', fields);
+  assert.equal(response.status, 400); assert.deepEqual((await response.json()).missing, ['foodPackageIds']);
+  row.formalData.foodConfiguration = { version: 1, packages: [{ id: 1, name: 'Anterior', categoryIds: [1] }] };
+  response = await post('/form/test-token/draft', { ...fields, foodPackageIds: [2,3], foodConfiguration: { packages: [{ id: 1, categoryIds: [1] }] } });
+  assert.equal(response.status, 200);
+  const saved = (await (await fetch(url + '/form/test-token')).json()).request;
+  assert.deepEqual(saved.formalData.onboardingDraft.foodPackageIds, [2,3]);
+  assert.deepEqual(saved.formalData.onboardingDraft.foodConfiguration.packages[0].categoryIds, [20,40]);
+  packages[0].categoryIds = [999]; packages[0].active = false;
+  response = await post('/form/test-token', { ...fields, foodPackageIds: '[2,3]' });
+  assert.equal(response.status, 200);
+  assert.equal(row.formalData.foodPackagesRequired, true);
+  assert.deepEqual(row.formalData.foodConfiguration.packages[0].categoryIds, [20,40]);
 });
