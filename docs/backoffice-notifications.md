@@ -1,5 +1,7 @@
 # Paquetes de comida — publicados el 24 de octubre de 2026
 
+Corrección del formulario de demostración en la web pública: storefront `7cf5b05`, Railway `43d85b6d-9319-4d70-8cd4-2af64025d81d`, SUCCESS. El campo dice «Nombre del restaurante» y tanto la introducción como la confirmación en pantalla usan «restaurante». Verificado en navegador y con las cinco pruebas de la landing. Se amplía el detalle de la nota existente en cinco idiomas, conservando identificador y revisión; no requiere una nueva lectura. El envío conserva su contrato de API.
+
 `foodPackagesAnnouncementDraft` se incorpora al feed en ES/EN/IT/FR/PT tras verificar backend `0247e01` (Railway `21d8d204-610c-4899-801a-de8fcc4fd8e9`) y storefront `10e712c` (`2142e370-8bb4-4fb7-a953-71264c4a53a7`), ambos SUCCESS. La migración está aplicada y los seis paquetes tienen categorías y están activos. La carta de MyCrushPizza conserva sus 46 productos, tamaños y precios. Las asignaciones de los 10 negocios existentes permanecen sin paquetes. Véase [alcance y publicación](food-packages-rollout.md).
 
 # Confirmación de modalidad en checkout — publicada el 20 de octubre de 2026
