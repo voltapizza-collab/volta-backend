@@ -1,4 +1,5 @@
 import { pizzaSpatialAnnouncementDraft, pizzaWorkbenchAnnouncementDraft, categoryBasePricingAnnouncementDraft, pizzaSauceLayersAnnouncementDraft } from './pizzaSpatialAnnouncement.js';
+import { foodPackagesAnnouncementDraft } from './foodPackagesAnnouncement.js';
 export { foodPackagesAnnouncementDraft } from './foodPackagesAnnouncement.js';
 // Published after storefront a3f2b0d and backend 221944c were verified on 20 October 2026.
 export const checkoutModeConfirmationAnnouncementDraft = {
@@ -947,4 +948,10 @@ backofficeAnnouncements.push({
 backofficeAnnouncements.push({
   ...checkoutModeConfirmationAnnouncementDraft,
   publishedAt: '2026-10-20T11:25:49.511Z', expiresAt: '2027-01-20T23:59:59.000Z',
+});
+
+// Both applications, the migration and the six active packages were verified first.
+backofficeAnnouncements.push({
+  ...foodPackagesAnnouncementDraft,
+  publishedAt: '2026-10-24T10:26:17.000Z', expiresAt: '2027-01-24T23:59:59.000Z',
 });

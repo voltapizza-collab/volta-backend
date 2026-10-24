@@ -1,6 +1,6 @@
-# Paquetes de comida — borrador local, 24 de octubre de 2026
+# Paquetes de comida — publicados el 24 de octubre de 2026
 
-`foodPackagesAnnouncementDraft` está exportado por el catálogo y traducido a ES/EN/IT/FR/PT, pero permanece fuera del feed. Publicarlo después de la migración, el despliegue coordinado y la verificación de los paquetes. Véase [alcance y publicación](food-packages-rollout.md).
+`foodPackagesAnnouncementDraft` se incorpora al feed en ES/EN/IT/FR/PT tras verificar backend `0247e01` (Railway `21d8d204-610c-4899-801a-de8fcc4fd8e9`) y storefront `10e712c` (`2142e370-8bb4-4fb7-a953-71264c4a53a7`), ambos SUCCESS. La migración está aplicada y los seis paquetes tienen categorías y están activos. La carta de MyCrushPizza conserva sus 46 productos, tamaños y precios. Las asignaciones de los 10 negocios existentes permanecen sin paquetes. Véase [alcance y publicación](food-packages-rollout.md).
 
 # Confirmación de modalidad en checkout — publicada el 20 de octubre de 2026
 

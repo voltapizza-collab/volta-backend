@@ -1,4 +1,4 @@
-# Paquetes de comida — implementación local, 24 de octubre de 2026
+# Paquetes de comida — publicación del 24 de octubre de 2026
 
 Los paquetes agrupan IDs de categorías existentes. Un negocio combina varios paquetes sin duplicar categorías. `Category.builderType` identifica NONE o PIZZA; los extras conservan su modelo y no activan constructores. Mitad y mitad permanece como capacidad independiente de categoría. No se modifican tamaños, marca, dominio, precios ni reglas de reparto.
 
@@ -27,4 +27,16 @@ Los negocios gestionados por paquetes no reciben automáticamente categorías nu
 5. Verificar una alta sin pizza y una mixta en un entorno de prueba, incluida la recepción del pedido en POS; revisar una pizzería existente. No realizar cobros ni comunicaciones reales para estas pruebas.
 6. Publicar `foodPackagesAnnouncementDraft` únicamente cuando la función esté disponible y comprobada.
 
-La implementación local no aplica esta migración a producción, no modifica negocios reales y no publica la nota. Si se revierte el despliegue, no basta con devolver el backend antiguo: sus consultas no respetan la configuración de paquetes. Mantener las tiendas nuevas cerradas o preparar un parche compatible; no eliminar datos ni columnas como recuperación automática.
+Si se revierte el despliegue, no basta con devolver el backend antiguo: sus consultas no respetan la configuración de paquetes. Mantener las tiendas nuevas cerradas o preparar un parche compatible; no eliminar datos ni columnas como recuperación automática.
+
+## Ejecución verificada en producción
+
+- Copia comprimida y verificada antes de migrar: 10 Partner, 16 Category y 116 PartnerCategory. SHA-256 `7b49e12c5d9049c32eafdb3db0346b4d714cdfc3cf99f1ac887b6516adbcb40b`. La copia permanece en el directorio privado de trabajo local, fuera del repositorio.
+- Migración aplicada correctamente. Backend funcional `0247e01`, despliegue `21d8d204-610c-4899-801a-de8fcc4fd8e9`, SUCCESS; storefront `10e712c`, despliegue `2142e370-8bb4-4fb7-a953-71264c4a53a7`, SUCCESS. Paquete web servido `main.de359856.js`.
+- Paquete Pizza: categorías 3, 1, 2, 4, 5, 8, 9, 17, 18, 19, 20. Se excluyeron las categorías de demo 14 y 15.
+- Categorías creadas: Hamburguesas 21, Kebab 22, Pollo 23, Perritos calientes 24 y Otros platos 25. Cada una usa constructor NONE y mitad y mitad desactivado. Sus enlaces con negocios anteriores se crearon desactivados.
+- Los seis paquetes comparten Postres 6, Bebidas 7 y Complementos 16. Se configuraron primero en borrador y se activaron tras verificar ambas aplicaciones.
+- Verificación con MySQL real de Hamburguesas + Kebab y Pizza + Hamburguesas, incluyendo consulta de carta, conservación de tamaños y registro de cambios. Todo el negocio/productos de prueba permaneció dentro de una transacción revertida. No hubo pedidos, cobros ni comunicaciones de prueba.
+- Conservación comprobada de las 16 categorías previas, 116 enlaces previos y configuración sin paquetes de los 10 negocios existentes. La API pública mantiene los 46 productos y sus precios/tamaños de MyCrushPizza. Acceso anónimo al catálogo administrativo: 401.
+- Validación local: 111 pruebas específicas; suite general 372 aprobadas y 2 omitidas; 16 pruebas React y compilación de producción. Las pruebas de paquetes se incorporan a `npm test`. Un fallo transitorio de limpieza de carpeta temporal en Windows pasó tanto al repetir su archivo como en la suite completa posterior.
+- Límites: la revisión visual autenticada de Global Manager se hizo con datos simulados locales; en producción se verificaron la API, la base de datos y el paquete web. No se realizó un alta comercial con firma/pago ni recepción de un pedido real en POS. Los constructores visuales propios de hamburguesa/kebab quedan para otra entrega.

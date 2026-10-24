@@ -1,4 +1,4 @@
-// Draft: publish only after the migration and both applications are deployed and verified.
+// Published after the migration, both applications and active packages were verified on 24 October 2026.
 export const foodPackagesAnnouncementDraft = {
   id: 'food-packages-2026-10', revision: 1, category: 'improvement', severity: 'info',
   title: 'Una carta adaptada a las comidas de tu negocio',
