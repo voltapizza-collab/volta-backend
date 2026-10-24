@@ -76,6 +76,7 @@ export default function onboardingClosureRoutes(db, { mapRequest, draftContract,
     const row = await requestFor(req); res.json({ ok: true, request: await mapRequest(await completePaid(await service.sync(row.id))) });
   }));
   router.post('/form/:token/closure/cancel', handle(async (req, res) => {
+    if (req.body.confirmCancellation !== true) throw closureError('cancellation_confirmation_required', 400);
     const row = await requestFor(req); res.json({ ok: true, request: await mapRequest(await service.cancel(row.id, req.body.offerHash)) });
   }));
   router.post('/stripe/webhook', handle(async (req, res) => {

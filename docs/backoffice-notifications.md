@@ -225,3 +225,11 @@ Pasaron las 6 pruebas del backend y las 15 del centro de avisos, incluida la lec
 ## Armado, bases y comandas — publicación del 16 de octubre de 2026
 
 Activados los tres avisos traducidos después de verificar backend 8f7d277 y storefront 5dc802e en producción. El constructor visual está habilitado públicamente; los precios proceden de la configuración del negocio. La nota del POS describe la APK disponible y pide comprobar Impresión de prueba, sin afirmar instalación ni validación física. Fecha de los avisos: 2026-10-16T11:18:11.416Z.
+# Confirmación de cancelación del alta — 24 de octubre de 2026
+
+El enlace de contratación requiere una segunda confirmación antes de solicitar la cancelación; volver al contrato conserva el expediente abierto. La ruta pública exige también la confirmación explícita. Nota traducida a ES/EN/IT/FR/PT, publicada con el backend después de verificar storefront `4180aee`, Railway `9338d8eb-6978-4b52-bf92-cccef8efbce4` SUCCESS, bundle `main.73283366.js`.
+
+Las operaciones internas de pago simulado se distinguen de los cobros reales en el contrato, el backoffice y el correo posterior. No existe una ruta pública para crearlas. Requieren auditoría administrativa, expediente sin pago ni firma y sin recarga SMS; conservan el contrato y su hash. La firma corresponde al representante. Cerrar una simulación no solicita devolución a Stripe.
+
+Validación: 52 pruebas de contratación, correos, modalidades y acceso; 10 de interfaz; compilación de producción correcta. Las pruebas comprueban ausencia de activación antes de firmar, ausencia de cargos y devoluciones para simulaciones, y activación única posterior a la firma.
+

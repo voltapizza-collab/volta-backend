@@ -1036,9 +1036,11 @@ export default function onboardingRoutes(prisma, { sendEmail = sendSmtpEmail, st
       const activation = freshActivation || reserved.formalData.activation;
       const body = buildCredentialsEmail(reserved, activation);
       const url = buildContractUrl(reserved.token);
+      const copyLabel = reserved.formalData.closure?.payment?.method === 'SIMULATED'
+        ? 'Tu contrato firmado y estado del pago simulado (sin cobro real)' : 'Tu contrato firmado y justificante';
       result = await mail({ to: reserved.formalData.businessEmail || reserved.email, subject: 'Bienvenido a Volta: contrato y accesos de tu negocio',
-        text: `${body.text}\n\nTu contrato firmado y justificante: ${url}`,
-        html: `${body.html}<p>Contrato firmado y justificante: <a href="${escapeHtml(url)}">Abrir copia</a></p>`,
+        text: `${body.text}\n\n${copyLabel}: ${url}`,
+        html: `${body.html}<p>${copyLabel}: <a href="${escapeHtml(url)}">Abrir copia</a></p>`,
         replyTo: process.env.ONBOARDING_REPLY_TO || 'voltapizza@gmail.com' });
     } catch { result = { ok: false, reason: 'welcome_delivery_failed' }; }
     return lockedClosure(prisma, id, (tx, row) => {
@@ -1560,7 +1562,7 @@ export default function onboardingRoutes(prisma, { sendEmail = sendSmtpEmail, st
           if (!closureView(row).canSign) throw Object.assign(new Error('onboarding_request_not_signable'), { status: 409 });
           return tx.onboardingRequest.update({ where: { id: row.id }, data: { formalData: { ...row.formalData,
             contractSignature: signedMeta, signedContract: buildSignedContractSnapshot(row, signedMeta),
-            closure: { ...c, status: 'AWAITING_PAYMENT', signedAt: signedMeta.acceptedAt,
+            closure: { ...c, status: c.payment?.method === 'SIMULATED' && c.payment.simulated === true && c.payment.status === 'PAID' ? 'PAID' : 'AWAITING_PAYMENT', signedAt: signedMeta.acceptedAt,
               consent: { offerHash: c.offer.hash, acceptedAt: signedMeta.acceptedAt, ip: signedMeta.ipAddress, userAgent: signedMeta.userAgent } } } } });
         });
         return res.json({ ok: true, request: await mapRequest(signed), signedContract: signed.formalData.signedContract });

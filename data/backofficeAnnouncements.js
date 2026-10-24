@@ -955,3 +955,17 @@ backofficeAnnouncements.push({
   ...foodPackagesAnnouncementDraft,
   publishedAt: '2026-10-24T10:26:17.000Z', expiresAt: '2027-01-24T23:59:59.000Z',
 });
+export const onboardingCancellationConfirmationAnnouncement = {
+  id: 'onboarding-cancellation-confirmation-2026-10', revision: 1, category: 'improvement', severity: 'info',
+  title: 'Confirmación antes de cancelar el alta',
+  message: 'El enlace de contratación pide confirmar antes de solicitar una cancelación. Volver al contrato permite continuar sin bloquear la firma ni el pago.',
+  translations: {
+    en: { title: 'Confirmation before cancelling onboarding', message: 'The contract link asks for confirmation before requesting cancellation. Return to the contract to continue without blocking signature or payment.' },
+    it: { title: 'Conferma prima di annullare l’adesione', message: 'Il link del contratto richiede una conferma prima di chiedere l’annullamento. Tornando al contratto puoi continuare senza bloccare la firma o il pagamento.' },
+    fr: { title: 'Confirmation avant d’annuler l’inscription', message: 'Le lien du contrat demande une confirmation avant toute demande d’annulation. Revenir au contrat permet de continuer sans bloquer la signature ni le paiement.' },
+    pt: { title: 'Confirmação antes de cancelar a adesão', message: 'A ligação do contrato pede confirmação antes de solicitar o cancelamento. Voltar ao contrato permite continuar sem bloquear a assinatura nem o pagamento.' },
+  },
+};
+// Storefront 4180aee is available; the server enforces the same confirmation.
+backofficeAnnouncements.push({ ...onboardingCancellationConfirmationAnnouncement,
+  publishedAt: '2026-10-24T10:57:43.000Z', expiresAt: '2027-01-24T23:59:59.000Z' });

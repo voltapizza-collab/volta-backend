@@ -11,6 +11,7 @@ import closureRoutes from '../routes/onboardingClosure.js';
 import { isPublicWebRoute } from '../services/webAccess.js';
 import { normalizeOnboardingDefaults, offerDefaults } from '../services/onboardingDefaults.js';
 import { reviewContract } from '../services/onboardingReview.js';
+import { prepareSimulatedPayment } from '../services/onboardingTestPayment.js';
 
 test('selected rental term drives the contract and first payment and survives later tariff changes', async () => {
   const catalog = await newOnboardingCatalog({ onboardingPricing: { findUnique: async () => ({ posTotalCents: 25000, revision: 4, defaults: { rentMode: 'CUSTOMER_TERM' } }) } });
@@ -76,8 +77,8 @@ test('review button publishes the exact reviewed contract and sends one resumabl
   assert.equal((await post({})).status, 200); assert.equal(emails.length, 2); // Explicit resend.
 });
 
-for (const scenario of ['PURCHASE','INSTALLMENTS','RENT_QUOTE','FINANCED_RENT']) test(`signature before payment and automatic webhook activation: ${scenario}`, async t => {
-  const mode = scenario === 'FINANCED_RENT' ? 'RENT_QUOTE' : scenario;
+for (const scenario of ['PURCHASE','INSTALLMENTS','RENT_QUOTE','FINANCED_RENT','SIMULATED']) test(`signature and payment activation: ${scenario}`, async t => {
+  const mode = ['FINANCED_RENT','SIMULATED'].includes(scenario) ? 'RENT_QUOTE' : scenario;
   const firstRent = scenario === 'FINANCED_RENT' ? 2199 : 2083;
   for (const key of ['GOOGLE_GEOCODING_KEY','GOOGLE_MAPS_API_KEY','REACT_APP_GOOGLE_KEY']) {
     const previous = process.env[key]; delete process.env[key];
@@ -124,17 +125,38 @@ for (const scenario of ['PURCHASE','INSTALLMENTS','RENT_QUOTE','FINANCED_RENT'])
   const server = app.listen(0, '127.0.0.1'); await new Promise(resolve => server.once('listening', resolve));
   t.after(() => new Promise(resolve => server.close(resolve)));
   const post = (path, body) => fetch(`http://127.0.0.1:${server.address().port}${path}`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+  if (scenario === 'SIMULATED') {
+    await f.service.cancel(1, hash);
+    f.row().formalData = prepareSimulatedPayment(f.row(), { offerHash: hash, reason: 'Explicit controlled test', actor: { role: 'global_admin', username: 'test-admin' } });
+    await post('/form/test-only/closure/refresh', {});
+    assert.equal(partners, 0); assert.equal(emails.length, 0);
+    assert.equal(closureView(f.row()).canSign, true);
+    assert.equal((await post('/form/test-only/sign-contract', { acceptedContract: false, offerHash: hash })).status, 400);
+  }
   await assert.rejects(f.service.checkout(1, hash, ''), /prepayment_consent_required/);
   await assert.rejects(f.service.consent(1, hash, {}), /contract_signature_required/);
   assert.equal((await post('/form/test-only/sign-contract', { acceptedContract: true, offerHash: 'wrong' })).status, 409);
   const sign = () => post('/form/test-only/sign-contract', { acceptedContract: true, offerHash: hash });
   for (const response of await Promise.all([sign(), sign()])) assert.equal(response.status, 200);
   assert.equal(partners, 0); assert.equal(emails.length, 0);
-  assert.equal(f.row().formalData.closure.status, 'AWAITING_PAYMENT');
+  assert.equal(f.row().formalData.closure.status, scenario === 'SIMULATED' ? 'PAID' : 'AWAITING_PAYMENT');
   assert.equal(closureView(f.row()).signed, true); assert.equal(closureView(f.row()).activated, false);
   assert.equal(f.row().formalData.signedContract.offerHash, hash);
   const signedAt = f.row().formalData.contractSignature.acceptedAt;
   await assert.rejects(f.service.publish(1, { ...input(), replacesOfferHash: hash }), /signed_contract_cannot_change/);
+  if (scenario === 'SIMULATED') {
+    failMail = false;
+    for (let i = 0; i < 2; i++) assert.equal((await post('/form/test-only/closure/refresh', {})).status, 200);
+    assert.equal(partners, 1); assert.equal(stores, 1); assert.equal(emails.length, 1);
+    assert.equal(f.row().status, 'ACTIVATED');
+    assert.equal(f.row().formalData.contractSignature.acceptedAt, signedAt);
+    assert.equal(f.row().formalData.closure.payment.method, 'SIMULATED');
+    assert.equal(f.row().formalData.closure.payment.receivedCents, 0);
+    assert.match(emails[0].text, /pago simulado \(sin cobro real\)/);
+    assert.doesNotMatch(emails[0].text, /justificante/);
+    assert.deepEqual(f.counts(), { creates: 0, refunds: 0 });
+    return;
+  }
   await f.service.checkout(1, hash, 'https://example.invalid');
   await post('/form/test-only/closure/refresh', {}); assert.equal(partners, 0);
   const session = [...f.sessions.values()][0];
@@ -244,6 +266,51 @@ async function offered(f, custom = {}) {
   await f.service.publish(1, { ...input(), ...custom }, { username: 'test-admin' });
   return f.row().formalData.closure.offer.hash;
 }
+
+test('simulation preserves the offer and cancellation audit, cannot replace real payment or a signature, and voids without refund', async () => {
+  const f = fixture(); f.row().formalData.commercialSelection.sms.initialRecharge = 'SEPARATE';
+  const hash = await offered(f, { workflow: 'SIGN_PAY_ACTIVATE' });
+  await f.service.cancel(1, hash);
+  const before = structuredClone(f.row());
+  const options = { offerHash: hash, reason: 'Explicit controlled test', actor: { role: 'global_admin', username: 'test-admin' } };
+  const result = prepareSimulatedPayment(f.row(), options);
+  assert.deepEqual(f.row(), before); assert.deepEqual(result.closure.offer, before.formalData.closure.offer);
+  assert.equal(result.testOperations[0].previousStatus, 'CANCEL_REQUESTED');
+  assert.equal(result.testOperations[0].previousCancelRequestedAt, before.formalData.closure.cancelRequestedAt);
+  assert.equal(result.closure.payment.receivedCents, 0);
+  assert.equal(result.contractSignature, undefined); assert.equal(result.activation, undefined);
+  assert.throws(() => prepareSimulatedPayment(before, { ...options, actor: { role: 'partner' } }), /audit_required/);
+  assert.throws(() => prepareSimulatedPayment(before, { ...options, offerHash: 'wrong' }), /not_eligible/);
+  for (const key of ['contractSignature', 'signedContract', 'activation']) {
+    const row = structuredClone(before); row.formalData[key] = {};
+    assert.throws(() => prepareSimulatedPayment(row, options), /not_eligible/);
+  }
+  const paid = structuredClone(before); paid.formalData.closure.payment = { method: 'STRIPE', status: 'PENDING' };
+  assert.throws(() => prepareSimulatedPayment(paid, options), /not_eligible/);
+  const sms = fixture(); const smsHash = await offered(sms, { workflow: 'SIGN_PAY_ACTIVATE' });
+  assert.throws(() => prepareSimulatedPayment(sms.row(), { ...options, offerHash: smsHash }), /not_eligible/);
+  f.row().formalData = result;
+  await f.service.cancel(1, hash); await f.service.refund(1, hash, '', options.actor);
+  assert.equal(f.row().formalData.closure.status, 'CANCELLED');
+  assert.equal(f.row().formalData.closure.payment.status, 'VOIDED');
+  assert.deepEqual(f.counts(), { creates: 0, refunds: 0 });
+});
+
+test('public cancellation requires explicit confirmation before changing the request', async t => {
+  const f = fixture(); const hash = await offered(f);
+  const app = express(); app.use(express.json());
+  app.use(closureRoutes(f.db, { mapRequest: row => ({ closure: closureView(row) }), stripeDeps: f.deps }));
+  const server = app.listen(0, '127.0.0.1'); await new Promise(resolve => server.once('listening', resolve));
+  t.after(() => new Promise(resolve => server.close(resolve)));
+  const post = body => fetch(`http://127.0.0.1:${server.address().port}/form/test-only/closure/cancel`, {
+    method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body),
+  });
+  assert.equal((await post({ offerHash: hash })).status, 400);
+  assert.equal((await post({ offerHash: hash, confirmCancellation: false })).status, 400);
+  assert.equal(f.row().formalData.closure.status, 'OFFERED');
+  assert.equal((await post({ offerHash: hash, confirmCancellation: true })).status, 200);
+  assert.equal(f.row().formalData.closure.status, 'CANCEL_REQUESTED');
+});
 
 test('variable sale price drives every installment, contract and first payment; renting has exactly 36 payments', () => {
   for (let count = 2; count <= 6; count++) {

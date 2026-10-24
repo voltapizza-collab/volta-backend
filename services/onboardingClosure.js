@@ -313,6 +313,8 @@ export function createClosureService(db, deps = stripe) {
     }
     const reserved = await lockedClosure(db, id, async (tx, row) => {
       const live = assertCurrent(row, hash), p = live.payment;
+      if (p?.method === 'SIMULATED' && p.simulated === true) return save(tx, row, { ...live, status: 'CANCELLED',
+        payment: { ...p, status: 'VOIDED', voidedAt: iso(), voidedBy: actor } });
       if (!p || p.status === 'EXPIRED') return save(tx, row, { ...live, status: 'CANCELLED' });
       if (p.status === 'REFUNDED') return row;
       requireValue(['PAID','REFUND_PENDING'].includes(p.status), 'payment_reconciliation_required');
