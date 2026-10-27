@@ -5,6 +5,7 @@ import storesRoutes from './stores.js';
 import reservationsRoutes from './reservations.js';
 import presenceRoutes from './presence.js';
 import storeIngredientsRoutes from './storeIngredients.js';
+import stockRoutes from './stock.js';
 
 // Called only after the device signature AND store session have been verified.
 // Existing business handlers are reachable only through this explicit allowlist.
@@ -31,6 +32,11 @@ export function posUiScope(prisma) {
         (store[2] === 'order-reception' && ['GET', 'PATCH'].includes(method)) ||
         (store[2] === 'ingredients' && method === 'GET') ||
         (/^ingredients\/\d+$/.test(store[2]) && method === 'PATCH');
+    }
+    const stock = /^\/(?:api\/)?stock\/(\d+)(?:\/(\d+)\/active)?$/.exec(path);
+    if (stock) {
+      if (Number(stock[1]) !== storeId) return deny();
+      allowed = stock[2] ? method === 'PATCH' : method === 'GET';
     }
     const presence = /^\/api\/presence\/stores\/(\d+)\/status$/.exec(path);
     if (presence && method === 'GET') {
@@ -71,6 +77,9 @@ export default function posUiRoutes(prisma) {
   router.use('/api/reservations', reservationsRoutes(prisma));
   router.use('/api/stores/:storeId/ingredients', storeIngredientsRoutes);
   router.use('/stores/:storeId/ingredients', storeIngredientsRoutes);
+  const stock = stockRoutes(prisma);
+  router.use('/api/stock', stock);
+  router.use('/stock', stock);
   const stores = storesRoutes(prisma);
   router.use('/api/stores', stores);
   router.use('/stores', stores);

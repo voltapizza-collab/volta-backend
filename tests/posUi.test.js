@@ -12,6 +12,17 @@ test('POS forces store scope even when client omits it',async()=>{
   assert.deepEqual(await check('/api/myorders/pending'),{status:200,passed:true,query:{storeId:'1',partnerId:'2'}});
 });
 
+test('POS can read and switch products only in its store, never change quantities', async () => {
+  for (const prefix of ['/api/stock', '/stock']) {
+    assert.equal((await check(`${prefix}/1`)).passed, true);
+    assert.equal((await check(`${prefix}/1/10/active`, 'PATCH')).passed, true);
+    for (const [path, method] of [[`${prefix}/3`, 'GET'], [`${prefix}/3/10/active`, 'PATCH'],
+      [`${prefix}/1/10`, 'PATCH'], [`${prefix}/1/10/active`, 'POST'], [`${prefix}/1`, 'DELETE']]) {
+      assert.equal((await check(path, method)).status, 403);
+    }
+  }
+});
+
 test('POS may pause only its own store and only via PATCH', async () => {
   assert.equal((await check('/api/stores/1/operations-pause', 'PATCH')).passed, true);
   assert.equal((await check('/api/stores/3/operations-pause', 'PATCH')).status, 403);

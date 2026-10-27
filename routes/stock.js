@@ -74,6 +74,7 @@ export default function stockRoutes(prisma) {
         where: {
           partnerId: store.partnerId,
           type: "SELLABLE",
+          ...(req.posSession ? { status: "ACTIVE" } : {}),
         },
         include: {
           ingredients: {
@@ -117,9 +118,11 @@ export default function stockRoutes(prisma) {
             ingredients: (pizza.ingredients || []).map((rel) => ({
               id: rel.ingredient?.id,
               name: rel.ingredient?.name,
+              globalStatus: rel.ingredient?.status,
+              active: rel.ingredient?.storeStocks?.[0]?.active === true,
               status:
                 rel.ingredient?.status === "ACTIVE" &&
-                rel.ingredient?.storeStocks?.[0]?.active !== false
+                rel.ingredient?.storeStocks?.[0]?.active === true
                   ? "ACTIVE"
                   : "INACTIVE",
             })),
@@ -165,6 +168,7 @@ export default function stockRoutes(prisma) {
         where: {
           id: pizzaId,
           partnerId: store.partnerId,
+          ...(req.posSession ? { type: "SELLABLE", status: "ACTIVE" } : {}),
         },
         select: { id: true },
       });
@@ -223,6 +227,7 @@ export default function stockRoutes(prisma) {
         where: {
           id: pizzaId,
           partnerId: store.partnerId,
+          ...(req.posSession ? { type: "SELLABLE", status: "ACTIVE" } : {}),
         },
         select: {
           id: true,
@@ -236,7 +241,9 @@ export default function stockRoutes(prisma) {
         return res.status(404).json({ error: "Pizza not found for store partner" });
       }
 
-      if (active) {
+      // POS availability is independent: restoring a dish must never restore
+      // exhausted ingredients (or other dishes sharing those ingredients).
+      if (active && !req.posSession) {
         await ensureStoreIngredientsActive(prisma, {
           storeIds: [storeId],
           ingredientIds: (pizza.ingredients || []).map((row) => row.ingredientId),

@@ -1,5 +1,18 @@
 import { pizzaSpatialAnnouncementDraft, pizzaWorkbenchAnnouncementDraft, categoryBasePricingAnnouncementDraft, pizzaSauceLayersAnnouncementDraft } from './pizzaSpatialAnnouncement.js';
 import { foodPackagesAnnouncementDraft } from './foodPackagesAnnouncement.js';
+// Keep outside the feed until the backend and POS 0.3.25 are available together.
+export const posProductInventoryAnnouncementDraft = {
+  id: 'pos-product-inventory-2026-10', revision: 1, category: 'improvement', severity: 'info',
+  title: 'Ingredientes y productos en el inventario del POS',
+  message: 'Busca ingredientes o productos en el mismo inventario y cambia su estado con Activo/Inactivo. Puedes retirar temporalmente bebidas, nuggets o postres sin modificar sus ingredientes.',
+  detail: 'El cambio afecta solo a la tienda del POS. Reactivar un plato no reactiva ingredientes agotados: si falta alguno, se indica junto al producto. Requiere la nueva versión del POS.',
+  translations: {
+    en: { title: 'Ingredients and products in POS inventory', message: 'Search ingredients or products in the same inventory and switch them on or off. Temporarily disable drinks, nuggets or desserts without changing their ingredients.', detail: 'Changes apply only to the POS store. Reactivating a dish does not restore exhausted ingredients: missing ingredients are shown beside the product. Requires the new POS version.' },
+    it: { title: 'Ingredienti e prodotti nell’inventario del POS', message: 'Cerca ingredienti o prodotti nello stesso inventario e attivali o disattivali. Puoi disattivare temporaneamente bevande, nuggets o dolci senza modificarne gli ingredienti.', detail: 'La modifica riguarda solo il punto vendita del POS. Riattivare un piatto non riattiva gli ingredienti esauriti: quelli mancanti sono indicati accanto al prodotto. Richiede la nuova versione del POS.' },
+    fr: { title: 'Ingrédients et produits dans l’inventaire du POS', message: 'Recherchez des ingrédients ou des produits dans le même inventaire et activez-les ou désactivez-les. Retirez temporairement boissons, nuggets ou desserts sans modifier leurs ingrédients.', detail: 'La modification concerne uniquement le point de vente du POS. Réactiver un plat ne réactive pas les ingrédients épuisés : les ingrédients manquants sont indiqués à côté du produit. Nécessite la nouvelle version du POS.' },
+    pt: { title: 'Ingredientes e produtos no inventário do POS', message: 'Pesquise ingredientes ou produtos no mesmo inventário e ative-os ou desative-os. Pode desativar temporariamente bebidas, nuggets ou sobremesas sem alterar os ingredientes.', detail: 'A alteração afeta apenas a loja do POS. Reativar um prato não reativa ingredientes esgotados: os ingredientes em falta aparecem junto ao produto. Requer a nova versão do POS.' },
+  },
+};
 export { foodPackagesAnnouncementDraft } from './foodPackagesAnnouncement.js';
 // Published after storefront a3f2b0d and backend 221944c were verified on 20 October 2026.
 export const checkoutModeConfirmationAnnouncementDraft = {
