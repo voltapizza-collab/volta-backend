@@ -1,5 +1,11 @@
 # Distribución permanente de Volta POS
 
+## Inventario de productos — 27 de octubre de 2026
+
+0.3.25/código 28 publicada y asignada a SUNMI V3 001, 002 y 003 por autorización expresa del usuario. Búsqueda conjunta de ingredientes y productos y disponibilidad independiente por tienda. Reactivar un producto desde POS no modifica los ingredientes agotados. Backend `1c42077`, despliegue `9432b9f1-c386-41a3-bad1-85d2847fa606` verificado antes de asignar. Sin migraciones.
+
+SHA-256 `b6db6b2e3d9b799f90a362f41a3ece4597292dc16c5fd6e7e418cd0b3333537f`, 4 582 955 bytes. Firma, paquete, versión, certificado contra 0.3.24 y descarga duradera comprobados por la CLI. A las 11:19:30 UTC del 27 de octubre las tres asignaciones coincidían con el SHA nuevo. Los últimos reportes seguían en código 27 (003 y 002) y 26 (001); instalación y prueba física pendientes. [Alcance y pruebas](../../volta-storefront/docs/pos/product-inventory-2026-10-27.md).
+
 ## Comandas por zonas — 16 de octubre de 2026
 
 0.3.24/código 27 publicada y asignada a los tres terminales autorizados SUNMI V3 001, 002 y 003, tras la petición explícita del usuario de actualizar toda la red. Agrupa las personalizadas en FULL, DERECHA e IZQUIERDA y las pizzas de dos recetas en LADO 1/LADO 2, conservando cantidades, extras y observaciones. SHA256 `977c5c3a423110012f8a64e363f645896b330d9750352a6d0650a1561f148e62`.

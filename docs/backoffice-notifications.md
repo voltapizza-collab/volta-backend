@@ -1,3 +1,11 @@
+# Inventario de productos en POS — 27 de octubre de 2026
+
+`posProductInventoryAnnouncementDraft` explica la búsqueda conjunta de ingredientes y productos, los interruptores independientes por tienda y el mantenimiento del bloqueo por ingredientes agotados. Incluye ES/EN/IT/FR/PT y avisa de que requiere la nueva versión del POS.
+
+Backend funcional `1c42077`, despliegue `9432b9f1-c386-41a3-bad1-85d2847fa606` SUCCESS. Verificación real mediante una sesión POS temporal, revocada al terminar: lectura HTTP 200 de 52 productos (6 sin ingredientes), otra tienda HTTP 403 y cero cambios de disponibilidad. APK 0.3.25/código 28 publicada y asignada a los tres terminales autorizados por petición expresa de Luigi. SHA-256 `b6db6b2e3d9b799f90a362f41a3ece4597292dc16c5fd6e7e418cd0b3333537f`. Los reportes al asignar seguían en versiones anteriores; no se afirma instalación física.
+
+Validación: 36 pruebas de backend de inventario/acceso/checkout, 10 de avisos y 19 de interfaz POS; compilaciones web y Android correctas, firma contrastada con 0.3.24. No necesita migraciones. El POS web corresponde al commit `1bc200b`.
+
 # Paquetes de comida — publicados el 24 de octubre de 2026
 
 Corrección del formulario de demostración en la web pública: storefront `7cf5b05`, Railway `43d85b6d-9319-4d70-8cd4-2af64025d81d`, SUCCESS. El campo dice «Nombre del restaurante» y tanto la introducción como la confirmación en pantalla usan «restaurante». Verificado en navegador y con las cinco pruebas de la landing. Se amplía el detalle de la nota existente en cinco idiomas, conservando identificador y revisión; no requiere una nueva lectura. El envío conserva su contrato de API.

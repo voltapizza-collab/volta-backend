@@ -1,6 +1,6 @@
 import { pizzaSpatialAnnouncementDraft, pizzaWorkbenchAnnouncementDraft, categoryBasePricingAnnouncementDraft, pizzaSauceLayersAnnouncementDraft } from './pizzaSpatialAnnouncement.js';
 import { foodPackagesAnnouncementDraft } from './foodPackagesAnnouncement.js';
-// Keep outside the feed until the backend and POS 0.3.25 are available together.
+// Backend verified and POS 0.3.25 assigned to all three authorized terminals.
 export const posProductInventoryAnnouncementDraft = {
   id: 'pos-product-inventory-2026-10', revision: 1, category: 'improvement', severity: 'info',
   title: 'Ingredientes y productos en el inventario del POS',
@@ -982,3 +982,7 @@ export const onboardingCancellationConfirmationAnnouncement = {
 // Storefront 4180aee is available; the server enforces the same confirmation.
 backofficeAnnouncements.push({ ...onboardingCancellationConfirmationAnnouncement,
   publishedAt: '2026-10-24T10:57:43.000Z', expiresAt: '2027-01-24T23:59:59.000Z' });
+
+// Backend 1c42077 verified; POS 0.3.25 assigned to SUNMI V3 001, 002 and 003.
+backofficeAnnouncements.push({ ...posProductInventoryAnnouncementDraft,
+  publishedAt: '2026-10-27T11:20:43.081Z', expiresAt: '2027-01-27T23:59:59.000Z' });
