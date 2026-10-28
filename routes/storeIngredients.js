@@ -1,10 +1,10 @@
+import { saveIngredientWithEffects, posOutboxEnabled } from '../services/posOutbox.js';
 import express from "express";
 import multer from "multer";
 import { v2 as cloudinary } from "cloudinary";
 import { assertCloudinaryConfigured } from "../services/cloudinaryConfig.js";
 import { loadPartnerIngredientProfiles, savePartnerIngredientProfile, withPartnerIngredientProfile } from "../services/partnerIngredientProfiles.js";
 import { sendIngredientDisabledTrackingSms } from "../services/trackingNotifications.js";
-import { ensureIngredientMediaColumns } from "../services/ingredientMediaColumns.js";
 import { ensureIngredientSemanticsAvailable } from "../services/ingredientSemanticsColumns.js";
 import { resolveIngredientDisplay } from "../services/ingredientSemantics.js";
 import prisma from "../services/prisma.js";
@@ -309,9 +309,10 @@ const serializeIngredient = (ing, storeStock, context = {}, extra = {}) => {
 const getMenuScopedIngredients = async (
   storeId,
   semanticsEnabled = false,
-  localeOverride = null
+  localeOverride = null,
+  loadedContext = null
 ) => {
-  const context = await getStoreIngredientContext(
+  const context = loadedContext || await getStoreIngredientContext(
     storeId,
     semanticsEnabled,
     localeOverride
@@ -436,8 +437,7 @@ const getMenuScopedIngredients = async (
 
 router.get("/", async (req, res) => {
   try {
-    await ensureIngredientMediaColumns(prisma);
-
+    // Schema is prepared at deployment, never during POS inventory polling.
     const storeId = parseId(req.params.storeId);
     if (!storeId) {
       return res.status(400).json({ error: "Invalid storeId" });
@@ -458,7 +458,8 @@ router.get("/", async (req, res) => {
       const scoped = await getMenuScopedIngredients(
         storeId,
         semanticsEnabled,
-        localeOverride
+        localeOverride,
+        context
       );
       if (!scoped) {
         return res.status(404).json({ error: "Store not found" });
@@ -668,7 +669,7 @@ router.patch("/:ingredientId", async (req, res) => {
       });
     }
 
-    const updated = await prisma.storeIngredientStock.upsert({
+    const saveStock = db => db.storeIngredientStock.upsert({
       where: {
         storeId_ingredientId: {
           storeId,
@@ -684,13 +685,18 @@ router.patch("/:ingredientId", async (req, res) => {
       },
     });
 
-    let notification = null;
+    const { updated, queued } = posOutboxEnabled()
+      ? await saveIngredientWithEffects(prisma, { storeId, ingredientId, active, saveStock,
+          notify: source === 'pos' || notifyTracking === true || notifyTracking === 'true' })
+      : { updated: await saveStock(prisma), queued: false };
+
+    let notification = queued ? { ok: false, queued: true } : null;
     const isDisabling = active !== undefined && Boolean(active) === false;
     const wasAlreadyDisabled = previous?.active === false;
     const shouldNotify =
       source === "pos" || notifyTracking === true || notifyTracking === "true";
 
-    if (shouldNotify && isDisabling && !wasAlreadyDisabled) {
+    if (!posOutboxEnabled() && shouldNotify && isDisabling && !wasAlreadyDisabled) {
       const [store, ingredient] = await Promise.all([
         prisma.store.findUnique({
           where: { id: storeId },

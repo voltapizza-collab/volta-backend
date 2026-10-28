@@ -248,11 +248,14 @@ test('prepare rechecks target and store scope while allowing open stores and new
 });
 test('reports audit sanitized health without retaining arbitrary secrets', async t => {
   const f = await fixture(t);
-  const report = { state: 'healthy', versionCode: 17, targetVersionCode: 17, foreground: true, printerReady: true, storeId: 2, token: 'never-store' };
+  const report = { state: 'healthy', versionCode: 17, targetVersionCode: 17, foreground: true, printerReady: true, storeId: 2, token: 'never-store', stateAt: 1234, retryAt: 2345, operations: 2 };
   assert.equal((await f.request('/report', 'POST', report)).status, 200);
   assert.equal(f.state.audits[0].action, 'SOFTWARE_UPDATE');
   assert.equal(f.state.audits[0].details.token, undefined);
   assert.equal(f.state.audits[0].details.foreground, true);
+  assert.equal(f.state.audits[0].details.operations, 2);
+  assert.equal(f.state.audits[0].details.retryAt, 2345);
+  assert.equal((await f.request('/report', 'POST', { ...report, operations: -1 })).status, 400);
   assert.equal((await f.request('/report', 'POST', { ...report, versionCode: -1 })).status, 400);
   assert.equal((await f.request('/report', 'POST', { ...report, error: 'raw exception containing secret' })).status, 400);
 });

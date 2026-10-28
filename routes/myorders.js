@@ -1,5 +1,7 @@
-﻿import express from "express";
+import { completeOrderWithEffects, posOutboxEnabled } from '../services/posOutbox.js';
+import express from "express";
 import { getBoostSettings } from "../services/boostSettings.js";
+import { posDailySummary } from '../services/posDailySummary.js';
 import { sendOrderCustomerMessageSms, sendOrderReadySms } from "../services/orderNotifications.js";
 import { createProductReviewRequestForSale } from "../services/productReviews.js";
 import { createBoostCheckoutSession, isStripeCheckoutConfigured } from "../services/stripe.js";
@@ -1401,6 +1403,17 @@ export default function myordersRoutes(prisma) {
     const storeId = parsePositiveInt(req.query.storeId);
     const period = String(req.query.period || "today").toLowerCase() === "week" ? "week" : "today";
     const { from, to, label } = getPeriodRange(period);
+    if (req.query.view === 'pos') {
+      if (!partnerId || !storeId || period !== 'today') return res.status(400).json({ error: 'invalid_pos_history_scope' });
+      try {
+        return res.json(await posDailySummary(prisma, {
+          where: completedOrderWhere({ partnerId, storeId, activeStoresOnly: false }),
+          from, to, cursor: req.query.cursor, formatSale,
+        }));
+      } catch (error) {
+        return res.status(error.status === 400 ? 400 : 500).json({ error: error.status === 400 ? error.message : 'Error loading POS history' });
+      }
+    }
     const historyFrom = subtractDays(nowInTZ(), SUMMARY_HISTORY_DAYS);
     const scope = orderScopeWhere({ partnerId, storeId, activeStoresOnly: false });
     const cacheKey = `${req.posSession ? "device" : "legacy"}:${partnerId || "all"}:${storeId || "all"}:${req.originalUrl}`;
@@ -1662,9 +1675,8 @@ export default function myordersRoutes(prisma) {
         });
       }
 
-      const updated = await prisma.sale.update({
+      const readUpdated = db => db.sale.findUnique({
         where: { id },
-        data: { processed: true },
         include: {
           partner: { select: { id: true, name: true, currency: true } },
           store: { select: { id: true, storeName: true, slug: true, active: true } },
@@ -1694,7 +1706,15 @@ export default function myordersRoutes(prisma) {
         },
       });
 
-      const notification = sale.processed
+      const updated = posOutboxEnabled() ? await completeOrderWithEffects(prisma, id, readUpdated) : await prisma.sale.update({ where: { id }, data: { processed: true }, include: {
+        partner: { select: { id: true, name: true, currency: true } },
+        store: { select: { id: true, storeName: true, slug: true, active: true } },
+        customer: { include: { _count: { select: { sales: true } }, sales: { select: { total: true, createdAt: true }, orderBy: { createdAt: 'desc' }, take: CUSTOMER_RECENT_SALES_TAKE } } },
+      } });
+
+      pendingOrdersCache.clear();
+      summaryCache.clear();
+      const notification = posOutboxEnabled() ? { ok: false, queued: true } : sale.processed
         ? { ok: false, skipped: true, reason: "already_processed" }
         : await sendOrderReadySms(prisma, updated).catch((error) => {
             console.error("[myorders.ready-sms] error:", error);
@@ -1702,7 +1722,7 @@ export default function myordersRoutes(prisma) {
           });
 
       if (!notification.ok) console.warn("[myorders.ready-sms]", notification);
-      const reviewRequest = sale.processed
+      const reviewRequest = posOutboxEnabled() ? { ok: true, queued: true } : sale.processed
         ? { ok: false, skipped: true, reason: "already_processed" }
         : await createProductReviewRequestForSale(prisma, updated).catch((error) => {
             console.error("[myorders.review-request] error:", error);
@@ -1712,7 +1732,7 @@ export default function myordersRoutes(prisma) {
       return res.json({ ok: true, order: formatSale(updated), notification, reviewRequest });
     } catch (error) {
       console.error("[myorders.ready] error:", error);
-      return res.status(500).json({ error: "Error marking order ready" });
+      return res.status(error.status === 409 ? 409 : 500).json({ error: error.status === 409 ? error.message : "Error marking order ready" });
     }
   });
 

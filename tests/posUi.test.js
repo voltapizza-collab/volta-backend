@@ -11,6 +11,11 @@ async function check(path, method='GET', query={}, db={}) {
 test('POS forces store scope even when client omits it',async()=>{
   assert.deepEqual(await check('/api/myorders/pending'),{status:200,passed:true,query:{storeId:'1',partnerId:'2'}});
 });
+test('paged POS history retains store scope and does not add parameters to pending orders', async () => {
+  assert.equal((await check('/api/myorders/summary', 'GET', { view: 'pos', cursor: 'page' })).passed, true);
+  assert.equal((await check('/api/myorders/summary', 'GET', { view: 'pos', storeId: 9 })).status, 403);
+  assert.equal((await check('/api/myorders/pending', 'GET', { cursor: 'page' })).status, 403);
+});
 
 test('POS can read and switch products only in its store, never change quantities', async () => {
   for (const prefix of ['/api/stock', '/stock']) {

@@ -945,6 +945,19 @@ export const orderCommunicationAndStoreSelectionAnnouncementDraft = {
     pt: { title: 'Pedidos mais fáceis de identificar e levantar', message: 'Os avisos de pedidos online mostram o mesmo número curto do POS. Ao escolher uma cidade com uma única loja, o cliente entra diretamente; se houver várias, escolhe pelo nome e morada. Um negócio com uma única loja também tem acesso direto, mantendo a verificação de cobertura para entrega.', detail: 'O mesmo código curto aparece em Movimentos e nos respetivos tickets, em Finanças e nos CSV, em Repetir pedido e nas avaliações. Em Movimentos pode pesquisar pelo código curto ou completo. Os pedidos antigos mantêm a referência.' },
   },
 };
+// Draft: publish only after backend activation and the corresponding POS release.
+export const posPerformanceAnnouncementDraft = {
+  id: 'pos-performance-outlook-2026-10', revision: 1, category: 'improvement', severity: 'info',
+  title: 'Avisos anticipados y mejoras del POS',
+  message: 'Consulta los festivos cargados con tres días de antelación y la previsión meteorológica de los próximos tres días. Los avisos muestran la fecha completa y no modifican horarios ni cierres.',
+  detail: 'El POS reduce consultas repetidas, permite cambiar elementos distintos del inventario mientras guarda y muestra con más claridad el estado de las actualizaciones. Requiere la nueva versión del POS.',
+  translations: {
+    en: { title: 'Advance notices and POS improvements', message: 'View loaded public holidays three days ahead and the weather forecast for the next three days. Notices show the full date and do not change opening hours or closures.', detail: 'The POS reduces repeated requests, lets you change different inventory items while saving and explains update status more clearly. Requires the new POS version.' },
+    it: { title: 'Avvisi anticipati e miglioramenti del POS', message: 'Consulta le festività caricate con tre giorni di anticipo e le previsioni meteo dei prossimi tre giorni. Gli avvisi mostrano la data completa e non modificano orari o chiusure.', detail: 'Il POS riduce le richieste ripetute, permette di modificare articoli diversi durante il salvataggio e chiarisce lo stato degli aggiornamenti. Richiede la nuova versione del POS.' },
+    fr: { title: 'Alertes anticipées et améliorations du POS', message: 'Consultez les jours fériés chargés trois jours à l’avance et les prévisions météo des trois prochains jours. Les avis affichent la date complète sans modifier les horaires ni les fermetures.', detail: 'Le POS réduit les requêtes répétées, permet de modifier différents articles pendant l’enregistrement et clarifie l’état des mises à jour. Nécessite la nouvelle version du POS.' },
+    pt: { title: 'Avisos antecipados e melhorias do POS', message: 'Consulte os feriados carregados com três dias de antecedência e a previsão meteorológica dos próximos três dias. Os avisos mostram a data completa e não alteram horários nem encerramentos.', detail: 'O POS reduz pedidos repetidos, permite alterar artigos diferentes enquanto guarda e esclarece o estado das atualizações. Requer a nova versão do POS.' },
+  },
+};
 export { pizzaSpatialAnnouncementDraft, pizzaWorkbenchAnnouncementDraft, categoryBasePricingAnnouncementDraft };
 
 // Published after backend and storefront production verification on 16 October 2026.

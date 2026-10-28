@@ -88,13 +88,14 @@ export default function posUpdatesRoutes(prisma, { catalogueFile, onEvent = () =
         (body.error != null && !/^[a-zA-Z0-9_:-]{1,100}$/.test(body.error)) ||
         (body.decision != null && !['now','scheduled','pending'].includes(body.decision)) ||
         (body.approvedSha && !shaPattern.test(body.approvedSha)) ||
-        [body.scheduledAt,body.authorizedUntil].some(value => value != null && (!Number.isSafeInteger(value) || value < 0))) throw fail(400, 'invalid_update_report');
+        [body.scheduledAt,body.authorizedUntil,body.stateAt,body.retryAt,body.operations].some(value => value != null && (!Number.isSafeInteger(value) || value < 0))) throw fail(400, 'invalid_update_report');
     const details = { state: body.state, versionCode: body.versionCode,
       targetVersionCode: body.targetVersionCode ?? null, error: body.error ?? null,
       foreground: body.foreground === true, printerReady: body.printerReady === true,
       storeId: Number.isSafeInteger(body.storeId) ? body.storeId : null,
       decision: body.decision ?? null, approvedSha: body.approvedSha || null,
-      scheduledAt: body.scheduledAt ?? null, authorizedUntil: body.authorizedUntil ?? null };
+      scheduledAt: body.scheduledAt ?? null, authorizedUntil: body.authorizedUntil ?? null,
+      stateAt: body.stateAt ?? null, retryAt: body.retryAt ?? null, operations: body.operations ?? null };
     if (catalogueFile) await audit(prisma, req.posDevice.id, 'SOFTWARE_UPDATE', 'device', details);
     else await recordSoftwareReport(prisma, req.posDevice.id, details);
     onEvent({ deviceId: req.posDevice.id, event: 'report', ...details });

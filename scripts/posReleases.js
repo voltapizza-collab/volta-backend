@@ -8,6 +8,7 @@ import { audit, lockDevice } from '../services/posIdentity.js';
 import { uploadReleaseArtifact, migrationDownloadUrl } from '../services/posReleaseStorage.js';
 import { validatePublication, verifyApkFile } from '../services/posApkVerification.js';
 import { assignRelease } from '../services/posReleaseRegistry.js';
+import { posFleetHealth } from '../services/posFleetHealth.js';
 
 const [command, ...args] = process.argv.slice(2);
 const actorValue = value => {
@@ -72,6 +73,8 @@ try {
     console.log(JSON.stringify(await prisma.posSoftwareRelease.findMany({ select: { sha256: true, versionCode: true,
       versionName: true, title: true, enabled: true, createdAt: true, publishedBy: true, _count: { select: { assignments: true } } },
     orderBy: { versionCode: 'desc' }, take: 100 }), null, 2));
+  } else if (command === 'fleet') {
+    console.log(JSON.stringify(await posFleetHealth(prisma), null, 2));
   } else if (command === 'status') {
     console.log(JSON.stringify(await prisma.posDevice.findMany({ select: { id: true, name: true, status: true,
       softwareStatus: true, updateAssignment: { select: { releaseSha256: true, assignedAt: true } } },

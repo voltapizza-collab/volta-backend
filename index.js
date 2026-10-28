@@ -1,3 +1,5 @@
+import { startPosOutboxWorker } from './services/posOutbox.js';
+import { posOutboxHandlers } from './services/posOutboxHandlers.js';
 import webAuthRoutes from './routes/webAuth.js';
 import { webAccess } from './services/webAccess.js';
 import express from "express";
@@ -269,6 +271,7 @@ app.get("/", (req, res) => {
 
 const PORT = process.env.PORT || 8080;
 let productReviewWorker = null;
+let posOutboxWorker = null;
 let startupFailed = false;
 
 const server = app.listen(PORT, () => {
@@ -276,6 +279,7 @@ const server = app.listen(PORT, () => {
     if (startupFailed) return;
 
     productReviewWorker = startProductReviewWorker(prisma);
+    posOutboxWorker = startPosOutboxWorker(prisma, posOutboxHandlers(prisma));
     console.log(`Server running on port ${PORT}`);
   });
 });
@@ -284,6 +288,7 @@ server.on("error", async (error) => {
   startupFailed = true;
   console.error("[server] listen error:", error);
   productReviewWorker?.stop();
+  posOutboxWorker?.stop();
   await prisma.$disconnect().catch((disconnectError) => {
     console.error("[server] prisma disconnect error:", disconnectError);
   });

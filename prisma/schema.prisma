@@ -1149,3 +1149,15 @@ model PosLoginThrottle {
   expiresAt DateTime @db.DateTime(3)
   @@index([expiresAt])
 }
+
+// Durable POS side effects. REVIEW requires operator reconciliation before retry.
+model PosEffectOutbox {
+  id        String   @id @db.VarChar(191)
+  kind      String   @db.VarChar(40)
+  payload   Json
+  state     String   @default("PENDING") @db.VarChar(24)
+  error     String?  @db.VarChar(100)
+  createdAt DateTime @default(now()) @db.DateTime(3)
+  updatedAt DateTime @default(now()) @db.DateTime(3)
+  @@index([state, createdAt])
+}

@@ -22,7 +22,8 @@ export function posUiScope(prisma) {
     const storeInfo = /^\/api\/stores\/(\d+)$/.exec(path);
     if (storeInfo && method === 'GET') { if (Number(storeInfo[1]) !== storeId) return deny(); allowed = true; }
     if (method === 'GET' && /^\/api\/myorders\/(pending|summary)$/.test(path)) {
-      if (Object.keys(query).some(k => !['storeId','partnerId','_ts','period'].includes(k))) return deny();
+      const fields = path.endsWith('/summary') ? ['storeId','partnerId','_ts','period','view','cursor'] : ['storeId','partnerId','_ts','period'];
+      if (Object.keys(query).some(k => !fields.includes(k))) return deny();
       query.storeId = String(storeId); query.partnerId = String(partnerId); allowed = true;
     }
     const store = /^\/(?:api\/)?stores\/(\d+)\/(active|operations-pause|order-reception|ingredients(?:\/\d+)?)$/.exec(path);

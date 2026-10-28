@@ -402,10 +402,13 @@ export function startProductReviewWorker(prisma) {
   if (process.env.NODE_ENV === "test") return null;
 
   const intervalMs = Math.max(30_000, Number(process.env.PRODUCT_REVIEW_WORKER_INTERVAL_MS || 300_000));
+  let running = false;
   const run = () => {
+    if (running) return;
+    running = true;
     processDueProductReviewRequests(prisma).catch((error) => {
       console.error("[product-reviews.worker] error:", error);
-    });
+    }).finally(() => { running = false; });
   };
 
   const initialTimer = setTimeout(run, 15_000);
