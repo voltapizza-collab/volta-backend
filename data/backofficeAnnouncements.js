@@ -999,3 +999,7 @@ backofficeAnnouncements.push({ ...onboardingCancellationConfirmationAnnouncement
 // Backend 1c42077 verified; POS 0.3.25 assigned to SUNMI V3 001, 002 and 003.
 backofficeAnnouncements.push({ ...posProductInventoryAnnouncementDraft,
   publishedAt: '2026-10-27T11:20:43.081Z', expiresAt: '2027-01-27T23:59:59.000Z' });
+
+// Backend, storefront and POS 0.3.26 verified before publication.
+backofficeAnnouncements.push({ ...posPerformanceAnnouncementDraft,
+  publishedAt: '2026-10-28T10:16:12.405Z', expiresAt: '2027-01-28T23:59:59.000Z' });

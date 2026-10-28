@@ -1,3 +1,9 @@
+# Optimización POS — 28 de octubre de 2026
+
+Se activa `posPerformanceAnnouncementDraft` en ES/EN/IT/FR/PT tras verificar backend `f0114af` y storefront `6eaff22` en producción, aplicar `20261028160000_pos_effect_outbox` y publicar/asignar la APK 0.3.26/código 29 a los tres POS autorizados. Explica avisos de festivos con tres días de antelación, previsión meteorológica y mejoras de inventario/actualización. Requiere la nueva versión del POS y no cambia horarios ni cierres.
+
+Historial e inventario HTTP 200; tienda ajena HTTP 403. Cola activada y comprobada con un trabajo sintético sin mensajes. Instalación física pendiente de confirmación: los reportes actuales conservan versiones anteriores. Detalles y límites en [Optimización POS](pos-optimizations.md).
+
 # Inventario de productos en POS — 27 de octubre de 2026
 
 `posProductInventoryAnnouncementDraft` explica la búsqueda conjunta de ingredientes y productos, los interruptores independientes por tienda y el mantenimiento del bloqueo por ingredientes agotados. Incluye ES/EN/IT/FR/PT y avisa de que requiere la nueva versión del POS.
