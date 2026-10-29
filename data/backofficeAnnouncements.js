@@ -1,5 +1,18 @@
 import { pizzaSpatialAnnouncementDraft, pizzaWorkbenchAnnouncementDraft, categoryBasePricingAnnouncementDraft, pizzaSauceLayersAnnouncementDraft } from './pizzaSpatialAnnouncement.js';
 import { foodPackagesAnnouncementDraft } from './foodPackagesAnnouncement.js';
+// Published after POS web verification and APK 0.3.27 assignment to the three terminals.
+export const posDayOutlookAnnouncementDraft = {
+  id: 'pos-day-outlook-2026-10', revision: 1, category: 'improvement', severity: 'info',
+  title: 'Clima y próximo festivo en cocina',
+  message: 'El panel muestra hoy, mañana, pasado mañana y el próximo festivo registrado. Desde tres días antes del festivo y hasta ese día recuerda revisar inventario y anticipar compras.',
+  detail: 'Si hay previsión adversa, toca el día señalado para consultar su posible impacto en cocina, campañas y reparto. El panel solo aparece en cocina y los avisos son informativos. El calendario disponible no incluye festivos municipales. Requiere el POS actualizado.',
+  translations: {
+    en: { title: 'Weather and next holiday in the kitchen', message: 'The panel shows today, tomorrow, the day after and the next recorded public holiday. From three days before the holiday through the day itself, it reminds you to review stock and plan purchases.', detail: 'When adverse weather is forecast, tap the marked day to see its possible impact on kitchen preparation, campaigns and deliveries. The panel appears only in the kitchen and alerts are informational. The available calendar excludes municipal holidays. Requires the updated POS.' },
+    it: { title: 'Meteo e prossima festività in cucina', message: 'Il pannello mostra oggi, domani, dopodomani e la prossima festività registrata. Da tre giorni prima fino al giorno della festività ricorda di controllare le scorte e pianificare gli acquisti.', detail: 'In caso di previsioni avverse, tocca il giorno evidenziato per consultarne il possibile impatto su cucina, campagne e consegne. Il pannello appare solo in cucina e gli avvisi sono informativi. Il calendario disponibile non include le festività comunali. Richiede il POS aggiornato.' },
+    fr: { title: 'Météo et prochain jour férié en cuisine', message: 'Le panneau affiche aujourd’hui, demain, après-demain et le prochain jour férié enregistré. De trois jours avant jusqu’au jour férié inclus, il rappelle de vérifier les stocks et d’anticiper les achats.', detail: 'En cas de prévisions défavorables, touchez le jour signalé pour consulter les effets possibles sur la cuisine, les campagnes et les livraisons. Le panneau apparaît uniquement en cuisine et les alertes sont informatives. Le calendrier disponible exclut les jours fériés municipaux. Nécessite le POS mis à jour.' },
+    pt: { title: 'Meteorologia e próximo feriado na cozinha', message: 'O painel mostra hoje, amanhã, depois de amanhã e o próximo feriado registado. Desde três dias antes até ao próprio feriado, lembra que deve rever o inventário e antecipar compras.', detail: 'Se houver previsão adversa, toque no dia assinalado para consultar o possível impacto na cozinha, nas campanhas e nas entregas. O painel aparece apenas na cozinha e os avisos são informativos. O calendário disponível não inclui feriados municipais. Requer o POS atualizado.' },
+  },
+};
 // Backend verified and POS 0.3.25 assigned to all three authorized terminals.
 export const posProductInventoryAnnouncementDraft = {
   id: 'pos-product-inventory-2026-10', revision: 1, category: 'improvement', severity: 'info',
@@ -1003,3 +1016,7 @@ backofficeAnnouncements.push({ ...posProductInventoryAnnouncementDraft,
 // Backend, storefront and POS 0.3.26 verified before publication.
 backofficeAnnouncements.push({ ...posPerformanceAnnouncementDraft,
   publishedAt: '2026-10-28T10:16:12.405Z', expiresAt: '2027-01-28T23:59:59.000Z' });
+
+// POS weather/holiday panel is available on the web and through APK 0.3.27.
+backofficeAnnouncements.push({ ...posDayOutlookAnnouncementDraft,
+  publishedAt: "2026-10-29T12:41:00.554Z", expiresAt: "2027-01-29T23:59:59.000Z" });
