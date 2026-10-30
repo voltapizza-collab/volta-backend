@@ -1046,3 +1046,9 @@ backofficeAnnouncements.push({ ...posPerformanceAnnouncementDraft,
 // POS weather/holiday panel is available on the web and through APK 0.3.27.
 backofficeAnnouncements.push({ ...posDayOutlookAnnouncementDraft,
   publishedAt: "2026-10-29T12:41:00.554Z", expiresAt: "2027-01-29T23:59:59.000Z" });
+
+// Storefront 70f8888 and backend 24a8557 verified in production.
+// POS 0.3.28 is available to the authorized terminal network and on the web.
+backofficeAnnouncements.push(...[storefrontModesAnnouncementDraft, posCompactNoticesAnnouncementDraft].map(announcement => ({
+  ...announcement, publishedAt: '2026-10-30T09:20:21.362Z', expiresAt: '2027-01-30T23:59:59.000Z',
+})));
