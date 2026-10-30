@@ -96,7 +96,7 @@ export async function authorizeBackoffice(db, req, path) {
   if (req.method === 'POST' && path === '/partners/backoffice-password/change') return;
   const read = ['GET', 'HEAD'].includes(req.method);
   let match;
-  if ((match = /^\/partners\/by-id\/(\d+)(?:\/(?:policy|policies|price-adjustments|storefront-buttons|tracking-notifications|branding|logo)(?:\/[^/]+)?)?$/.exec(path)) ||
+  if ((match = /^\/partners\/by-id\/(\d+)(?:\/(?:policy|policies|price-adjustments|storefront-buttons|storefront-mode|tracking-notifications|branding|logo)(?:\/[^/]+)?)?$/.exec(path)) ||
       (match = /^\/(?:billing|sms-credits|backoffice-notifications)\/(\d+)(?:\/(?:summary|checkout-session|invoices\/send|cashouts\/instant))?$/.exec(path)) ||
       (match = /^\/partners\/(\d+)\/categories(?:\/order|\/\d+)?$/.exec(path))) {
     if (id(match[1]) !== s.partnerId) throw denied();

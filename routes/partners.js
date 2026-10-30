@@ -1,3 +1,4 @@
+import storefrontModeRoutes from './storefrontMode.js';
 import { issueWebSession, createAuthLimiter, backofficeCredential } from '../services/webSessions.js';
 import { COVERAGE_ROUTE_ESTIMATE_FACTOR, getGoogleGeocodingKey, geocodeAddress, geocodeCustomerAddress, computeDrivingDistances, haversineKm, isPreciseCustomerGeocode } from "../services/deliveryGeography.js";
 export { isPreciseCustomerGeocode } from "../services/deliveryGeography.js";
@@ -1698,6 +1699,11 @@ router.patch("/by-id/:partnerId/tracking-notifications", async (req, res) => {
     res.status(500).json({ error: e.message });
   }
 });
+
+router.use('/by-id/:partnerId/storefront-mode', storefrontModeRoutes({
+  getPartner: async id => { await ensurePartnerSettingsColumns(); return getPartnerPolicyById(id); },
+  saveMode: (id, mode) => prisma.$executeRawUnsafe('UPDATE Partner SET storefrontMode = ? WHERE id = ?', mode, id),
+}));
 
 router.patch("/by-id/:partnerId/branding", async (req, res) => {
   try {
