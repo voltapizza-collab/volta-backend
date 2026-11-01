@@ -2,6 +2,7 @@ import express from "express";
 import { readStoreOpening } from '../services/storeOpening.js';
 import { buildOrderAvailability } from '../services/orderAvailability.js';
 import { loadStoreMenuProducts } from "../services/storeMenuProducts.js";
+import { isPromoAvailable } from "../services/promoAvailability.js";
 import { getBoostSettings } from "../services/boostSettings.js";
 import { sendStoreStatusTrackingSms } from "../services/trackingNotifications.js";
 import {
@@ -886,7 +887,7 @@ const attachStorePublicMenu = (router, prisma) => {
       );
       const promoWindowNow = nowInTZ();
       const visiblePromos = promos.filter((promo) =>
-        isPromoWithinWindow(promo, promoWindowNow)
+        isPromoWithinWindow(promo, promoWindowNow) && isPromoAvailable(promo, menu)
       );
       const payload = {
         store: {

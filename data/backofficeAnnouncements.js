@@ -1,5 +1,19 @@
 import { pizzaSpatialAnnouncementDraft, pizzaWorkbenchAnnouncementDraft, categoryBasePricingAnnouncementDraft, pizzaSauceLayersAnnouncementDraft } from './pizzaSpatialAnnouncement.js';
 import { foodPackagesAnnouncementDraft } from './foodPackagesAnnouncement.js';
+// Publish after the menu availability fix and storefront are deployed together.
+export const promoAvailabilityAnnouncementDraft = {
+  id: 'promo-component-availability-2026-11', revision: 1, category: 'improvement', severity: 'info',
+  title: 'Promos disponibles al completo',
+  message: 'Las promos se ocultan de la carta cuando falta un producto o tamaño necesario en esa tienda. Vuelven a mostrarse cuando sus componentes están disponibles y la promo sigue vigente.',
+  detail: 'La disponibilidad sigue el inventario de productos e ingredientes. Las promos con opciones requieren suficientes productos disponibles para completar cada elección. No necesitas desactivar y reactivar la promo manualmente.',
+  translations: {
+    en: { title: 'Promos available in full', message: 'Promos are hidden from the menu when a required product or size is unavailable at that store. They return when their components are available and the promo is still valid.', detail: 'Availability follows product and ingredient inventory. Promos with choices require enough available products to complete each choice. You do not need to manually disable and re-enable the promo.' },
+    it: { title: 'Promo disponibili al completo', message: 'Le promo vengono nascoste dal menu quando un prodotto o formato necessario non è disponibile nel punto vendita. Ricompaiono quando i componenti sono disponibili e la promo è ancora valida.', detail: 'La disponibilità segue l’inventario di prodotti e ingredienti. Le promo con opzioni richiedono abbastanza prodotti disponibili per completare ogni scelta. Non serve disattivare e riattivare manualmente la promo.' },
+    fr: { title: 'Des promos disponibles au complet', message: 'Les promos sont masquées dans la carte lorsqu’un produit ou format nécessaire manque dans cette boutique. Elles réapparaissent lorsque leurs composants sont disponibles et que la promo reste valide.', detail: 'La disponibilité suit le stock des produits et ingrédients. Les promos avec choix nécessitent suffisamment de produits disponibles pour compléter chaque sélection. Inutile de désactiver puis réactiver manuellement la promo.' },
+    pt: { title: 'Promoções disponíveis por completo', message: 'As promoções ficam ocultas na ementa quando falta um produto ou tamanho necessário nessa loja. Voltam a aparecer quando os componentes estão disponíveis e a promoção continua válida.', detail: 'A disponibilidade acompanha o inventário de produtos e ingredientes. As promoções com opções exigem produtos disponíveis suficientes para completar cada escolha. Não precisa de desativar e reativar a promoção manualmente.' },
+  },
+};
+
 // Activate only after the compact POS interface is available on the terminals.
 export const posCompactNoticesAnnouncementDraft = {
   id: 'pos-compact-notices-2026-10', revision: 1, category: 'improvement', severity: 'info',
@@ -570,6 +584,7 @@ export const singleLineCardPricesAnnouncement = {
 };
 
 export const backofficeAnnouncements = [
+  { ...promoAvailabilityAnnouncementDraft, publishedAt: '2026-11-01T00:00:00.000Z', expiresAt: '2027-02-01T23:59:59.000Z' },
   { ...compactCouponGalleryAnnouncementDraft, publishedAt: "2026-10-14T11:39:10.000Z", expiresAt: "2027-01-14T23:59:59.000Z" },
   { ...landingProductHeroAnnouncementDraft, publishedAt: "2026-10-09T12:03:37.169Z", expiresAt: "2027-01-09T23:59:59.000Z" },
   qrSmsConfirmationAnnouncement,
